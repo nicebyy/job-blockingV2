@@ -265,5 +265,125 @@ describe('FilterEngine 단위 테스트', () => {
       expect(engine.evaluateJobCard(jobB2).shouldFilter).toBe(true);
     });
   });
+
+  describe('차단 유형별 통계 산출 검증 (공고숨김 vs 회사차단)', () => {
+    it('특정 공고(job)만 차단했을 때는 차단 회사에 포함되지 않고 개별 숨김 공고로만 집계되어야 한다', () => {
+      // 1. 공고만 2개 차단 (A회사 공고1, B회사 공고1)
+      const blockItems: BlockItem[] = [
+        { id: '1', pattern: 'rec_job_1', type: 'job', title: '개발자 채용', companyName: 'A회사', createdAt: Date.now() },
+        { id: '2', pattern: 'rec_job_2', type: 'job', title: '디자이너 채용', companyName: 'B회사', createdAt: Date.now() },
+      ];
+      engine.updateBlockList(blockItems);
+
+      const card1: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'A회사',
+        title: '개발자 채용',
+        jobId: 'rec_job_1',
+        isAd: false,
+      };
+      const card2: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'B회사',
+        title: '디자이너 채용',
+        jobId: 'rec_job_2',
+        isAd: false,
+      };
+      const card3Normal: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'A회사',
+        title: '마케터 채용',
+        jobId: 'rec_job_3',
+        isAd: false,
+      };
+
+      const eval1 = engine.evaluateJobCard(card1);
+      const eval2 = engine.evaluateJobCard(card2);
+      const eval3 = engine.evaluateJobCard(card3Normal);
+
+      // card1, card2는 필터링되어야 하지만 matchedItem의 type은 'job'이어야 함
+      expect(eval1.shouldFilter).toBe(true);
+      expect(eval1.matchedItem?.type).toBe('job');
+
+      expect(eval2.shouldFilter).toBe(true);
+      expect(eval2.matchedItem?.type).toBe('job');
+
+      // card3는 같은 A회사라도 개별 공고 차단이 아니므로 노출
+      expect(eval3.shouldFilter).toBe(false);
+
+      // 통계 집계 시뮬레이션
+      const cards = [card1, card2, card3Normal];
+      let totalBlocked = 0;
+      let blockedJobs = 0;
+      let blockedAds = 0;
+      const blockedCompanySet = new Set<string>();
+
+      for (const card of cards) {
+        const res = engine.evaluateJobCard(card);
+        if (res.shouldFilter) {
+          totalBlocked++;
+          if (res.isAdFilter) {
+            blockedAds++;
+          } else if (res.matchedItem?.type === 'job') {
+            blockedJobs++;
+          } else if (res.matchedItem?.type === 'company' || res.matchedItem?.type === 'keyword') {
+            blockedCompanySet.add(card.companyName || res.matchedItem.pattern);
+          }
+        }
+      }
+
+      // 공고 2개만 차단되었으므로 totalBlocked=2, blockedJobs=2, blockedCompanies=0이어야 함!
+      expect(totalBlocked).toBe(2);
+      expect(blockedJobs).toBe(2);
+      expect(blockedCompanySet.size).toBe(0);
+      expect(blockedAds).toBe(0);
+    });
+
+    it('동일 회사의 공고가 여러 개 있어도 회사 차단인 경우 차단 회사 수는 1이어야 한다', () => {
+      engine.updateBlockList([
+        { id: 'c1', pattern: '카카오', type: 'company', createdAt: Date.now() },
+      ]);
+
+      const kakaoJob1: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '카카오',
+        title: 'FE 개발자',
+        jobId: '101',
+        isAd: false,
+      };
+      const kakaoJob2: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '(주)카카오',
+        title: 'BE 개발자',
+        jobId: '102',
+        isAd: false,
+      };
+
+      const cards = [kakaoJob1, kakaoJob2];
+      let totalBlocked = 0;
+      let blockedJobs = 0;
+      let blockedAds = 0;
+      const blockedCompanySet = new Set<string>();
+
+      for (const card of cards) {
+        const res = engine.evaluateJobCard(card);
+        if (res.shouldFilter) {
+          totalBlocked++;
+          if (res.isAdFilter) {
+            blockedAds++;
+          } else if (res.matchedItem?.type === 'job') {
+            blockedJobs++;
+          } else if (res.matchedItem?.type === 'company' || res.matchedItem?.type === 'keyword') {
+            blockedCompanySet.add(res.matchedItem.pattern);
+          }
+        }
+      }
+
+      // 공고는 2개 차단되었으나 회사는 1개(카카오)여야 함
+      expect(totalBlocked).toBe(2);
+      expect(blockedCompanySet.size).toBe(1);
+      expect(blockedJobs).toBe(0);
+    });
+  });
 });
 

@@ -15,6 +15,7 @@ class ContentController {
   private currentStats: FilterStats = {
     totalBlocked: 0,
     blockedCompanies: 0,
+    blockedJobs: 0,
     blockedAds: 0,
   };
 
@@ -160,8 +161,10 @@ class ContentController {
     this.adapter.hidePromotionBanners?.();
 
     const elements = this.adapter.getJobCardElements();
-    let blockedCompanies = 0;
+    let totalBlocked = 0;
+    let blockedJobs = 0;
     let blockedAds = 0;
+    const blockedCompanySet = new Set<string>();
 
     for (const el of elements) {
       const cardInfo = this.adapter.parseCard(el);
@@ -171,10 +174,16 @@ class ContentController {
 
       if (evalResult.shouldFilter) {
         this.filterEngine.applyFilter(cardInfo.cardElement);
+        totalBlocked++;
+
         if (evalResult.isAdFilter) {
           blockedAds++;
+        } else if (evalResult.matchedItem?.type === 'job') {
+          blockedJobs++;
+        } else if (evalResult.matchedItem?.type === 'company' || evalResult.matchedItem?.type === 'keyword') {
+          blockedCompanySet.add(cardInfo.companyName || evalResult.matchedItem.pattern);
         } else {
-          blockedCompanies++;
+          blockedCompanySet.add(cardInfo.companyName);
         }
       } else {
         this.filterEngine.removeFilter(cardInfo.cardElement);
@@ -192,8 +201,9 @@ class ContentController {
     }
 
     this.currentStats = {
-      totalBlocked: blockedCompanies + blockedAds,
-      blockedCompanies,
+      totalBlocked,
+      blockedCompanies: blockedCompanySet.size,
+      blockedJobs,
       blockedAds,
     };
 

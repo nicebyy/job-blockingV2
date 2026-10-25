@@ -8,6 +8,7 @@ export const Popup: React.FC = () => {
   const [stats, setStats] = useState<FilterStats>({
     totalBlocked: 0,
     blockedCompanies: 0,
+    blockedJobs: 0,
     blockedAds: 0,
   });
   const [newCompany, setNewCompany] = useState('');
@@ -104,6 +105,10 @@ export const Popup: React.FC = () => {
         <div className="stat-item">
           <div className="stat-value">{stats.blockedCompanies}</div>
           <div className="stat-label">차단 회사</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-value">{stats.blockedJobs ?? 0}</div>
+          <div className="stat-label">숨긴 공고</div>
         </div>
         <div className="stat-item">
           <div className="stat-value">{stats.blockedAds}</div>

@@ -70,6 +70,7 @@ export interface FilterResult {
 export interface FilterStats {
   totalBlocked: number;
   blockedCompanies: number;
+  blockedJobs: number;
   blockedAds: number;
 }
 
