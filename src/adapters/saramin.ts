@@ -26,6 +26,18 @@ export class SaraminAdapter extends BaseSiteAdapter {
     return Array.from(all);
   }
 
+  /**
+   * AI 검색 배너, 개인 맞춤 추천 공고 섹션, 스토어 프로모션 배너 등 불필요한 마케팅/추천 요소 숨김
+   */
+  public override hidePromotionBanners(container: Document | HTMLElement = document): void {
+    const banners = container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.PROMOTION_BANNERS);
+    banners.forEach((el) => {
+      el.style.display = 'none';
+      el.setAttribute('data-job-filtered', 'true');
+      el.setAttribute('data-filter-mode', 'hide');
+    });
+  }
+
   public override getCardListContainer(doc: Document = document): HTMLElement | null {
     const container = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.LIST_CONTAINER);
     if (container) return container;

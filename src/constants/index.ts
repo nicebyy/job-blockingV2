@@ -85,6 +85,8 @@ export const SARAMIN_SELECTORS = {
   DETAIL_COMPANY_NAME: '.jv_header .company_name, .jv_header a.company, .wrap_jv_header .corp_name, .company_info .name, .company_name, .corp_name',
   DETAIL_POSITION_TITLE: '.jv_header .tit_job, .jv_header h1, h1.tit_job, .wrap_jv_header .tit_job, .job_tit, .tit',
   DETAIL_HEADER: '.jv_header, .wrap_jv_header, .header_jv, .view_header',
+  // 프로모션 및 광고 배너(AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너)
+  PROMOTION_BANNERS: '.area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, #section_contents, section[aria-label="추천공고"], .list_curation_wrap',
 } as const;
 
 /**
