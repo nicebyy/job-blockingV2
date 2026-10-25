@@ -82,6 +82,7 @@ export const Options: React.FC = () => {
           >
             <option value="company">회사명</option>
             <option value="keyword">제목 키워드</option>
+            <option value="job">공고 ID</option>
           </select>
           <input
             type="text"
@@ -117,12 +118,20 @@ export const Options: React.FC = () => {
                 <div>
                   <span
                     className={`block-badge ${
-                      item.type === 'company' ? 'badge-company' : 'badge-keyword'
+                      item.type === 'company'
+                        ? 'badge-company'
+                        : item.type === 'job'
+                        ? 'badge-job'
+                        : 'badge-keyword'
                     }`}
                   >
-                    {item.type === 'company' ? '회사' : '키워드'}
+                    {item.type === 'company' ? '회사' : item.type === 'job' ? '공고' : '키워드'}
                   </span>
-                  <strong>{item.pattern}</strong>
+                  <strong>
+                    {item.type === 'job'
+                      ? `${item.companyName ? `[${item.companyName}] ` : ''}${item.title || item.pattern}`
+                      : item.pattern}
+                  </strong>
                 </div>
                 <button
                   className="btn-delete"

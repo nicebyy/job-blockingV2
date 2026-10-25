@@ -2,7 +2,7 @@ import { AdapterRegistry } from '../adapters';
 import { FilterEngine } from '../core/filter-engine';
 import { InfiniteScrollManager } from '../core/infinite-scroll';
 import { StorageManager } from '../core/storage';
-import { ExtensionMessage, FilterSettings, FilterStats } from '../types';
+import { ExtensionMessage, FilterSettings, FilterStats, JobCardInfo } from '../types';
 import { FILTER_CONFIG } from '../constants';
 
 class ContentController {
@@ -38,8 +38,59 @@ class ContentController {
     // DOM 변화 감시 (SPA 페이지 전환 및 무한 스크롤 대응)
     this.setupObserver();
 
+    // URL 변경 감지 (정렬 필터, 카테고리 탭 변경 등 대응)
+    this.setupUrlChangeListener();
+
     // 메시지 리스너 등록
     this.setupMessageListener();
+  }
+
+  private setupUrlChangeListener(): void {
+    if (typeof window === 'undefined') return;
+
+    let lastUrl = window.location.href;
+
+    const onUrlChange = () => {
+      const currentUrl = window.location.href;
+      if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        this.handleUrlOrFilterChange();
+      }
+    };
+
+    window.addEventListener('popstate', onUrlChange);
+    window.addEventListener('hashchange', onUrlChange);
+
+    // pushState / replaceState 감지 (SPA 및 AJAX 정렬 변경 감지)
+    const originalPushState = history.pushState.bind(history);
+    history.pushState = (...args: Parameters<typeof history.pushState>) => {
+      originalPushState(...args);
+      window.dispatchEvent(new Event('job-filter-url-change'));
+    };
+
+    const originalReplaceState = history.replaceState.bind(history);
+    history.replaceState = (...args: Parameters<typeof history.replaceState>) => {
+      originalReplaceState(...args);
+      window.dispatchEvent(new Event('job-filter-url-change'));
+    };
+
+    window.addEventListener('job-filter-url-change', onUrlChange);
+  }
+
+  private handleUrlOrFilterChange(): void {
+    // 사이트 정렬 및 검색 필터 변경 시 어댑터 재확인 및 무한 스크롤 초기화
+    this.adapter = AdapterRegistry.getAdapterForUrl(window.location.href);
+
+    if (this.infiniteScroll) {
+      this.infiniteScroll.destroy();
+      this.infiniteScroll = null;
+    }
+
+    if (this.settings?.enableInfiniteScroll && this.adapter?.supportsInfiniteScroll) {
+      this.setupInfiniteScroll();
+    }
+
+    this.scanAndFilter();
   }
 
   private setupInfiniteScroll(): void {
@@ -125,9 +176,14 @@ class ContentController {
       } else {
         this.filterEngine.removeFilter(cardInfo.cardElement);
 
-        // 필터링되지 않은 정상 카드에 [차단] 인라인 버튼 주입
-        this.adapter.injectInlineButton(cardInfo, async (companyName) => {
-          await this.handleBlockCompany(companyName);
+        // 필터링되지 않은 정상 카드에 [공고숨김 / 회사차단] 듀얼 인라인 버튼 주입
+        this.adapter.injectInlineButton(cardInfo, {
+          onBlockCompany: async (companyName) => {
+            await this.handleBlockCompany(companyName);
+          },
+          onBlockJob: async (info) => {
+            await this.handleBlockJob(info);
+          },
         });
       }
     }
@@ -149,6 +205,17 @@ class ContentController {
 
   private async handleBlockCompany(companyName: string): Promise<void> {
     await StorageManager.addBlockItem(companyName, 'company');
+    const updatedList = await StorageManager.getBlockList();
+    this.filterEngine?.updateBlockList(updatedList);
+    this.scanAndFilter();
+  }
+
+  private async handleBlockJob(cardInfo: JobCardInfo): Promise<void> {
+    const pattern = cardInfo.jobId || `${cardInfo.companyName}:::${cardInfo.title}`;
+    await StorageManager.addBlockItem(pattern, 'job', {
+      title: cardInfo.title,
+      companyName: cardInfo.companyName,
+    });
     const updatedList = await StorageManager.getBlockList();
     this.filterEngine?.updateBlockList(updatedList);
     this.scanAndFilter();

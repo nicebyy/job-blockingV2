@@ -14,8 +14,8 @@
   display: none !important;
 }
 
-/* 주입되는 인라인 [차단] 버튼 */
-.job-filter-hide-btn {
+/* 주입되는 인라인 [차단/숨김] 버튼 그룹 */
+.job-filter-btn-group {
   position: absolute !important;
   top: 8px !important;
   right: 8px !important;
@@ -23,12 +23,18 @@
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
-  padding: 4px 8px !important;
+}
+
+.job-filter-hide-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  padding: 3px 6px !important;
   font-size: 11px !important;
   font-weight: 500 !important;
   line-height: 1 !important;
   color: #64748b !important;
-  background-color: rgba(255, 255, 255, 0.9) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 6px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
@@ -37,11 +43,18 @@
   backdrop-filter: blur(4px) !important;
 }
 
-.job-filter-hide-btn:hover {
+.job-filter-btn-job:hover {
+  color: #b45309 !important;
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  transform: scale(1.04) !important;
+}
+
+.job-filter-btn-company:hover {
   color: #ef4444 !important;
   background-color: #fef2f2 !important;
   border-color: #fca5a5 !important;
-  transform: scale(1.05) !important;
+  transform: scale(1.04) !important;
 }
 
 .job-filter-hide-btn svg {
