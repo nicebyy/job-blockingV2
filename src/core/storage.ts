@@ -1,9 +1,5 @@
 import { BlockItem, DEFAULT_SETTINGS, FilterSettings } from '../types';
-
-const STORAGE_KEYS = {
-  SETTINGS: 'job_filter_settings',
-  BLOCK_LIST: 'job_filter_block_list',
-} as const;
+import { STORAGE_KEYS } from '../constants';
 
 export class StorageManager {
   private static memoryFallback: Record<string, any> = {

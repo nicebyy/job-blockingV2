@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FilterSettings, DEFAULT_SETTINGS, FilterStats } from '../types';
 import { StorageManager } from '../core/storage';
+import { FILTER_CONFIG, UI_MESSAGES } from '../constants';
 
 export const Popup: React.FC = () => {
   const [settings, setSettings] = useState<FilterSettings>(DEFAULT_SETTINGS);
@@ -54,8 +55,8 @@ export const Popup: React.FC = () => {
     notifyContentScript({ type: 'BLOCKLIST_CHANGED', items: updatedList });
 
     setNewCompany('');
-    setStatusMsg(`'${trimmed}' 차단 등록 완료!`);
-    setTimeout(() => setStatusMsg(''), 2000);
+    setStatusMsg(UI_MESSAGES.BLOCK_SUCCESS(trimmed));
+    setTimeout(() => setStatusMsg(''), FILTER_CONFIG.STATUS_MESSAGE_TIMEOUT_MS);
   };
 
   const notifyContentScript = (message: any) => {

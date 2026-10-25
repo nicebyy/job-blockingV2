@@ -2,6 +2,7 @@ import { AdapterRegistry } from '../adapters';
 import { FilterEngine } from '../core/filter-engine';
 import { StorageManager } from '../core/storage';
 import { ExtensionMessage, FilterStats } from '../types';
+import { FILTER_CONFIG } from '../constants';
 
 class ContentController {
   private adapter = AdapterRegistry.getAdapterForUrl(window.location.href);
@@ -40,7 +41,7 @@ class ContentController {
       }
       this.debounceTimer = window.setTimeout(() => {
         this.scanAndFilter();
-      }, 150);
+      }, FILTER_CONFIG.DEBOUNCE_DELAY_MS);
     });
 
     this.observer.observe(document.body, {

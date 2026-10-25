@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BlockItem, BlockType } from '../types';
 import { StorageManager } from '../core/storage';
+import { UI_MESSAGES } from '../constants';
 
 export const Options: React.FC = () => {
   const [blockList, setBlockList] = useState<BlockItem[]>([]);
@@ -52,10 +53,10 @@ export const Options: React.FC = () => {
         if (Array.isArray(imported)) {
           await StorageManager.saveBlockList(imported);
           loadBlockList();
-          alert('차단 목록을 성공적으로 불러왔습니다!');
+          alert(UI_MESSAGES.IMPORT_SUCCESS);
         }
       } catch (err) {
-        alert('올바르지 않은 JSON 파일입니다.');
+        alert(UI_MESSAGES.IMPORT_INVALID_JSON);
       }
     };
     reader.readAsText(file);
@@ -107,7 +108,7 @@ export const Options: React.FC = () => {
 
         {filteredList.length === 0 ? (
           <div className="empty-state">
-            {search ? '검색 결과가 없습니다.' : '등록된 차단 항목이 없습니다.'}
+            {search ? UI_MESSAGES.EMPTY_SEARCH_RESULT : UI_MESSAGES.EMPTY_BLOCK_LIST}
           </div>
         ) : (
           <ul className="block-list">
