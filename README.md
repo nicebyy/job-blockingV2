@@ -1,4 +1,4 @@
-# 잡필터 V2 (Job Blocking V2)
+# Job Blocking V2 (채용 사이트 공고 필터링)
 
 채용 플랫폼(원티드, 사람인, 잡코리아 등)에서 원하지 않는 기업 및 불필요한 추천/스폰서 광고 공고를 숨기거나 흐리게(블러) 처리해 주는 크롬 확장 프로그램(Manifest V3)입니다.
 
@@ -35,6 +35,8 @@
 ## 📂 프로젝트 구조 (Modular Architecture)
 
 ```
+public/
+└── icons/                     # 확장 프로그램 아이콘 (16, 32, 48, 128px)
 src/
 ├── manifest.json              # Chrome Manifest V3 설정
 ├── constants/                 # 설정값, DOM 셀렉터, 뱃지, UI 메시지 중앙 집중 상수

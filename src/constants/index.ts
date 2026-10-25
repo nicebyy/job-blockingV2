@@ -1,4 +1,14 @@
 /**
+ * 애플리케이션 브랜딩 및 기본 정보 상수
+ */
+export const APP_INFO = {
+  NAME: 'Job Blocking V2',
+  FULL_NAME: 'Job Blocking V2 - 채용 사이트 공고 필터링',
+  DESCRIPTION: '원티드, 사람인, 잡코리아 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
+  VERSION: '0.1.0',
+} as const;
+
+/**
  * 스토리지 키 상수
  */
 export const STORAGE_KEYS = {
@@ -94,6 +104,8 @@ export const JOBKOREA_SELECTORS = {
  * UI 안내 문구 상수
  */
 export const UI_MESSAGES = {
+  POPUP_TITLE: 'Job Blocking V2',
+  OPTIONS_TITLE: 'Job Blocking V2 - 환경 설정',
   BLOCK_SUCCESS: (pattern: string) => `'${pattern}' 차단 등록 완료!`,
   IMPORT_SUCCESS: '차단 목록을 성공적으로 불러왔습니다!',
   IMPORT_INVALID_JSON: '올바르지 않은 JSON 파일입니다.',
