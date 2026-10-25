@@ -1,6 +1,7 @@
 import { JobCardInfo } from '../types';
 import { BaseSiteAdapter } from './base';
-import { SITE_DOMAINS, SARAMIN_SELECTORS } from '../constants';
+import { SITE_DOMAINS, SARAMIN_SELECTORS, INLINE_BUTTON_CONFIG } from '../constants';
+
 
 export class SaraminAdapter extends BaseSiteAdapter {
   readonly name = 'Saramin';
@@ -121,7 +122,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
     actions: import('./base').BlockActions | ((companyName: string) => void)
   ): void {
     const header = cardInfo.cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_HEADER);
-    if (header && !cardInfo.cardElement.querySelector('.job-filter-btn-group')) {
+    if (header && !cardInfo.cardElement.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)) {
       header.style.position = 'relative';
       super.injectInlineButton({ ...cardInfo, cardElement: header }, actions);
       return;
@@ -129,3 +130,4 @@ export class SaraminAdapter extends BaseSiteAdapter {
     super.injectInlineButton(cardInfo, actions);
   }
 }
+
