@@ -24,6 +24,7 @@ src/
 │   └── index.ts
 ├── core/                      # 순수 비즈니스 로직
 │   ├── filter-engine.ts       # 정규화, 기업명/키워드 매칭, DOM 블러/숨김 판정
+│   ├── infinite-scroll.ts     # 페이지네이션 무한 스크롤 변환 및 빈 페이지 방지 자동 채우기(Auto-Refill)
 │   └── storage.ts             # chrome.storage.sync / local 추상화 및 폴백
 ├── adapters/                  # 플랫폼별 고유 DOM 셀렉터 및 파서 (어댑터 패턴)
 │   ├── base.ts                # BaseSiteAdapter 추상 클래스 ([차단] 인라인 버튼 주입)

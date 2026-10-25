@@ -27,6 +27,7 @@ export interface FilterSettings {
   blurIntensity: number; // px 단위 (기본: 6)
   hideAds: boolean; // 상시/추천/헤드헌팅 광고 공고 숨김 여부
   showInlineButton: boolean; // 공고 카드에 [차단] 인라인 버튼 노출 여부
+  enableInfiniteScroll: boolean; // 페이지네이션을 무한 스크롤로 자동 변환 여부
 }
 
 /**
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: FilterSettings = {
   blurIntensity: 6,
   hideAds: true,
   showInlineButton: true,
+  enableInfiniteScroll: true,
 };
 
 /**

@@ -4,15 +4,51 @@ import { SITE_DOMAINS, SARAMIN_SELECTORS } from '../constants';
 
 export class SaraminAdapter extends BaseSiteAdapter {
   readonly name = 'Saramin';
+  override readonly supportsInfiniteScroll = true;
 
   public matches(url: string): boolean {
     return url.includes(SITE_DOMAINS.SARAMIN);
   }
 
-  public getJobCardElements(): HTMLElement[] {
+  public getJobCardElements(container: Document | HTMLElement = document): HTMLElement[] {
     return Array.from(
-      document.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.JOB_CARDS)
+      container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.JOB_CARDS)
     );
+  }
+
+  public override getCardListContainer(doc: Document = document): HTMLElement | null {
+    const container = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.LIST_CONTAINER);
+    if (container) return container;
+    const firstCard = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.JOB_CARDS);
+    return firstCard?.parentElement || null;
+  }
+
+  public override getPaginationElement(doc: Document = document): HTMLElement | null {
+    return doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.PAGINATION);
+  }
+
+  public override getNextPageUrl(doc: Document = document, currentPage: number): string | null {
+    const nextPage = currentPage + 1;
+
+    // 1. DOM 내부의 페이지네이션 a 태그 우선 탐색
+    const pageLink =
+      doc.querySelector<HTMLAnchorElement>(
+        `a[page="${nextPage}"], a[href*="page=${nextPage}"], a[href*="recruitPage=${nextPage}"]`
+      ) ||
+      doc.querySelector<HTMLAnchorElement>('.pagination .next, .page_box .btn_next');
+
+    if (pageLink?.href && !pageLink.href.includes('javascript:')) {
+      return pageLink.href;
+    }
+
+    // 2. 현재 URL 기준 query parameter 증가 fallback
+    try {
+      const currentUrl = new URL(typeof window !== 'undefined' ? window.location.href : 'https://www.saramin.co.kr');
+      currentUrl.searchParams.set('page', String(nextPage));
+      return currentUrl.toString();
+    } catch {
+      return null;
+    }
   }
 
   public parseCard(element: HTMLElement): JobCardInfo | null {

@@ -1,12 +1,15 @@
 import { AdapterRegistry } from '../adapters';
 import { FilterEngine } from '../core/filter-engine';
+import { InfiniteScrollManager } from '../core/infinite-scroll';
 import { StorageManager } from '../core/storage';
-import { ExtensionMessage, FilterStats } from '../types';
+import { ExtensionMessage, FilterSettings, FilterStats } from '../types';
 import { FILTER_CONFIG } from '../constants';
 
 class ContentController {
   private adapter = AdapterRegistry.getAdapterForUrl(window.location.href);
   private filterEngine: FilterEngine | null = null;
+  private infiniteScroll: InfiniteScrollManager | null = null;
+  private settings: FilterSettings | null = null;
   private observer: MutationObserver | null = null;
   private debounceTimer: number | null = null;
   private currentStats: FilterStats = {
@@ -20,9 +23,14 @@ class ContentController {
       return;
     }
 
-    const settings = await StorageManager.getSettings();
+    this.settings = await StorageManager.getSettings();
     const blockList = await StorageManager.getBlockList();
-    this.filterEngine = new FilterEngine(settings, blockList);
+    this.filterEngine = new FilterEngine(this.settings, blockList);
+
+    // 무한 스크롤 초기화
+    if (this.settings.enableInfiniteScroll && this.adapter.supportsInfiniteScroll) {
+      this.setupInfiniteScroll();
+    }
 
     // 1차 스캔
     this.scanAndFilter();
@@ -32,6 +40,18 @@ class ContentController {
 
     // 메시지 리스너 등록
     this.setupMessageListener();
+  }
+
+  private setupInfiniteScroll(): void {
+    if (!this.adapter) return;
+
+    this.infiniteScroll = new InfiniteScrollManager({
+      adapter: this.adapter,
+      onCardsAppended: () => {
+        this.scanAndFilter();
+      },
+    });
+    this.infiniteScroll.init();
   }
 
   private setupObserver(): void {
@@ -60,7 +80,14 @@ class ContentController {
       }
 
       if (message.type === 'SETTINGS_CHANGED') {
+        this.settings = message.settings;
         this.filterEngine?.updateSettings(message.settings);
+        if (message.settings.enableInfiniteScroll && !this.infiniteScroll && this.adapter?.supportsInfiniteScroll) {
+          this.setupInfiniteScroll();
+        } else if (!message.settings.enableInfiniteScroll && this.infiniteScroll) {
+          this.infiniteScroll.destroy();
+          this.infiniteScroll = null;
+        }
         this.scanAndFilter();
         sendResponse({ success: true });
         return true;
@@ -112,6 +139,12 @@ class ContentController {
     };
 
     this.notifyBadgeUpdate(this.currentStats.totalBlocked);
+
+    // 유효 공고 개수 확인 후 필요 시 다음 페이지 자동 채우기 (Auto-Refill)
+    const visibleCount = elements.length - this.currentStats.totalBlocked;
+    if (this.settings?.enableInfiniteScroll) {
+      this.infiniteScroll?.checkAndAutoRefill(visibleCount);
+    }
   }
 
   private async handleBlockCompany(companyName: string): Promise<void> {

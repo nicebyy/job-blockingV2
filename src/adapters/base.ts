@@ -2,18 +2,35 @@ import { JobCardInfo } from '../types';
 
 export interface SiteAdapter {
   readonly name: string;
+  readonly supportsInfiniteScroll?: boolean;
   matches(url: string): boolean;
-  getJobCardElements(): HTMLElement[];
+  getJobCardElements(container?: Document | HTMLElement): HTMLElement[];
   parseCard(element: HTMLElement): JobCardInfo | null;
   injectInlineButton(cardInfo: JobCardInfo, onBlock: (companyName: string) => void): void;
+  getNextPageUrl?(currentDoc: Document, currentPage: number): string | null;
+  getCardListContainer?(currentDoc: Document): HTMLElement | null;
+  getPaginationElement?(currentDoc: Document): HTMLElement | null;
 }
 
 export abstract class BaseSiteAdapter implements SiteAdapter {
   abstract readonly name: string;
+  readonly supportsInfiniteScroll: boolean = false;
 
   abstract matches(url: string): boolean;
-  abstract getJobCardElements(): HTMLElement[];
+  abstract getJobCardElements(container?: Document | HTMLElement): HTMLElement[];
   abstract parseCard(element: HTMLElement): JobCardInfo | null;
+
+  public getNextPageUrl?(_currentDoc: Document, _currentPage: number): string | null {
+    return null;
+  }
+
+  public getCardListContainer?(_currentDoc: Document): HTMLElement | null {
+    return null;
+  }
+
+  public getPaginationElement?(_currentDoc: Document): HTMLElement | null {
+    return null;
+  }
 
   /**
    * 공고 카드에 [숨기기] 인라인 버튼 삽입

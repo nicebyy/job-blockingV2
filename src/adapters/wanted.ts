@@ -9,9 +9,9 @@ export class WantedAdapter extends BaseSiteAdapter {
     return url.includes(SITE_DOMAINS.WANTED);
   }
 
-  public getJobCardElements(): HTMLElement[] {
+  public getJobCardElements(container: Document | HTMLElement = document): HTMLElement[] {
     const cards = Array.from(
-      document.querySelectorAll<HTMLElement>(WANTED_SELECTORS.JOB_CARDS)
+      container.querySelectorAll<HTMLElement>(WANTED_SELECTORS.JOB_CARDS)
     );
 
     // a태그인 경우 가장 가까운 카드 컨테이너가 있으면 그것을 기준으로 하거나 자기 자신
