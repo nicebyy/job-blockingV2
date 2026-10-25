@@ -156,6 +156,9 @@ class ContentController {
   public scanAndFilter(): void {
     if (!this.adapter || !this.filterEngine) return;
 
+    // AI 검색 배너, 개인 맞춤 추천 공고, 스토어 배너 등 프로모션 섹션 숨김 처리
+    this.adapter.hidePromotionBanners?.();
+
     const elements = this.adapter.getJobCardElements();
     let blockedCompanies = 0;
     let blockedAds = 0;

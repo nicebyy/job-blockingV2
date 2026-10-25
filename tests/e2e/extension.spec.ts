@@ -1,11 +1,12 @@
 import { test, expect } from './fixtures';
+import { UI_MESSAGES } from '../../src/constants';
 
 test.describe('크롬 확장 프로그램 E2E 테스트', () => {
   test('팝업 창(Popup UI)이 정상적으로 렌더링되어야 한다', async ({ page, extensionId }) => {
     await page.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
 
     // 헤더 타이틀 확인
-    await expect(page.locator('h1')).toContainText('잡필터 V2');
+    await expect(page.locator('h1')).toContainText(UI_MESSAGES.POPUP_TITLE);
 
     // 통계 카드 확인
     await expect(page.locator('.stats-card')).toBeVisible();
@@ -26,7 +27,7 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     await page.goto(`chrome-extension://${extensionId}/src/options/index.html`);
 
     // 타이틀 확인
-    await expect(page.locator('h1')).toContainText('차단 목록 관리');
+    await expect(page.locator('h1')).toContainText(UI_MESSAGES.OPTIONS_TITLE);
 
     // 회사 등록
     const testCompany = '테스트블랙기업';

@@ -169,6 +169,53 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.title).toBe('추천 직무 공고');
       expect(info?.jobId).toBe('88888');
     });
+
+    it('hidePromotionBanners 호출 시 AI 검색 배너, 개인 맞춤 추천 공고, 스토어 배너 3종이 모두 display: none 처리되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <!-- 1. AI 검색 유도 배너 -->
+        <div class="area_ai_search">
+          <div class="tit_section">AI로 원하는 채용 정보를 찾아보세요</div>
+          <div class="txt_desc">딱 맞는 채용정보를 빠르고 쉽게!</div>
+        </div>
+
+        <!-- 2. 개인 맞춤 추천 공고 섹션 -->
+        <section class="section_search type_searchup keyword_up_logo_area">
+          <h2 class="tit_section">곽현기님을 위한 공고</h2>
+          <div class="wrap_searchup">추천 슬라이더...</div>
+        </section>
+
+        <!-- 3. 스토어 프로모션 배너 -->
+        <section class="wrap_store">
+          <div id="store_product">막막한 취업·이직 준비는 스토어에서!</div>
+          <a class="txt_link" href="#">스토어 바로가기</a>
+        </section>
+
+        <!-- 일반 정상 채용 공고 (숨겨지지 않아야 함) -->
+        <div class="item_recruit">
+          <div class="corp_name"><a href="#">일반회사</a></div>
+        </div>
+      `;
+
+      adapter.hidePromotionBanners(container);
+
+      const aiBanner = container.querySelector<HTMLElement>('.area_ai_search');
+      const recommendSection = container.querySelector<HTMLElement>('section.keyword_up_logo_area');
+      const storeBanner = container.querySelector<HTMLElement>('section.wrap_store');
+      const normalJob = container.querySelector<HTMLElement>('.item_recruit');
+
+      expect(aiBanner?.style.display).toBe('none');
+      expect(aiBanner?.getAttribute('data-job-filtered')).toBe('true');
+
+      expect(recommendSection?.style.display).toBe('none');
+      expect(recommendSection?.getAttribute('data-job-filtered')).toBe('true');
+
+      expect(storeBanner?.style.display).toBe('none');
+      expect(storeBanner?.getAttribute('data-job-filtered')).toBe('true');
+
+      // 일반 공고는 영향받지 않아야 함
+      expect(normalJob?.style.display).not.toBe('none');
+    });
   });
 
   describe('JobKoreaAdapter DOM 파싱', () => {

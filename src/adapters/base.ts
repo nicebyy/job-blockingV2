@@ -14,6 +14,7 @@ export interface SiteAdapter {
   getNextPageUrl?(currentDoc: Document, currentPage: number): string | null;
   getCardListContainer?(currentDoc: Document): HTMLElement | null;
   getPaginationElement?(currentDoc: Document): HTMLElement | null;
+  hidePromotionBanners?(container?: Document | HTMLElement): void;
 }
 
 export interface BlockActions {
@@ -28,6 +29,10 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   abstract matches(url: string): boolean;
   abstract getJobCardElements(container?: Document | HTMLElement): HTMLElement[];
   abstract parseCard(element: HTMLElement): JobCardInfo | null;
+
+  public hidePromotionBanners?(_container?: Document | HTMLElement): void {
+    // 기본 구현은 no-op (하위 어댑터에서 필요 시 재정의)
+  }
 
   public getNextPageUrl?(_currentDoc: Document, _currentPage: number): string | null {
     return null;
