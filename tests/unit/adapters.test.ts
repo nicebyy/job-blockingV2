@@ -5,6 +5,7 @@ import {
   SaraminAdapter,
   JobKoreaAdapter,
 } from '../../src/adapters';
+import { FilterEngine } from '../../src/core/filter-engine';
 
 describe('Site Adapters 단위 테스트', () => {
   describe('AdapterRegistry', () => {
@@ -133,10 +134,9 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.isAd).toBe(true);
     });
 
-    it('사람인 상세 페이지의 무한스크롤 릴레이 뷰 컨테이너를 올바르게 파싱해야 한다', () => {
-      const relayContainer = document.createElement('div');
-      relayContainer.className = 'wrap_jview';
-      relayContainer.setAttribute('data-rec-idx', 'rec_77777');
+    it('사람인 상세 페이지의 무한스크롤 릴레이 뷰 개별 공고 카드를 올바르게 파싱해야 한다', () => {
+      const relayContainer = document.createElement('section');
+      relayContainer.className = 'jview jview-0-77777';
       relayContainer.innerHTML = `
         <div class="jv_header">
           <a class="company" href="#">B 채용기업</a>
@@ -149,8 +149,42 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info).not.toBeNull();
       expect(info?.companyName).toBe('B 채용기업');
       expect(info?.title).toBe('B 포지션 채용공고');
-      expect(info?.jobId).toBe('rec_77777');
+      expect(info?.jobId).toBe('77777');
       expect(info?.isAd).toBe(false);
+    });
+
+    it('사람인 상세 페이지에서 부모 컨테이너(.wrap_jview)는 카드로 수집되지 않고 내부 개별 .jview 공고들만 정확히 수집되어야 한다', () => {
+      const pageWrapper = document.createElement('div');
+      pageWrapper.innerHTML = `
+        <div class="wrap_jview">
+          <section class="jview jview-0-11111">
+            <div class="jv_header">
+              <span class="company_name">첫번째기업</span>
+              <h1 class="tit_job">첫번째 공고</h1>
+            </div>
+          </section>
+          <section class="jview jview-1-22222">
+            <div class="jv_header">
+              <span class="company_name">두번째기업</span>
+              <h1 class="tit_job">두번째 공고</h1>
+            </div>
+          </section>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(pageWrapper);
+      // 부모인 .wrap_jview는 카드로 잡히지 않고 자식 2개만 반환되어야 함
+      expect(cards.length).toBe(2);
+      expect(cards.some((el) => el.classList.contains('wrap_jview'))).toBe(false);
+
+      const info1 = adapter.parseCard(cards[0]);
+      const info2 = adapter.parseCard(cards[1]);
+
+      expect(info1?.jobId).toBe('11111');
+      expect(info1?.companyName).toBe('첫번째기업');
+
+      expect(info2?.jobId).toBe('22222');
+      expect(info2?.companyName).toBe('두번째기업');
     });
 
     it('사람인 상세 페이지 하단 추천 공고 카드를 올바르게 파싱해야 한다', () => {
@@ -168,6 +202,65 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.companyName).toBe('추천기업B');
       expect(info?.title).toBe('추천 직무 공고');
       expect(info?.jobId).toBe('88888');
+    });
+
+    it('1번 공고를 차단(applyFilter)해도 부모 .wrap_jview는 유지되고 2번 공고는 정상 노출되어야 한다 (빈 페이지 방지)', () => {
+      const pageWrapper = document.createElement('div');
+      pageWrapper.innerHTML = `
+        <div class="wrap_jview">
+          <section class="jview jview-0-11111">
+            <div class="jv_header">
+              <span class="company_name">차단기업</span>
+              <h1 class="tit_job">차단할 첫번째 공고</h1>
+            </div>
+          </section>
+          <section class="jview jview-1-22222">
+            <div class="jv_header">
+              <span class="company_name">통과기업</span>
+              <h1 class="tit_job">보존될 두번째 공고</h1>
+            </div>
+          </section>
+        </div>
+      `;
+
+      const engine = new FilterEngine(
+        {
+          mode: 'hide',
+          blurIntensity: 5,
+          hideAds: false,
+          showInlineButton: true,
+          enableInfiniteScroll: true,
+        },
+        [{ id: '1', pattern: '차단기업', type: 'company', createdAt: Date.now() }]
+      );
+
+      const cards = adapter.getJobCardElements(pageWrapper);
+      expect(cards.length).toBe(2);
+
+      for (const card of cards) {
+        const info = adapter.parseCard(card);
+        if (!info) continue;
+        const result = engine.evaluateJobCard(info);
+        if (result.shouldFilter) {
+          engine.applyFilter(card);
+        }
+      }
+
+      const wrapJview = pageWrapper.querySelector('.wrap_jview') as HTMLElement;
+      const card1 = pageWrapper.querySelector('.jview-0-11111') as HTMLElement;
+      const card2 = pageWrapper.querySelector('.jview-1-22222') as HTMLElement;
+
+      // 핵심 검증: 부모 컨테이너 자체는 필터링되지 않고 멀쩡히 살아있어야 함
+      expect(wrapJview.hasAttribute('data-job-filtered')).toBe(false);
+      expect(wrapJview.style.display).not.toBe('none');
+
+      // 1번 공고만 차단
+      expect(card1.getAttribute('data-job-filtered')).toBe('true');
+      expect(card1.getAttribute('data-filter-mode')).toBe('hide');
+
+      // 2번 공고는 정상 노출 유지
+      expect(card2.hasAttribute('data-job-filtered')).toBe(false);
+      expect(card2.style.display).not.toBe('none');
     });
 
     it('hidePromotionBanners 호출 시 AI 검색 배너, 개인 맞춤 추천 공고, 스토어 배너 3종이 모두 display: none 처리되어야 한다', () => {
