@@ -1,0 +1,50 @@
+/* 채용 공고 카드 필터링 스타일 */
+[data-job-filtered="true"][data-filter-mode="blur"] {
+  position: relative !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+[data-job-filtered="true"][data-filter-mode="blur"]:hover {
+  filter: blur(0px) !important;
+  opacity: 0.95 !important;
+}
+
+[data-job-filtered="true"][data-filter-mode="hide"] {
+  display: none !important;
+}
+
+/* 주입되는 인라인 [차단] 버튼 */
+.job-filter-hide-btn {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  z-index: 99 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  color: #64748b !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-in-out !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.job-filter-hide-btn:hover {
+  color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  transform: scale(1.05) !important;
+}
+
+.job-filter-hide-btn svg {
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
