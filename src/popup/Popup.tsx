@@ -45,6 +45,14 @@ export const Popup: React.FC = () => {
     notifyContentScript({ type: 'SETTINGS_CHANGED', settings: updated });
   };
 
+  const handleToggleInfiniteScroll = async () => {
+    const updated = await StorageManager.saveSettings({
+      enableInfiniteScroll: !settings.enableInfiniteScroll,
+    });
+    setSettings(updated);
+    notifyContentScript({ type: 'SETTINGS_CHANGED', settings: updated });
+  };
+
   const handleAddCompany = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newCompany.trim();
@@ -122,6 +130,18 @@ export const Popup: React.FC = () => {
               type="checkbox"
               checked={settings.hideAds}
               onChange={handleToggleAds}
+            />
+            <span className="slider"></span>
+          </label>
+        </div>
+
+        <div className="toggle-row" style={{ marginTop: '10px' }}>
+          <span className="toggle-label">무한 스크롤 & 자동 채우기</span>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={settings.enableInfiniteScroll}
+              onChange={handleToggleInfiniteScroll}
             />
             <span className="slider"></span>
           </label>

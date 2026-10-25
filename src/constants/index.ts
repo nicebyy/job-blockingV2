@@ -48,10 +48,23 @@ export const WANTED_SELECTORS = {
 } as const;
 
 /**
+ * 무한 스크롤 관련 상수
+ */
+export const INFINITE_SCROLL_CONFIG = {
+  MIN_VISIBLE_CARDS: 5,
+  MAX_CONSECUTIVE_FETCHES: 5,
+  FETCH_DELAY_MS: 300,
+  SENTINEL_ID: 'job-filter-scroll-sentinel',
+  LOADING_INDICATOR_ID: 'job-filter-loading-indicator',
+} as const;
+
+/**
  * 사람인(Saramin) DOM 셀렉터 상수
  */
 export const SARAMIN_SELECTORS = {
   JOB_CARDS: '.item_recruit, .list_item, div[class*="BoxAd_wrap"], .recruit_list .row',
+  LIST_CONTAINER: '#recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
+  PAGINATION: '.pagination, .page_box',
   COMPANY_NAME: '.area_corp .corp_name a, .corp_name, a[class*="company"], .company_name',
   POSITION_TITLE: '.area_job .job_tit a, .job_tit a, .job_tit, .area_job .job_tit',
   AD_BADGE: '.badge_plus, .badge_recommend, .tag_ad, .ad_tag',
@@ -63,6 +76,8 @@ export const SARAMIN_SELECTORS = {
  */
 export const JOBKOREA_SELECTORS = {
   JOB_CARDS: '.list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
+  LIST_CONTAINER: '.lists-cnt, .lists-wrap, .list-default',
+  PAGINATION: '.tplPagination, .page-box, .pagination',
   COMPANY_NAME: '.post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
   POSITION_TITLE: '.post-list-info a.title, .title a, a.tit, .post-title',
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',

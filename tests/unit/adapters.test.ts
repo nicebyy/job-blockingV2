@@ -113,5 +113,27 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.jobId).toBe('gno_8888');
       expect(info?.isAd).toBe(false);
     });
+
+    it('사람인 및 잡코리아는 supportsInfiniteScroll이 true여야 한다', () => {
+      const saramin = new SaraminAdapter();
+      expect(saramin.supportsInfiniteScroll).toBe(true);
+      expect(adapter.supportsInfiniteScroll).toBe(true);
+
+      const wanted = new WantedAdapter();
+      expect(wanted.supportsInfiniteScroll).toBe(false);
+    });
+
+    it('사람인 어댑터는 페이지네이션 링크에서 다음 페이지 URL을 추출할 수 있어야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div class="pagination">
+          <a href="https://www.saramin.co.kr/zf_user/search?page=3" page="3">3</a>
+        </div>
+      `;
+
+      const nextUrl = saramin.getNextPageUrl(doc, 2);
+      expect(nextUrl).toContain('page=3');
+    });
   });
 });
