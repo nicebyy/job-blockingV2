@@ -1,4 +1,5 @@
 import { JobCardInfo } from '../types';
+import { INLINE_BUTTON_CONFIG } from '../constants';
 
 export interface SiteAdapter {
   readonly name: string;
@@ -49,7 +50,10 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   ): void {
     if (!cardInfo.cardElement || !cardInfo.companyName) return;
 
-    if (cardInfo.cardElement.querySelector('.job-filter-btn-group')) {
+    // 호버 시 노출을 위한 호스트 클래스 부여
+    cardInfo.cardElement.classList.add(INLINE_BUTTON_CONFIG.CLASSES.CARD_HOST);
+
+    if (cardInfo.cardElement.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)) {
       return;
     }
 
@@ -57,20 +61,20 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
     const onBlockJob = typeof actions === 'object' ? actions.onBlockJob : undefined;
 
     const group = document.createElement('div');
-    group.className = 'job-filter-btn-group';
+    group.className = INLINE_BUTTON_CONFIG.CLASSES.CONTAINER;
 
     // 1. [이 공고만 숨기기] 버튼 (jobId 또는 공고 제목 단위)
     if (onBlockJob) {
       const hideJobBtn = document.createElement('button');
-      hideJobBtn.className = 'job-filter-hide-btn job-filter-btn-job';
+      hideJobBtn.className = `${INLINE_BUTTON_CONFIG.CLASSES.BUTTON} ${INLINE_BUTTON_CONFIG.CLASSES.JOB_BUTTON}`;
       hideJobBtn.type = 'button';
-      hideJobBtn.title = '이 특정 공고만 숨기기 (같은 회사의 다른 공고는 유지)';
+      hideJobBtn.title = INLINE_BUTTON_CONFIG.TOOLTIPS.HIDE_JOB;
       hideJobBtn.innerHTML = `
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="${INLINE_BUTTON_CONFIG.CLASSES.ICON}" width="${INLINE_BUTTON_CONFIG.ICONS.SIZE}" height="${INLINE_BUTTON_CONFIG.ICONS.SIZE}" viewBox="${INLINE_BUTTON_CONFIG.ICONS.VIEW_BOX}" fill="none" stroke="currentColor" stroke-width="${INLINE_BUTTON_CONFIG.ICONS.STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
-        <span>공고숨김</span>
+        <span class="${INLINE_BUTTON_CONFIG.CLASSES.TEXT}">${INLINE_BUTTON_CONFIG.LABELS.HIDE_JOB}</span>
       `;
       hideJobBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -78,19 +82,24 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
         onBlockJob(cardInfo);
       });
       group.appendChild(hideJobBtn);
+
+      // 버튼 사이 구분 디바이더
+      const divider = document.createElement('span');
+      divider.className = INLINE_BUTTON_CONFIG.CLASSES.DIVIDER;
+      group.appendChild(divider);
     }
 
     // 2. [회사 전체 차단] 버튼
     const blockCompanyBtn = document.createElement('button');
-    blockCompanyBtn.className = 'job-filter-hide-btn job-filter-btn-company';
+    blockCompanyBtn.className = `${INLINE_BUTTON_CONFIG.CLASSES.BUTTON} ${INLINE_BUTTON_CONFIG.CLASSES.COMPANY_BUTTON}`;
     blockCompanyBtn.type = 'button';
-    blockCompanyBtn.title = `'${cardInfo.companyName}' 기업의 모든 공고 영구 차단`;
+    blockCompanyBtn.title = INLINE_BUTTON_CONFIG.TOOLTIPS.BLOCK_COMPANY(cardInfo.companyName);
     blockCompanyBtn.innerHTML = `
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="${INLINE_BUTTON_CONFIG.CLASSES.ICON}" width="${INLINE_BUTTON_CONFIG.ICONS.SIZE}" height="${INLINE_BUTTON_CONFIG.ICONS.SIZE}" viewBox="${INLINE_BUTTON_CONFIG.ICONS.VIEW_BOX}" fill="none" stroke="currentColor" stroke-width="${INLINE_BUTTON_CONFIG.ICONS.STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
         <line x1="1" y1="1" x2="23" y2="23"></line>
       </svg>
-      <span>회사차단</span>
+      <span class="${INLINE_BUTTON_CONFIG.CLASSES.TEXT}">${INLINE_BUTTON_CONFIG.LABELS.BLOCK_COMPANY}</span>
     `;
     blockCompanyBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -99,8 +108,10 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
     });
     group.appendChild(blockCompanyBtn);
 
-    cardInfo.cardElement.style.position =
-      cardInfo.cardElement.style.position === 'absolute' ? 'absolute' : 'relative';
+    if (!cardInfo.cardElement.style.position || cardInfo.cardElement.style.position === 'static') {
+      cardInfo.cardElement.style.position = 'relative';
+    }
     cardInfo.cardElement.appendChild(group);
   }
 }
+

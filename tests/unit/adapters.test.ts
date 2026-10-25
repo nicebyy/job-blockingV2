@@ -56,7 +56,7 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.isAd).toBe(true);
     });
 
-    it('공고 카드에 [공고숨김] 및 [회사차단] 듀얼 버튼을 주입해야 한다', () => {
+    it('공고 카드에 [공고숨김] 및 [회사차단] 듀얼 버튼 및 디바이더, 호스트 클래스를 주입해야 한다', () => {
       const card = document.createElement('div');
       const cardInfo = {
         cardElement: card,
@@ -70,14 +70,25 @@ describe('Site Adapters 단위 테스트', () => {
 
       adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
 
+      // 1. 호버 리빌을 위한 호스트 클래스 확인
+      expect(card.classList.contains('job-filter-card-host')).toBe(true);
+
+      // 2. 버튼 캡슐 그룹 및 디바이더 확인
       const btnGroup = card.querySelector('.job-filter-btn-group');
       expect(btnGroup).not.toBeNull();
 
+      const divider = card.querySelector('.job-filter-btn-divider');
+      expect(divider).not.toBeNull();
+
+      // 3. 버튼 요소 및 툴팁 확인
       const jobBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-job');
       const companyBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-company');
       expect(jobBtn).not.toBeNull();
       expect(companyBtn).not.toBeNull();
+      expect(jobBtn?.title).toContain('공고만 숨기기');
+      expect(companyBtn?.title).toContain('원티드랩');
 
+      // 4. 클릭 이벤트 동작 검증
       jobBtn?.click();
       expect(onBlockJob).toHaveBeenCalledWith(cardInfo);
 

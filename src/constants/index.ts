@@ -112,3 +112,33 @@ export const UI_MESSAGES = {
   EMPTY_SEARCH_RESULT: '검색 결과가 없습니다.',
   EMPTY_BLOCK_LIST: '등록된 차단 항목이 없습니다.',
 } as const;
+
+/**
+ * 공고 카드 내 인라인 액션 버튼(공고숨김 / 회사차단) UI 및 스타일 설정 상수
+ */
+export const INLINE_BUTTON_CONFIG = {
+  CLASSES: {
+    CARD_HOST: 'job-filter-card-host',
+    CONTAINER: 'job-filter-btn-group',
+    BUTTON: 'job-filter-hide-btn',
+    JOB_BUTTON: 'job-filter-btn-job',
+    COMPANY_BUTTON: 'job-filter-btn-company',
+    DIVIDER: 'job-filter-btn-divider',
+    ICON: 'job-filter-btn-icon',
+    TEXT: 'job-filter-btn-text',
+  },
+  LABELS: {
+    HIDE_JOB: '공고숨김',
+    BLOCK_COMPANY: '회사차단',
+  },
+  TOOLTIPS: {
+    HIDE_JOB: '이 공고만 숨기기 (동일 회사의 다른 공고는 유지)',
+    BLOCK_COMPANY: (companyName: string) => `'${companyName}' 기업의 모든 공고 영구 차단`,
+  },
+  ICONS: {
+    SIZE: 11,
+    STROKE_WIDTH: 2,
+    VIEW_BOX: '0 0 24 24',
+  },
+} as const;
+
