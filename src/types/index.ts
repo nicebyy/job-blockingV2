@@ -4,19 +4,21 @@
 export type FilterMode = 'blur' | 'hide';
 
 /**
- * 차단 대상 유형
+ * 차단 대상 유형: 회사, 키워드, 단일 공고
  */
-export type BlockType = 'company' | 'keyword';
+export type BlockType = 'company' | 'keyword' | 'job';
 
 /**
  * 차단 항목 인터페이스
  */
 export interface BlockItem {
   id: string;
-  pattern: string; // 회사명 또는 키워드
+  pattern: string; // 회사명, 키워드 또는 jobId
   type: BlockType;
   createdAt: number;
   memo?: string;
+  title?: string; // 공고 단위 차단 시 제목
+  companyName?: string; // 공고 단위 차단 시 회사명
 }
 
 /**

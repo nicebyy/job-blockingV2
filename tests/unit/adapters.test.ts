@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   AdapterRegistry,
   WantedAdapter,
@@ -54,6 +54,35 @@ describe('Site Adapters 단위 테스트', () => {
 
       const info = adapter.parseCard(card);
       expect(info?.isAd).toBe(true);
+    });
+
+    it('공고 카드에 [공고숨김] 및 [회사차단] 듀얼 버튼을 주입해야 한다', () => {
+      const card = document.createElement('div');
+      const cardInfo = {
+        cardElement: card,
+        companyName: '원티드랩',
+        title: '프로덕트 디자이너',
+        isAd: false,
+      };
+
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      const btnGroup = card.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+
+      const jobBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-job');
+      const companyBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-company');
+      expect(jobBtn).not.toBeNull();
+      expect(companyBtn).not.toBeNull();
+
+      jobBtn?.click();
+      expect(onBlockJob).toHaveBeenCalledWith(cardInfo);
+
+      companyBtn?.click();
+      expect(onBlockCompany).toHaveBeenCalledWith('원티드랩');
     });
   });
 

@@ -46,7 +46,24 @@ export class FilterEngine {
 
     // 2. 차단 목록 매칭 체크
     for (const item of this.blockList) {
-      if (item.type === 'company') {
+      if (item.type === 'job') {
+        const isJobIdMatch = Boolean(cardInfo.jobId && item.pattern === cardInfo.jobId);
+        const isTitleAndCompanyMatch = Boolean(
+          item.title &&
+          item.companyName &&
+          item.title.trim().toLowerCase() === cardInfo.title.trim().toLowerCase() &&
+          this.normalizeCompanyName(item.companyName) === normalizedCompany
+        );
+
+        if (isJobIdMatch || isTitleAndCompanyMatch) {
+          return {
+            shouldFilter: true,
+            matchedItem: item,
+            isAdFilter: false,
+            reason: `숨긴 공고: ${item.title || cardInfo.title}`,
+          };
+        }
+      } else if (item.type === 'company') {
         const normalizedPattern = this.normalizeCompanyName(item.pattern);
         if (
           normalizedCompany.length > 0 &&

@@ -50,4 +50,20 @@ describe('StorageManager 단위 테스트', () => {
     list = await StorageManager.getBlockList();
     expect(list.length).toBe(0);
   });
+
+  it('특정 공고(job) 차단 항목을 메타데이터와 함께 저장할 수 있어야 한다', async () => {
+    const item = await StorageManager.addBlockItem('rec_12345', 'job', {
+      title: '프론트엔드 개발자',
+      companyName: '토스',
+    });
+
+    expect(item.type).toBe('job');
+    expect(item.pattern).toBe('rec_12345');
+    expect(item.title).toBe('프론트엔드 개발자');
+    expect(item.companyName).toBe('토스');
+
+    const list = await StorageManager.getBlockList();
+    expect(list.length).toBe(1);
+    expect(list[0].title).toBe('프론트엔드 개발자');
+  });
 });

@@ -1,4 +1,4 @@
-import { BlockItem, DEFAULT_SETTINGS, FilterSettings } from '../types';
+import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings } from '../types';
 import { STORAGE_KEYS } from '../constants';
 
 export class StorageManager {
@@ -93,12 +93,12 @@ export class StorageManager {
   }
 
   /**
-   * 단일 차단 항목 추가
+   * 단일 차단 항목 추가 (회사, 키워드, 또는 특정 공고)
    */
   public static async addBlockItem(
     pattern: string,
-    type: 'company' | 'keyword',
-    memo?: string
+    type: BlockType,
+    metadata?: { memo?: string; title?: string; companyName?: string }
   ): Promise<BlockItem> {
     const list = await this.getBlockList();
     const cleanPattern = pattern.trim();
@@ -116,7 +116,9 @@ export class StorageManager {
       pattern: cleanPattern,
       type,
       createdAt: Date.now(),
-      memo,
+      memo: metadata?.memo,
+      title: metadata?.title,
+      companyName: metadata?.companyName,
     };
 
     list.push(newItem);

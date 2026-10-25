@@ -94,6 +94,43 @@ describe('FilterEngine 단위 테스트', () => {
       const result = engine.evaluateJobCard(dummyCard);
       expect(result.shouldFilter).toBe(false);
     });
+
+    it('특정 공고(jobId)만 차단했을 때 동일 회사의 다른 공고는 숨겨지지 않아야 한다', () => {
+      const blockList: BlockItem[] = [
+        {
+          id: 'job_1',
+          pattern: 'rec_101',
+          type: 'job',
+          createdAt: Date.now(),
+          title: '카카오 프론트엔드 개발자',
+          companyName: '카카오',
+        },
+      ];
+      engine.updateBlockList(blockList);
+
+      // 1. 차단 대상 공고
+      const blockedJob: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '카카오',
+        title: '카카오 프론트엔드 개발자',
+        jobId: 'rec_101',
+        isAd: false,
+      };
+      const resultBlocked = engine.evaluateJobCard(blockedJob);
+      expect(resultBlocked.shouldFilter).toBe(true);
+      expect(resultBlocked.matchedItem?.type).toBe('job');
+
+      // 2. 같은 회사의 다른 공고는 정상적으로 노출되어야 함!
+      const otherJobSameCompany: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '카카오',
+        title: '카카오 백엔드 개발자',
+        jobId: 'rec_102',
+        isAd: false,
+      };
+      const resultOther = engine.evaluateJobCard(otherJobSameCompany);
+      expect(resultOther.shouldFilter).toBe(false);
+    });
   });
 
   describe('DOM 필터 스타일 적용 및 제거', () => {

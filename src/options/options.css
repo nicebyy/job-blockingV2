@@ -138,6 +138,11 @@ body {
   color: #92400e;
 }
 
+.badge-job {
+  background-color: #fce7f3;
+  color: #9d174d;
+}
+
 .btn-delete {
   background: none;
   border: none;
