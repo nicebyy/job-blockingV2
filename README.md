@@ -18,6 +18,8 @@
 ```
 src/
 ├── manifest.json              # Chrome Manifest V3 설정
+├── constants/                 # 설정값, DOM 셀렉터, 뱃지, UI 메시지 중앙 집중 상수
+│   └── index.ts
 ├── types/                     # 공통 데이터 모델 및 메시지 프로토콜
 │   └── index.ts
 ├── core/                      # 순수 비즈니스 로직

@@ -1,4 +1,5 @@
 import { ExtensionMessage } from '../types';
+import { BADGE_CONFIG } from '../constants';
 
 /**
  * Background Service Worker
@@ -14,10 +15,15 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
     const tabId = sender.tab?.id;
     if (tabId !== undefined) {
       const count = message.count;
-      const text = count > 0 ? (count > 99 ? '99+' : String(count)) : '';
+      const text =
+        count > 0
+          ? count > BADGE_CONFIG.MAX_DISPLAY_COUNT
+            ? BADGE_CONFIG.OVERFLOW_TEXT
+            : String(count)
+          : '';
 
       chrome.action.setBadgeText({ tabId, text });
-      chrome.action.setBadgeBackgroundColor({ tabId, color: '#ef4444' }); // 세련된 레드 뱃지
+      chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_CONFIG.COLOR });
     }
     sendResponse({ success: true });
     return true;
