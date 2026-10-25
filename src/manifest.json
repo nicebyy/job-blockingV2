@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "잡필터 V2 - 채용 사이트 공고 필터링",
+  "version": "0.1.0",
+  "description": "원티드, 사람인, 잡코리아 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.wanted.co.kr/*",
+    "https://*.saramin.co.kr/*",
+    "https://*.jobkorea.co.kr/*"
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html"
+  },
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.wanted.co.kr/*",
+        "https://*.saramin.co.kr/*",
+        "https://*.jobkorea.co.kr/*"
+      ],
+      "js": ["src/content/index.ts"],
+      "css": ["src/content/style.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "src/options/index.html",
+    "open_in_tab": true
+  }
+}
