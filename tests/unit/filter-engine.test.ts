@@ -161,4 +161,109 @@ describe('FilterEngine 단위 테스트', () => {
       expect(el.hasAttribute('data-job-filtered')).toBe(false);
     });
   });
+
+  describe('사람인 상세페이지 릴레이 뷰 무한스크롤 필터링 시나리오', () => {
+    it('A 상세페이지에서 스크롤 중 B 릴레이 공고(jobId)를 차단한 후, 다른 C 상세페이지에서 B 공고가 로드되면 자동 필터링되어야 한다', () => {
+      // 1. 초기 상태: 사용자가 A 공고 상세페이지 열람
+      const jobA: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'A회사',
+        title: 'A회사 시니어 프론트엔드',
+        jobId: 'rec_aaa_111',
+        isAd: false,
+      };
+      expect(engine.evaluateJobCard(jobA).shouldFilter).toBe(false);
+
+      // 2. A 상세페이지 아래로 스크롤하여 B 공고(릴레이 뷰) 노출됨
+      const jobBInPageA: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'B회사',
+        title: 'B회사 백엔드 개발자',
+        jobId: 'rec_bbb_222',
+        isAd: false,
+      };
+      expect(engine.evaluateJobCard(jobBInPageA).shouldFilter).toBe(false);
+
+      // 3. 사용자가 B 공고에 대해 [공고숨김] 클릭 -> 차단 목록에 등록
+      const blockItemB: BlockItem = {
+        id: 'block_b_222',
+        pattern: 'rec_bbb_222',
+        type: 'job',
+        title: 'B회사 백엔드 개발자',
+        companyName: 'B회사',
+        createdAt: Date.now(),
+      };
+      engine.updateBlockList([blockItemB]);
+
+      // 4. 이제 B 공고는 숨김 판정됨
+      const evalB = engine.evaluateJobCard(jobBInPageA);
+      expect(evalB.shouldFilter).toBe(true);
+      expect(evalB.matchedItem?.type).toBe('job');
+      expect(evalB.matchedItem?.pattern).toBe('rec_bbb_222');
+
+      // 5. 사용자가 다른 C 회사 상세페이지로 이동
+      const jobC: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'C회사',
+        title: 'C회사 풀스택 개발자',
+        jobId: 'rec_ccc_333',
+        isAd: false,
+      };
+      expect(engine.evaluateJobCard(jobC).shouldFilter).toBe(false);
+
+      // 6. C 상세페이지에서 무한스크롤 도중 과거 차단했던 B 공고가 릴레이 뷰나 추천 공고로 다시 로드됨
+      const jobBInPageC: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'B회사',
+        title: 'B회사 백엔드 개발자',
+        jobId: 'rec_bbb_222',
+        isAd: false,
+      };
+      const evalBInPageC = engine.evaluateJobCard(jobBInPageC);
+      // 이전에 차단했던 B 공고이므로 다른 상세페이지에서도 즉시 자동 필터링(숨김)되어야 함!
+      expect(evalBInPageC.shouldFilter).toBe(true);
+      expect(evalBInPageC.matchedItem?.pattern).toBe('rec_bbb_222');
+
+      // 7. B회사의 또 다른 신규 공고 D는 회사 차단이 아니므로 정상 노출되어야 함
+      const jobDInPageC: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'B회사',
+        title: 'B회사 인공지능 엔지니어',
+        jobId: 'rec_bbb_999',
+        isAd: false,
+      };
+      expect(engine.evaluateJobCard(jobDInPageC).shouldFilter).toBe(false);
+    });
+
+    it('A 상세페이지에서 B 회사를 [회사차단]한 경우, C 상세페이지에서 B 회사의 모든 릴레이 공고가 자동 필터링되어야 한다', () => {
+      // B 회사 전체 차단 등록
+      const blockCompanyB: BlockItem = {
+        id: 'block_corp_b',
+        pattern: 'B회사',
+        type: 'company',
+        createdAt: Date.now(),
+      };
+      engine.updateBlockList([blockCompanyB]);
+
+      // C 상세페이지에서 B 회사의 공고들이 릴레이 뷰로 로드될 때
+      const jobB1: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '(주)B회사',
+        title: 'B회사 데이터 분석가',
+        jobId: 'rec_b_1',
+        isAd: false,
+      };
+      const jobB2: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: 'B회사',
+        title: 'B회사 DevOps 엔지니어',
+        jobId: 'rec_b_2',
+        isAd: false,
+      };
+
+      expect(engine.evaluateJobCard(jobB1).shouldFilter).toBe(true);
+      expect(engine.evaluateJobCard(jobB2).shouldFilter).toBe(true);
+    });
+  });
 });
+

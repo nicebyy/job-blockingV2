@@ -121,6 +121,43 @@ describe('Site Adapters 단위 테스트', () => {
       const info = adapter.parseCard(card);
       expect(info?.isAd).toBe(true);
     });
+
+    it('사람인 상세 페이지의 무한스크롤 릴레이 뷰 컨테이너를 올바르게 파싱해야 한다', () => {
+      const relayContainer = document.createElement('div');
+      relayContainer.className = 'wrap_jview';
+      relayContainer.setAttribute('data-rec-idx', 'rec_77777');
+      relayContainer.innerHTML = `
+        <div class="jv_header">
+          <a class="company" href="#">B 채용기업</a>
+          <h1 class="tit_job">B 포지션 채용공고</h1>
+        </div>
+        <div class="jv_cont">상세 본문 내용...</div>
+      `;
+
+      const info = adapter.parseCard(relayContainer);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('B 채용기업');
+      expect(info?.title).toBe('B 포지션 채용공고');
+      expect(info?.jobId).toBe('rec_77777');
+      expect(info?.isAd).toBe(false);
+    });
+
+    it('사람인 상세 페이지 하단 추천 공고 카드를 올바르게 파싱해야 한다', () => {
+      const card = document.createElement('li');
+      card.className = 'item_recommend';
+      card.innerHTML = `
+        <a href="/zf_user/jobs/relay/view?rec_idx=88888">
+          <span class="corp_name">추천기업B</span>
+          <strong class="job_tit">추천 직무 공고</strong>
+        </a>
+      `;
+
+      const info = adapter.parseCard(card);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('추천기업B');
+      expect(info?.title).toBe('추천 직무 공고');
+      expect(info?.jobId).toBe('88888');
+    });
   });
 
   describe('JobKoreaAdapter DOM 파싱', () => {

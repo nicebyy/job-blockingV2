@@ -69,6 +69,12 @@ export const SARAMIN_SELECTORS = {
   POSITION_TITLE: '.area_job .job_tit a, .job_tit a, .job_tit, .area_job .job_tit',
   AD_BADGE: '.badge_plus, .badge_recommend, .tag_ad, .ad_tag',
   AD_CLASS: 'plus_ad',
+  // 상세 페이지 및 하단 무한 스크롤(릴레이 뷰/추천 공고) 셀렉터
+  DETAIL_RELAY_CONTAINERS: '.wrap_jview, .wrap_jv_cont, div[id^="jview_"], .jview_box, section[class*="jview"]',
+  DETAIL_RECOMMEND_CARDS: '.item_recommend, .recommend_sec .list_item, .box_recommend li, .relate_job li, [class*="recommend_job"] li',
+  DETAIL_COMPANY_NAME: '.jv_header .company_name, .jv_header a.company, .wrap_jv_header .corp_name, .company_info .name, .company_name, .corp_name',
+  DETAIL_POSITION_TITLE: '.jv_header .tit_job, .jv_header h1, h1.tit_job, .wrap_jv_header .tit_job, .job_tit, .tit',
+  DETAIL_HEADER: '.jv_header, .wrap_jv_header, .header_jv, .view_header',
 } as const;
 
 /**

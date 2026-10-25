@@ -11,9 +11,18 @@ export class SaraminAdapter extends BaseSiteAdapter {
   }
 
   public getJobCardElements(container: Document | HTMLElement = document): HTMLElement[] {
-    return Array.from(
+    const listCards = Array.from(
       container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.JOB_CARDS)
     );
+    const detailRelayViews = Array.from(
+      container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.DETAIL_RELAY_CONTAINERS)
+    );
+    const recommendCards = Array.from(
+      container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.DETAIL_RECOMMEND_CARDS)
+    );
+
+    const all = new Set([...listCards, ...detailRelayViews, ...recommendCards]);
+    return Array.from(all);
   }
 
   public override getCardListContainer(doc: Document = document): HTMLElement | null {
@@ -52,11 +61,15 @@ export class SaraminAdapter extends BaseSiteAdapter {
   }
 
   public parseCard(element: HTMLElement): JobCardInfo | null {
-    // 1. 회사명 추출
-    const companyEl = element.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME);
+    // 1. 회사명 추출 (상세 헤더 또는 일반 카드)
+    const companyEl =
+      element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME) ||
+      element.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME);
 
     // 2. 공고 제목 추출
-    const titleEl = element.querySelector<HTMLElement>(SARAMIN_SELECTORS.POSITION_TITLE);
+    const titleEl =
+      element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_POSITION_TITLE) ||
+      element.querySelector<HTMLElement>(SARAMIN_SELECTORS.POSITION_TITLE);
 
     const companyName = companyEl?.textContent?.trim() || '';
     const title = titleEl?.textContent?.trim() || '';
@@ -72,8 +85,27 @@ export class SaraminAdapter extends BaseSiteAdapter {
       element.getAttribute('data-is-ad') === 'true'
     );
 
-    // 4. Job ID 추출
-    const recruitId = element.getAttribute('value') || element.getAttribute('data-rec-idx');
+    // 4. Job ID 추출 (data-rec-idx, data-rec_idx, id regex, a[href*="rec_idx="], URL fallback)
+    let recruitId =
+      element.getAttribute('data-rec-idx') ||
+      element.getAttribute('data-rec_idx') ||
+      element.getAttribute('value');
+
+    if (!recruitId && element.id) {
+      const match = element.id.match(/\d+/);
+      if (match) recruitId = match[0];
+    }
+
+    if (!recruitId) {
+      const link = element.querySelector<HTMLAnchorElement>('a[href*="rec_idx="]');
+      const match = link?.href?.match(/rec_idx=(\d+)/);
+      if (match) recruitId = match[1];
+    }
+
+    if (!recruitId && typeof window !== 'undefined' && window.location.href.includes('rec_idx=')) {
+      const match = window.location.href.match(/rec_idx=(\d+)/);
+      if (match) recruitId = match[1];
+    }
 
     return {
       cardElement: element,
@@ -82,5 +114,18 @@ export class SaraminAdapter extends BaseSiteAdapter {
       isAd,
       jobId: recruitId || undefined,
     };
+  }
+
+  public override injectInlineButton(
+    cardInfo: JobCardInfo,
+    actions: import('./base').BlockActions | ((companyName: string) => void)
+  ): void {
+    const header = cardInfo.cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_HEADER);
+    if (header && !cardInfo.cardElement.querySelector('.job-filter-btn-group')) {
+      header.style.position = 'relative';
+      super.injectInlineButton({ ...cardInfo, cardElement: header }, actions);
+      return;
+    }
+    super.injectInlineButton(cardInfo, actions);
   }
 }
