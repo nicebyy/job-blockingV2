@@ -87,7 +87,10 @@ export const Popup: React.FC = () => {
   return (
     <div className="popup-container">
       <div className="header">
-        <h1>🔍 잡필터 V2</h1>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <img src="/icons/icon-32.png" alt="Logo" style={{ width: '22px', height: '22px' }} />
+          {UI_MESSAGES.POPUP_TITLE}
+        </h1>
         <button className="options-btn" onClick={openOptionsPage} title="상세 설정">
           ⚙️
         </button>

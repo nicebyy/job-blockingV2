@@ -70,7 +70,10 @@ export const Options: React.FC = () => {
     <div className="options-container">
       <div className="options-card">
         <div className="options-header">
-          <h1>🛡️ 잡필터 V2 - 차단 목록 관리</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <img src="/icons/icon-48.png" alt="Logo" style={{ width: '28px', height: '28px' }} />
+            {UI_MESSAGES.OPTIONS_TITLE}
+          </h1>
           <span style={{ color: '#64748b' }}>총 {blockList.length}개 차단 중</span>
         </div>
 
