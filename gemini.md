@@ -126,4 +126,27 @@ git worktree prune   # 잔여 메타데이터 정리
 4. **외부 엔드포인트 및 동적 설정 분리**:
    - 원격 룰셋 URL, 외부 연동 API 주소 등 환경에 따라 달라지거나 변경될 여지가 있는 값은 설정 파일 또는 환경 변수를 통해 주입받도록 구성합니다.
 
+---
+
+## 7. 외부 사이트 데이터 수집 및 네트워크 요청 안전 규칙 (Network & Scraping Safety Policy)
+
+Windows PowerShell 5.1의 `Invoke-WebRequest`는 기본적으로 구형 Internet Explorer 엔진(`mshtml`)을 초기화하여 DOM을 파싱하므로, 대용량 페이지(사람인, 잡코리아 등) 분석 시 헤드리스 환경에서 프로세스가 무한 대기(Hang / Lock) 상태에 빠집니다. 또한 채용 포털의 WAF 및 봇 방어벽에 의해 타임아웃 없는 연결 지연이 발생할 수 있습니다.
+
+### 필수 준수 사항
+1. **PowerShell `Invoke-WebRequest` 직접 단독 사용 금지**:
+   - `powershell -Command "Invoke-WebRequest ..."` 형태의 호출은 mshtml DOM 파싱 행잉, `$ProgressPreference` 속도 저하, Alias 충돌 문제를 유발하므로 금지합니다.
+2. **프로젝트 표준 샘플 수집 스크립트 사용**:
+   - 외부 사이트 HTML 샘플 수집 시에는 Node.js 18+ Web Fetch 기반의 공식 스크립트를 사용합니다:
+     ```bash
+     npm run fetch:sample -- "<URL>" [저장경로] [타임아웃(초)]
+     ```
+   - 기본 10초 타임아웃(`AbortSignal.timeout`) 및 실 브라우저 헤더가 자동 적용되어 락 발생 없이 안전하게 다운로드됩니다.
+3. **PowerShell / 셸 직접 실행 시 대체 수단**:
+   - 셸에서 직접 다운로드가 필요한 경우 Windows 내장 `curl.exe`를 타임아웃 플래그와 함께 사용합니다:
+     ```bash
+     curl.exe -s -L --max-time 10 -A "Mozilla/5.0..." -H "Accept: text/html..." -o output.html "<URL>"
+     ```
+   - 또는 프로젝트 루트의 `scripts/fetch-sample.ps1`을 호출합니다.
+
+
 

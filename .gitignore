@@ -28,3 +28,8 @@ pnpm-debug.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Samples & Scraped Data
+*_sample.html
+sample_*.html
+
