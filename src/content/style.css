@@ -57,7 +57,8 @@ section[aria-label="추천공고"],
 .item_recruit:hover .job-filter-btn-group,
 [data-cy="job-card"]:hover .job-filter-btn-group,
 .list-post:hover .job-filter-btn-group,
-.wrap_jview:hover .job-filter-btn-group,
+.jview:hover .job-filter-btn-group,
+.wrap_jview .jview:hover .job-filter-btn-group,
 .job-filter-btn-group:hover,
 .job-filter-btn-group:focus-within {
   opacity: 1 !important;

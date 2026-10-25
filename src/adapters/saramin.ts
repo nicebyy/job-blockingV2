@@ -17,7 +17,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
     );
     const detailRelayViews = Array.from(
       container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.DETAIL_RELAY_CONTAINERS)
-    );
+    ).filter((el) => !el.classList.contains('wrap_jview')); // 부모 래퍼 컨테이너 제외 가드
     const recommendCards = Array.from(
       container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.DETAIL_RECOMMEND_CARDS)
     );
@@ -98,11 +98,23 @@ export class SaraminAdapter extends BaseSiteAdapter {
       element.getAttribute('data-is-ad') === 'true'
     );
 
-    // 4. Job ID 추출 (data-rec-idx, data-rec_idx, id regex, a[href*="rec_idx="], URL fallback)
+    // 4. Job ID 추출 (data-rec-idx, data-rec_idx, className regex, id regex, 내부 버튼, 링크, URL fallback)
     let recruitId =
       element.getAttribute('data-rec-idx') ||
       element.getAttribute('data-rec_idx') ||
       element.getAttribute('value');
+
+    // 릴레이 뷰 공고 컨테이너 클래스 매칭 (예: jview jview-0-55351925)
+    if (!recruitId && element.className) {
+      const classMatch = element.className.match(/jview-\d+-(\d+)/);
+      if (classMatch) recruitId = classMatch[1];
+    }
+
+    // 내부 버튼 속성 확인 (스크랩/지원 버튼에 붙은 rec_idx)
+    if (!recruitId) {
+      const btn = element.querySelector<HTMLElement>('[rec_idx], [data-rec-idx]');
+      recruitId = btn?.getAttribute('rec_idx') || btn?.getAttribute('data-rec-idx') || null;
+    }
 
     if (!recruitId && element.id) {
       const match = element.id.match(/\d+/);
@@ -115,6 +127,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
       if (match) recruitId = match[1];
     }
 
+    // URL fallback (릴레이 뷰의 개별 공고는 각자 고유 ID가 있으므로 URL fallback은 일반 상세 뷰일 때만 사용)
     if (!recruitId && typeof window !== 'undefined' && window.location.href.includes('rec_idx=')) {
       const match = window.location.href.match(/rec_idx=(\d+)/);
       if (match) recruitId = match[1];
