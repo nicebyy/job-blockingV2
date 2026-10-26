@@ -119,6 +119,16 @@ export interface FilterStats {
 }
 
 /**
+ * 전체 누적 차단 목록 통계
+ */
+export interface TotalBlockStats {
+  total: number;
+  companies: number;
+  jobs: number;
+  keywords: number;
+}
+
+/**
  * Background-Content-Popup 간 메시지 프로토콜
  */
 export type ExtensionMessage =

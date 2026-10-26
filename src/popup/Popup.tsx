@@ -1,36 +1,101 @@
 import React, { useEffect, useState } from 'react';
-import { FilterSettings, DEFAULT_SETTINGS, FilterStats } from '../types';
+import { FilterSettings, DEFAULT_SETTINGS, FilterStats, TotalBlockStats } from '../types';
 import { StorageManager } from '../core/storage';
-import { FILTER_CONFIG, UI_MESSAGES } from '../constants';
+import { FILTER_CONFIG, UI_MESSAGES, POPUP_STATS_CONFIG, PopupStatsMode } from '../constants';
 
 export const Popup: React.FC = () => {
   const [settings, setSettings] = useState<FilterSettings>(DEFAULT_SETTINGS);
-  const [stats, setStats] = useState<FilterStats>({
+  const [statsMode, setStatsMode] = useState<PopupStatsMode>(POPUP_STATS_CONFIG.MODES.TOTAL);
+  const [totalStats, setTotalStats] = useState<TotalBlockStats>({
+    total: 0,
+    companies: 0,
+    jobs: 0,
+    keywords: 0,
+  });
+  const [pageStats, setPageStats] = useState<FilterStats>({
     totalBlocked: 0,
     blockedCompanies: 0,
     blockedJobs: 0,
     blockedAds: 0,
   });
+  const [isJobSite, setIsJobSite] = useState<boolean>(false);
   const [newCompany, setNewCompany] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
+
+  // 1. 전체 등록 누적 차단 통계 로드
+  const loadTotalStats = async () => {
+    const list = await StorageManager.getBlockList(false);
+    let companies = 0;
+    let jobs = 0;
+    let keywords = 0;
+
+    for (const item of list) {
+      if (item.type === 'company') companies++;
+      else if (item.type === 'job') jobs++;
+      else if (item.type === 'keyword') keywords++;
+    }
+
+    setTotalStats({
+      total: list.length,
+      companies,
+      jobs,
+      keywords,
+    });
+  };
+
+  // 2. 현재 활성 탭 페이지 필터링 통계 로드
+  const loadPageStats = () => {
+    if (typeof chrome === 'undefined' || !chrome.tabs?.query) return;
+
+    const queryActiveTab = (options: chrome.tabs.QueryInfo, callback: (tabId?: number) => void) => {
+      try {
+        chrome.tabs.query(options, (tabs) => {
+          if (chrome.runtime?.lastError) {
+            callback(undefined);
+            return;
+          }
+          callback(tabs?.[0]?.id);
+        });
+      } catch {
+        callback(undefined);
+      }
+    };
+
+    queryActiveTab({ active: true, currentWindow: true }, (tabId) => {
+      if (!tabId) {
+        queryActiveTab({ active: true, lastFocusedWindow: true }, (fallbackId) => {
+          if (fallbackId) fetchStatsFromTab(fallbackId);
+        });
+      } else {
+        fetchStatsFromTab(tabId);
+      }
+    });
+  };
+
+  const fetchStatsFromTab = (tabId: number) => {
+    try {
+      chrome.tabs.sendMessage(tabId, { type: 'GET_PAGE_STATS' }, (response) => {
+        if (chrome.runtime?.lastError || !response?.stats) {
+          setIsJobSite(false);
+          return;
+        }
+        setIsJobSite(true);
+        setPageStats(response.stats);
+      });
+    } catch {
+      setIsJobSite(false);
+    }
+  };
 
   useEffect(() => {
     // 1. 설정 로드
     StorageManager.getSettings().then(setSettings);
 
-    // 2. 현재 활성 탭의 통계 요청
-    if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const activeTabId = tabs[0]?.id;
-        if (activeTabId) {
-          chrome.tabs.sendMessage(activeTabId, { type: 'GET_PAGE_STATS' }, (response) => {
-            if (response?.stats) {
-              setStats(response.stats);
-            }
-          });
-        }
-      });
-    }
+    // 2. 전체 누적 통계 로드 (사용자가 등록한 전체 목록 기본 표시)
+    loadTotalStats();
+
+    // 3. 현재 활성 탭 통계 요청 (채용 사이트 방문 시 실시간 통계 보조 제공)
+    loadPageStats();
   }, []);
 
   const handleToggleMode = async () => {
@@ -79,6 +144,10 @@ export const Popup: React.FC = () => {
     const updatedList = await StorageManager.getBlockList();
     notifyContentScript({ type: 'BLOCKLIST_CHANGED', items: updatedList });
 
+    // 추가 즉시 전체 통계 및 탭 통계 실시간 재집계
+    await loadTotalStats();
+    loadPageStats();
+
     setNewCompany('');
     setStatusMsg(UI_MESSAGES.BLOCK_SUCCESS(trimmed));
     setTimeout(() => setStatusMsg(''), FILTER_CONFIG.STATUS_MESSAGE_TIMEOUT_MS);
@@ -113,23 +182,73 @@ export const Popup: React.FC = () => {
         </button>
       </div>
 
-      <div className="stats-card">
-        <div className="stat-item">
-          <div className="stat-value">{stats.totalBlocked}</div>
-          <div className="stat-label">차단된 공고</div>
+      {/* 통계 모드 세그먼트 탭 & 카드 (기본: 전체 등록 누적 통계) */}
+      <div className="stats-container">
+        <div className="stats-tab-group">
+          <button
+            type="button"
+            className={`stats-tab-btn ${statsMode === POPUP_STATS_CONFIG.MODES.TOTAL ? 'active' : ''}`}
+            onClick={() => setStatsMode(POPUP_STATS_CONFIG.MODES.TOTAL)}
+          >
+            {POPUP_STATS_CONFIG.MODE_LABELS.TOTAL}
+          </button>
+          <button
+            type="button"
+            className={`stats-tab-btn ${statsMode === POPUP_STATS_CONFIG.MODES.PAGE ? 'active' : ''}`}
+            onClick={() => setStatsMode(POPUP_STATS_CONFIG.MODES.PAGE)}
+            title={!isJobSite ? POPUP_STATS_CONFIG.NOT_JOB_SITE_TOOLTIP : undefined}
+          >
+            {POPUP_STATS_CONFIG.MODE_LABELS.PAGE}
+            {isJobSite && <span className="site-indicator" />}
+          </button>
         </div>
-        <div className="stat-item">
-          <div className="stat-value">{stats.blockedCompanies}</div>
-          <div className="stat-label">차단 회사</div>
+
+        <div className="stats-card">
+          {statsMode === POPUP_STATS_CONFIG.MODES.TOTAL ? (
+            <>
+              <div className="stat-item">
+                <div className="stat-value">{totalStats.total}</div>
+                <div className="stat-label">{POPUP_STATS_CONFIG.TOTAL_LABELS.TOTAL}</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">{totalStats.companies}</div>
+                <div className="stat-label">{POPUP_STATS_CONFIG.TOTAL_LABELS.COMPANIES}</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">{totalStats.jobs}</div>
+                <div className="stat-label">{POPUP_STATS_CONFIG.TOTAL_LABELS.JOBS}</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">{totalStats.keywords}</div>
+                <div className="stat-label">{POPUP_STATS_CONFIG.TOTAL_LABELS.KEYWORDS}</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="stat-item">
+                <div className="stat-value">{pageStats.totalBlocked}</div>
+                <div className="stat-label">{POPUP_STATS_CONFIG.PAGE_LABELS.TOTAL}</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">{pageStats.blockedCompanies}</div>
+                <div className="stat-label">{POPUP_STATS_CONFIG.PAGE_LABELS.COMPANIES}</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">{pageStats.blockedJobs}</div>
+                <div className="stat-label">{POPUP_STATS_CONFIG.PAGE_LABELS.JOBS}</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">{pageStats.blockedAds}</div>
+                <div className="stat-label">{POPUP_STATS_CONFIG.PAGE_LABELS.ADS}</div>
+              </div>
+            </>
+          )}
         </div>
-        <div className="stat-item">
-          <div className="stat-value">{stats.blockedJobs ?? 0}</div>
-          <div className="stat-label">숨긴 공고</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-value">{stats.blockedAds}</div>
-          <div className="stat-label">광고 공고</div>
-        </div>
+        {statsMode === POPUP_STATS_CONFIG.MODES.PAGE && !isJobSite && (
+          <div className="not-job-site-banner">
+            {POPUP_STATS_CONFIG.NOT_JOB_SITE_TOOLTIP}
+          </div>
+        )}
       </div>
 
       <div className="section">

@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { UI_MESSAGES } from '../../src/constants';
+import { UI_MESSAGES, POPUP_STATS_CONFIG } from '../../src/constants';
 
 test.describe('크롬 확장 프로그램 E2E 테스트', () => {
   test('팝업 창(Popup UI)이 정상적으로 렌더링되어야 한다', async ({ page, extensionId }) => {
@@ -8,9 +8,13 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     // 헤더 타이틀 확인
     await expect(page.locator('h1')).toContainText(UI_MESSAGES.POPUP_TITLE);
 
-    // 통계 카드 확인
+    // 기본 모드 (전체 등록 누적 통계) 확인
     await expect(page.locator('.stats-card')).toBeVisible();
-    await expect(page.locator('.stat-label').first()).toContainText('차단된 공고');
+    await expect(page.locator('.stat-label').first()).toContainText(POPUP_STATS_CONFIG.TOTAL_LABELS.TOTAL);
+
+    // 현재 페이지 탭 클릭 시 페이지 통계 모드로 전환 확인
+    await page.locator('.stats-tab-btn').nth(1).click();
+    await expect(page.locator('.stat-label').first()).toContainText(POPUP_STATS_CONFIG.PAGE_LABELS.TOTAL);
 
     // 빠른 추가 인풋 및 버튼 확인
     await expect(page.locator('.add-input')).toBeVisible();
