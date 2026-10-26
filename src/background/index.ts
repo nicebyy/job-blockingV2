@@ -1,6 +1,7 @@
 import { ExtensionMessage } from '../types';
 import { BADGE_CONFIG } from '../constants';
 import { JobplanetService } from '../core/jobplanet';
+import { BlindService } from '../core/blind';
 
 /**
  * Background Service Worker
@@ -30,7 +31,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
   });
 }
 
-// 메시지 수신 (뱃지 업데이트 및 잡플래닛 평점 조회)
+// 메시지 수신 (뱃지 업데이트 및 잡플래닛/블라인드 평점 조회)
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
     if (message.type === 'UPDATE_BADGE') {
@@ -50,6 +51,24 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
         })
         .catch(() => {
           sendResponse({
+            platform: 'jobplanet',
+            status: 'error',
+            companyName: message.companyName,
+            cachedAt: Date.now(),
+          });
+        });
+      return true; // 비동기 응답 유지
+    }
+
+    if (message.type === 'FETCH_BLIND_RATING') {
+      BlindService.getInstance()
+        .getRating(message.companyName)
+        .then((info) => {
+          sendResponse(info);
+        })
+        .catch(() => {
+          sendResponse({
+            platform: 'blind',
             status: 'error',
             companyName: message.companyName,
             cachedAt: Date.now(),

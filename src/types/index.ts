@@ -32,7 +32,8 @@ export interface FilterSettings {
   hideAds: boolean; // 상시/추천/헤드헌팅 광고 공고 숨김 여부
   showInlineButton: boolean; // 공고 카드에 [차단] 인라인 버튼 노출 여부
   enableInfiniteScroll: boolean; // 페이지네이션을 무한 스크롤로 자동 변환 여부
-  showJobplanetRating: boolean; // 잡플래닛 평점 뱃지 표시 여부
+  showJobplanetRating: boolean; // 잡플래닛 평점 뱃지 표시 여부 (초록색)
+  showBlindRating: boolean; // 블라인드 평점 뱃지 표시 여부 (빨간색)
 }
 
 /**
@@ -45,24 +46,38 @@ export const DEFAULT_SETTINGS: FilterSettings = {
   showInlineButton: true,
   enableInfiniteScroll: true,
   showJobplanetRating: true,
+  showBlindRating: true,
 };
 
 /**
- * 잡플래닛 평점 조회 결과 상태
+ * 기업 평점 연동 플랫폼 (잡플래닛 / 블라인드)
  */
-export type JobplanetRatingStatus = 'found' | 'not_found' | 'ambiguous' | 'error';
+export type RatingPlatform = 'jobplanet' | 'blind';
 
 /**
- * 잡플래닛 기업 평점 정보 인터페이스
+ * 평점 조회 결과 상태
  */
-export interface JobplanetRatingInfo {
-  status: JobplanetRatingStatus;
+export type RatingStatus = 'found' | 'not_found' | 'ambiguous' | 'error';
+
+/**
+ * 기업 평점 정보 공통 인터페이스
+ */
+export interface CompanyRatingInfo {
+  platform: RatingPlatform;
+  status: RatingStatus;
   companyName: string;
   rating?: number;
-  companyId?: number;
+  reviewCount?: number;
+  companyId?: number | string;
   companyUrl?: string;
   cachedAt: number;
 }
+
+// 하위 호환 별칭
+export type JobplanetRatingStatus = RatingStatus;
+export type JobplanetRatingInfo = CompanyRatingInfo;
+export type BlindRatingStatus = RatingStatus;
+export type BlindRatingInfo = CompanyRatingInfo;
 
 /**
  * 사이트 어댑터가 추출한 단일 채용 공고 정보
@@ -106,5 +121,6 @@ export type ExtensionMessage =
   | { type: 'SETTINGS_CHANGED'; settings: FilterSettings }
   | { type: 'BLOCKLIST_CHANGED'; items: BlockItem[] }
   | { type: 'ADD_BLOCK_COMPANY'; companyName: string }
-  | { type: 'FETCH_JOBPLANET_RATING'; companyName: string };
+  | { type: 'FETCH_JOBPLANET_RATING'; companyName: string }
+  | { type: 'FETCH_BLIND_RATING'; companyName: string };
 

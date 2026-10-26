@@ -65,6 +65,7 @@ export function parseJobplanetRsc(
 
   if (!normalizedTarget || !rscText) {
     return {
+      platform: 'jobplanet',
       status: 'not_found',
       companyName: targetCompanyName,
       cachedAt: now,
@@ -82,6 +83,7 @@ export function parseJobplanetRsc(
   // 1. 일치하는 회사가 없을 경우 -> 배치하지 않음
   if (matchingCompanies.length === 0) {
     return {
+      platform: 'jobplanet',
       status: 'not_found',
       companyName: targetCompanyName,
       cachedAt: now,
@@ -91,6 +93,7 @@ export function parseJobplanetRsc(
   // 2. 동명의 회사가 여러 개일 경우 -> 배치하지 않음 (사용자 요구사항)
   if (matchingCompanies.length > 1) {
     return {
+      platform: 'jobplanet',
       status: 'ambiguous',
       companyName: targetCompanyName,
       cachedAt: now,
@@ -106,6 +109,7 @@ export function parseJobplanetRsc(
 
   if (isNaN(ratingNum) || ratingNum <= 0) {
     return {
+      platform: 'jobplanet',
       status: 'not_found',
       companyName: targetCompanyName,
       cachedAt: now,
@@ -114,6 +118,7 @@ export function parseJobplanetRsc(
 
   const roundedRating = Math.round(ratingNum * 10) / 10;
   return {
+    platform: 'jobplanet',
     status: 'found',
     companyName: targetCompanyName,
     rating: roundedRating,
@@ -212,6 +217,7 @@ export class JobplanetService {
     const trimmed = companyName.trim();
     if (!trimmed) {
       return {
+        platform: 'jobplanet',
         status: 'not_found',
         companyName,
         cachedAt: Date.now(),
@@ -298,6 +304,7 @@ export class JobplanetService {
           resolve(result);
         } catch (err) {
           const fallback: JobplanetRatingInfo = {
+            platform: 'jobplanet',
             status: 'error',
             companyName,
             cachedAt: Date.now(),
@@ -353,6 +360,7 @@ export class JobplanetService {
 
       if (!response.ok) {
         return {
+          platform: 'jobplanet',
           status: 'error',
           companyName,
           cachedAt: Date.now(),
@@ -364,6 +372,7 @@ export class JobplanetService {
     } catch (err) {
       clearTimeout(timeoutId);
       return {
+        platform: 'jobplanet',
         status: 'error',
         companyName,
         cachedAt: Date.now(),
