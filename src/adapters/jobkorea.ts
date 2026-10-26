@@ -285,8 +285,13 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
     const targetEl = companyLink || companyEl;
 
     const favBtn = cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.FAVORITE_BUTTON);
-    if (favBtn && targetEl.parentElement?.contains(favBtn)) {
-      return favBtn;
+    if (favBtn) {
+      const commonContainer =
+        targetEl.closest<HTMLElement>('.headers, .coTit, td.tplCo, .recruit-company') ||
+        targetEl.parentElement;
+      if (commonContainer?.contains(favBtn)) {
+        return favBtn;
+      }
     }
 
     return targetEl;

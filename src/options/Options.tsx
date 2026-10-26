@@ -97,6 +97,7 @@ export const Options: React.FC = () => {
       [PLATFORM_CONFIG.SARAMIN]: baseList.filter((item) => item.platform === PLATFORM_CONFIG.SARAMIN).length,
       [PLATFORM_CONFIG.JOBKOREA]: baseList.filter((item) => item.platform === PLATFORM_CONFIG.JOBKOREA).length,
       [PLATFORM_CONFIG.WANTED]: baseList.filter((item) => item.platform === PLATFORM_CONFIG.WANTED).length,
+      [PLATFORM_CONFIG.REMEMBER]: baseList.filter((item) => item.platform === PLATFORM_CONFIG.REMEMBER).length,
       [PLATFORM_CONFIG.CUSTOM]: baseList.filter(
         (item) => !item.platform || item.platform === PLATFORM_CONFIG.CUSTOM
       ).length,
@@ -247,6 +248,7 @@ export const Options: React.FC = () => {
                   PLATFORM_CONFIG.SARAMIN,
                   PLATFORM_CONFIG.JOBKOREA,
                   PLATFORM_CONFIG.WANTED,
+                  PLATFORM_CONFIG.REMEMBER,
                   PLATFORM_CONFIG.CUSTOM,
                 ] as const
               ).map((platKey) => {
