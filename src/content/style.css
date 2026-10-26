@@ -346,3 +346,47 @@ td.tplCo .tplBtnFavOn,
   border: 1px solid #fecaca !important;
 }
 
+/* 잡코리아 상세 페이지(/Recruit/GI_Read/*) 회사명 및 평점 뱃지 정렬 */
+[data-sentry-component="CompanyName"],
+.artReadJob .coInfo {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+[data-sentry-component="CompanyName"] a {
+  display: inline-flex !important;
+  align-items: center !important;
+  text-decoration: none !important;
+}
+
+[data-sentry-component="CompanyName"] h2 {
+  display: inline-block !important;
+  margin: 0 !important;
+}
+
+/* 잡코리아 상세 페이지 액션 버튼 툴바 (#menu-buttons 내부 및 레거시 헤더) */
+#menu-buttons .job-filter-btn-group,
+[data-sentry-component="MenuButtons"] .job-filter-btn-group {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-right: 12px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 10 !important;
+  align-self: center !important;
+}
+
+.artReadJob .job-filter-btn-group-detail {
+  position: absolute !important;
+  top: 12px !important;
+  right: 12px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 100 !important;
+}
+

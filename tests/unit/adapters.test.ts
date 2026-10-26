@@ -8,7 +8,7 @@ import {
   JobKoreaAdapter,
 } from '../../src/adapters';
 import { FilterEngine } from '../../src/core/filter-engine';
-import { RATING_BADGE_CONFIG } from '../../src/constants';
+import { RATING_BADGE_CONFIG, INLINE_BUTTON_CONFIG } from '../../src/constants';
 
 describe('Site Adapters 단위 테스트', () => {
   describe('AdapterRegistry', () => {
@@ -1017,6 +1017,172 @@ describe('Site Adapters 단위 테스트', () => {
         (window as any).location = origLocation;
       }
     });
+
+    it('잡코리아 상세 페이지(/Recruit/GI_Read/50238665) 판별 시 isDetailPage는 true여야 한다', () => {
+      const detailUrl = 'https://www.jobkorea.co.kr/Recruit/GI_Read/50238665?rPageCode=AM&logpath=21&sn=6&sc=611';
+      expect(adapter.isDetailPage(detailUrl)).toBe(true);
+
+      const listUrl = 'https://www.jobkorea.co.kr/recruit/joblist?menucode=local&localorder=1';
+      expect(adapter.isDetailPage(listUrl)).toBe(false);
+
+      const origLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = new URL(detailUrl);
+
+      try {
+        expect(adapter.isDetailPage()).toBe(true);
+      } finally {
+        (window as any).location = origLocation;
+      }
+    });
+
+    it('잡코리아 상세 페이지 헤더 및 타이틀 영역에서 공고 정보(회사명, 직무명, jobId)를 정확히 파싱해야 한다', () => {
+      const origLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = new URL('https://www.jobkorea.co.kr/Recruit/GI_Read/50238665');
+
+      try {
+        const container = document.createElement('div');
+        container.innerHTML = `
+          <main class="grid [grid-template-areas:'title_title']">
+            <div data-sentry-component="Title">
+              <div class="flex justify-between w-[1280px]">
+                <div data-jobview-section="atf">
+                  <div data-sentry-component="CompanyName">
+                    <a href="https://www.jobkorea.co.kr/Recruit/Co_Read/C/48448463">
+                      <h2>(주)에이에이치푸드</h2>
+                    </a>
+                  </div>
+                  <div data-sentry-component="TitleContent">
+                    <h1 class="font-bold">[라피자일피노 이태리레스토랑] 주방요리사/홀서빙 채용</h1>
+                  </div>
+                </div>
+                <div class="flex" id="menu-buttons" data-sentry-component="MenuButtons">
+                  <div class="recruit-icon recruit-icon--system_heart"></div>
+                </div>
+              </div>
+            </div>
+          </main>
+        `;
+
+        const cards = adapter.getJobCardElements(container);
+        expect(cards.length).toBe(1);
+
+        const card = cards[0];
+        expect(card.tagName.toUpperCase()).toBe('MAIN');
+
+        const info = adapter.parseCard(card);
+        expect(info).not.toBeNull();
+        expect(info?.companyName).toBe('(주)에이에이치푸드');
+        expect(info?.title).toBe('[라피자일피노 이태리레스토랑] 주방요리사/홀서빙 채용');
+        expect(info?.jobId).toBe('50238665');
+        expect(info?.isAd).toBe(false);
+      } finally {
+        (window as any).location = origLocation;
+      }
+    });
+
+    it('잡코리아 상세 페이지의 #menu-buttons에 [이 공고만 숨기기] 및 [회사 전체 차단] 툴바가 찜하기 버튼 앞에 주입되어야 한다', () => {
+      const origLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = new URL('https://www.jobkorea.co.kr/Recruit/GI_Read/12345');
+
+      try {
+        const container = document.createElement('div');
+        container.innerHTML = `
+          <main class="grid">
+            <div data-sentry-component="Title">
+              <div class="flex justify-between w-[1280px]">
+                <div data-jobview-section="atf">
+                  <div data-sentry-component="CompanyName">
+                    <a href="/Recruit/Co_Read/C/123"><h2>테스트기업</h2></a>
+                  </div>
+                  <div data-sentry-component="TitleContent">
+                    <h1 class="font-bold">웹 프론트엔드 개발자 채용</h1>
+                  </div>
+                </div>
+                <div class="flex" id="menu-buttons" data-sentry-component="MenuButtons">
+                  <div class="fav-wrapper"><i class="recruit-icon--system_heart"></i></div>
+                </div>
+              </div>
+            </div>
+          </main>
+        `;
+
+        const cards = adapter.getJobCardElements(container);
+        expect(cards.length).toBe(1);
+
+        const info = adapter.parseCard(cards[0])!;
+        expect(info).not.toBeNull();
+
+        const onBlockCompany = vi.fn();
+        const onBlockJob = vi.fn();
+        adapter.injectInlineButton(info, { onBlockCompany, onBlockJob });
+
+        const menuButtons = container.querySelector('#menu-buttons');
+        expect(menuButtons).not.toBeNull();
+
+        const actionGroup = menuButtons?.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`);
+        expect(actionGroup).not.toBeNull();
+
+        // menuButtons의 첫 번째 자식이 액션 툴바여야 함 (하트 찜하기 버튼 왼쪽)
+        expect(menuButtons?.firstChild).toBe(actionGroup);
+
+        const hideJobBtn = actionGroup?.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.JOB_BUTTON}`);
+        const blockCompanyBtn = actionGroup?.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.COMPANY_BUTTON}`);
+        expect(hideJobBtn).not.toBeNull();
+        expect(blockCompanyBtn).not.toBeNull();
+      } finally {
+        (window as any).location = origLocation;
+      }
+    });
+
+    it('잡코리아 상세 페이지의 회사명 링크 바로 뒤에 평점 뱃지 래퍼가 <a> 태그 중첩 없이 주입되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <main class="grid">
+          <div data-sentry-component="Title">
+            <div data-jobview-section="atf">
+              <div data-sentry-component="CompanyName">
+                <a class="company-link" href="https://www.jobkorea.co.kr/Recruit/Co_Read/C/48448463">
+                  <h2 class="company-heading">㈜에이에이치푸드</h2>
+                </a>
+              </div>
+              <div data-sentry-component="TitleContent">
+                <h1 class="font-bold">주방요리사 채용</h1>
+              </div>
+            </div>
+          </div>
+        </main>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      const info = adapter.parseCard(cards[0])!;
+
+      adapter.injectRatingBadge(info, {
+        platform: 'jobplanet',
+        status: 'found',
+        companyName: '㈜에이에이치푸드',
+        rating: 3.5,
+        companyId: '12345',
+        cachedAt: Date.now(),
+      });
+
+      const companyLink = container.querySelector('a.company-link') as HTMLElement;
+      expect(companyLink).not.toBeNull();
+
+      const ratingWrap = container.querySelector('.job-filter-ratings-wrap');
+      expect(ratingWrap).not.toBeNull();
+
+      // <a> 태그 내부에 <a>가 중첩되지 않고, 회사 링크 바로 뒤(nextSibling)에 평점 래퍼가 위치해야 함
+      expect(companyLink.contains(ratingWrap!)).toBe(false);
+      expect(companyLink.nextElementSibling).toBe(ratingWrap);
+
+      const badge = ratingWrap?.querySelector('.job-filter-rating-jobplanet');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('3.5');
+    });
+
 
     it('실제 잡코리아 HTML 픽스처(jobkorea_joblist.html)를 파싱하여 공고 카드 목록 및 필터링 동작을 완벽히 수행해야 한다', () => {
       const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/jobkorea_joblist.html');
