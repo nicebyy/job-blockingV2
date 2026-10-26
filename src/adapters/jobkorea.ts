@@ -201,6 +201,16 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
       element.querySelector<HTMLElement>('[data-gno]')?.getAttribute('data-gno');
 
     if (!gno) {
+      const dataSource = element.getAttribute('data-source');
+      if (dataSource) {
+        try {
+          const parsed = JSON.parse(dataSource);
+          if (parsed.gno) gno = String(parsed.gno);
+        } catch {}
+      }
+    }
+
+    if (!gno) {
       const link = element.querySelector<HTMLAnchorElement>('a[href*="/GI_Read/"]');
       const match = link?.href?.match(/\/GI_Read\/(\d+)/i);
       if (match) gno = match[1];

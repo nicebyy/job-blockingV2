@@ -135,21 +135,21 @@ export const SARAMIN_SELECTORS = {
  */
 export const JOBKOREA_SELECTORS = {
   JOB_CARDS:
-    '.tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
+    '.tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, ol.rankList > li, li.dmpItem, .rankList > li, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
   LIST_CONTAINER:
-    '.tplList.tplJobList table tbody, #dev-gi-list .tplJobList table tbody, .tplList table tbody, .lists-cnt, .lists-wrap, .list-default',
+    'ol.rankList, .rankListArea, .tplList.tplJobList table tbody, #dev-gi-list .tplJobList table tbody, .tplList table tbody, .lists-cnt, .lists-wrap, .list-default',
   PAGINATION: '#dvGIPaging .tplPagination, .tplPagination, .page-box, .pagination',
   COMPANY_NAME:
-    'td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
+    '.coTit a.coLink, .coTit a, .coLink, td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
   POSITION_TITLE:
-    'td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
+    '.info .tit a.link, .info .tit a, .tit a.dev-recruit-link, td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
   BUTTON_HOST_CELL: '.titBx, td.tplTit .titBx, td.tplTit',
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',
   AD_CLASS: 'special-post, job-recommendation-item',
-  CLOSING_DATE: 'td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
-  FAVORITE_BUTTON: '.tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
+  CLOSING_DATE: '.side .day, td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
+  FAVORITE_BUTTON: '.devFavor, .tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
   PROMOTION_BANNERS:
-    '.job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
+    '#dev-TopHeadlineAGI, #TopHeadlineAGI, #dev-HeadlineAGI, #HeadlineAGI, .listTopHeadline, .listHeadline, .listBannerWrap, .job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
 
   // 상세 페이지(/Recruit/GI_Read/*) 셀렉터
   DETAIL_CONTAINER:

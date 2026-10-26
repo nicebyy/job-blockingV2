@@ -24,8 +24,12 @@
     - **기업 평점 뱃지(잡플래닛 & 블라인드)**: 공고 상세 페이지 헤더(`.title_inner`)의 기업명 바로 옆에 잡플래닛/블라인드 평점 뱃지를 동일하게 렌더링하여 공고 본문 확인 중에도 기업 평점을 즉시 확인 가능
     - **[공고숨김 / 회사차단] 듀얼 툴바 인라인 상시 노출**: 상세 페이지 우측 상단의 입사지원 버튼(`.btn_apply`) 및 스크랩 버튼과의 겹침/가려짐을 원천 방지하기 위해, 기업명 및 관심기업 영역(`.title_inner`) 내부에 정제된 인라인 플로팅 툴바로 상시 노출 (`job-filter-btn-group-detail`, `position: static`, `opacity: 1`)
     - **루트 카드 완전 격리 은닉(Anti-Empty Page)**: 최상위 부모 컨테이너(`.wrap_jview`)가 오은닉되어 화면 좌측 전체가 하얗게 증발하거나 헤더만 잘려나가는 문제를 원천 방지하고, 개별 공고 카드(`.jview`) 단위로 깔끔하게 격리 은닉
-  - **잡코리아 채용목록(`/recruit/joblist`) 및 상세 페이지(`/Recruit/GI_Read/*`) 완벽 지원**:
-    - **채용목록 테이블 행(`tr`) 정밀 앵커링**: 지역별/직무별 채용목록 테이블 구조를 훼손하지 않도록 제목 셀(`td.tplTit`)을 앵커 호스트로 자동 지정하여, 마우스 호버 시 자연스럽게 모던 알약 툴바 노출 (찜하기 하트 버튼 뒤 평점 주입으로 회사명 텍스트 겹침 방지)
+  - **잡코리아 채용목록(`/recruit/joblist`), 인기 TOP 100(`/top100/`), 상세 페이지(`/Recruit/GI_Read/*`) 완벽 지원**:
+    - **채용목록 테이블 행(`tr`) 및 인기 TOP 100 순위 카드(`ol.rankList > li`) 정밀 앵커링**:
+      - 테이블 목록(`td.tplTit`) 및 TOP 100 카드(`li.dmpItem`)에 호버 시 부드러운 모던 알약 툴바 노출 (마우스 오버 시에만 표시되는 Hover Reveal)
+      - 관심기업(찜하기 하트) 버튼 바로 뒤 평점 래퍼 주입으로 회사명 텍스트 및 하트 아이콘과의 겹침 완벽 방지
+      - `data-source` JSON 및 메타데이터 파싱으로 공고 식별자(Job ID: `gno`) 정밀 추출
+    - **"TOP 헤드라인 채용관" 및 프로모션 상품 배너 자동 숨김**: 채용목록 상단의 TOP 헤드라인 채용관 및 헤드라인 채용관 상품안내 배너(`#dev-TopHeadlineAGI`, `#HeadlineAGI`, `.listBannerWrap`, `.listTopHeadline`)를 CSS 및 스크립트로 흔적 없이 자동 차단
     - **상세 페이지(`/Recruit/GI_Read/*`) 기업 평점 뱃지(잡플래닛 & 블라인드)**: 채용 상세 타이틀 영역의 기업명 바로 옆에 초록색 잡플래닛 / 빨간색 블라인드 평점 뱃지를 자동 렌더링 (`[data-sentry-component="CompanyName"] a` 기준 앵커링으로 `<a>` 태그 중첩 원천 방지)
     - **상세 페이지 액션 버튼 툴바 상시 노출**: 스티키 타이틀 헤더 우측 액션 메뉴(`#menu-buttons`) 내부 찜하기(하트) 버튼 바로 옆에 [공고숨김 / 회사차단] 듀얼 툴바를 고정 배치하여 본문 확인 중 언제든 즉시 차단 가능
     - **상세페이지 차단 네비게이션 정책 (Smart Back & Close Guard)**:
@@ -44,10 +48,10 @@
   - **공고 중복 검사 및 무한 루프 차단**: 이미 페이지에 존재하는 공고 식별 키(`jobId`: `data-gno` 또는 `company:::title`)를 대조하여 중복 공고 추가를 배제하며, 신규 공고가 없을 시 탐색을 즉시 종료
   - **네트워크 타임아웃 및 스피너 자동 정리**: 10초 타임아웃(`AbortController`)과 `finally` 가드를 적용하여 네트워크 지연이나 WAF 응답 지연 시에도 로딩 스피너가 무한히 도는 현상 방지
   - **자동 채우기(Auto-Refill)**: 1페이지의 공고가 대량 차단되어 텅 비는 경우, 백그라운드에서 다음 페이지 공고를 즉시 긁어와 채워줌 (최대 5페이지 연속 탐색)
-- **불필요한 AI 검색 배너 및 추천/스토어/적극채용회사 프로모션 자동 숨김 (Ad & Banner Clean)**:
+- **불필요한 AI 검색 배너 및 추천/스토어/헤드라인 채용관 프로모션 자동 숨김 (Ad & Banner Clean)**:
   - 원티드: "🔥 적극 채용 중인 회사" 광고 슬라이더 (`section[class*="AdTargetList_"]`) 자동 숨김
   - 사람인: 검색 상단 AI 커리어 배너 (`.area_ai_search`), 맞춤 추천 공고 캐러셀 (`section.type_searchup`), 스토어 프로모션 (`.wrap_store`) 자동 숨김
-  - 잡코리아: 상단 퍼포먼스 추천공고 섹션 (`.job-recommendation`, `div.job-recommendation`), 스마트 배너 (`#dev-BNewsAGI`) 자동 숨김
+  - 잡코리아: TOP 헤드라인 채용관 및 헤드라인 채용관 (`#dev-TopHeadlineAGI`, `#HeadlineAGI`, `.listBannerWrap`, `.listTopHeadline`), 상단 퍼포먼스 추천공고 섹션 (`.job-recommendation`, `div.job-recommendation`), 스마트 배너 (`#dev-BNewsAGI`) 자동 숨김
   - CSS 기반 즉시 차단(깜빡임 FOUC 방지) 및 Content Script 어댑터 이중 필터링 적용
 - **팝업 통계 누적 기본 집계 및 현재 페이지 실시간 집계 듀얼 모드 (Popup Accumulative & Page Stats)**:
   - 팝업 창을 열었을 때 사용자가 등록한 **전체 차단 목록의 누적 건수([전체 차단], [차단 회사], [숨긴 공고], [키워드])**를 기본으로 즉시 집계하여 표시

@@ -1183,6 +1183,114 @@ describe('Site Adapters 단위 테스트', () => {
       expect(badge?.textContent).toContain('3.5');
     });
 
+    it('잡코리아 헤드라인 채용관 광고 배너(#dev-TopHeadlineAGI, #TopHeadlineAGI, #HeadlineAGI 등)가 hidePromotionBanners 호출 시 display: none 처리되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <!-- TOP 헤드라인 채용관 -->
+        <div id="dev-TopHeadlineAGI" class="listBannerWrap">
+          <div class="bn_hd_2"><h3>TOP 헤드라인 채용관</h3></div>
+          <ul class="listBanner listBanner_3xn listTopHeadline">
+            <li><div class="co"><a href="#">광고기업A</a></div></li>
+          </ul>
+        </div>
+        <!-- 헤드라인 채용관 -->
+        <div id="HeadlineAGI" class="listBannerWrap">
+          <div class="bn_hd_2"><h3>헤드라인 채용관</h3></div>
+          <ul class="listBanner listBanner_3xn listHeadline">
+            <li><div class="co"><a href="#">광고기업B</a></div></li>
+          </ul>
+        </div>
+        <!-- 일반 채용 공고 (숨겨지지 않아야 함) -->
+        <div class="tplList tplJobList">
+          <table><tbody><tr data-gno="12345"><td>일반채용</td></tr></tbody></table>
+        </div>
+      `;
+
+      adapter.hidePromotionBanners(container);
+
+      const topHeadline = container.querySelector<HTMLElement>('#dev-TopHeadlineAGI');
+      const headline = container.querySelector<HTMLElement>('#HeadlineAGI');
+      const normalList = container.querySelector<HTMLElement>('.tplList');
+
+      expect(topHeadline?.style.display).toBe('none');
+      expect(topHeadline?.getAttribute('data-job-filtered')).toBe('true');
+      expect(headline?.style.display).toBe('none');
+      expect(headline?.getAttribute('data-job-filtered')).toBe('true');
+      expect(normalList?.style.display).not.toBe('none');
+    });
+
+    it('잡코리아 인기 TOP 100(ol.rankList > li.dmpItem) 공고 카드를 정확히 수집 및 파싱하고 평점 뱃지와 인라인 툴바가 올바르게 주입되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="rankListArea devSarterTab">
+          <ol class="rankList">
+            <li class="dmpItem" data-source='{"memberId":"","gno":50177710,"giNo":51782990,"companyMemberType":"C"}'>
+              <div class="rank">
+                <span class="num">1</span>
+              </div>
+              <div class="co">
+                <div class="coTit">
+                  <a class="coLink" href="/Recruit/Co_Read/C/24558026?Oem_Code=C1" target="_blank" title="기업정보 이동"><b>테슬라코리아</b></a>
+                  <button type="button" title="관심기업" class="tplBtnTy tplBtnFavOff devFavor" data-mem-sys="24558026"><span class="blind">관심기업</span></button>
+                </div>
+              </div>
+              <div class="info">
+                <div class="tit">
+                  <button type="button" class="topBtn topBtnScr devScrap" data-gno="50177710"><span class="blind">스크랩</span></button>
+                  <a href="/Recruit/GI_Read/50177710?TpGb=TP" class="link dev-recruit-link" target="_blank" data-gno="50177710">
+                    <span>Tesla Korea 2026 대규모 공개 채용</span>
+                  </a>
+                </div>
+              </div>
+              <div class="side">
+                <span class="day">~10/31(토)</span>
+              </div>
+            </li>
+          </ol>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(1);
+
+      const card = cards[0];
+      const info = adapter.parseCard(card);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('테슬라코리아');
+      expect(info?.title).toBe('Tesla Korea 2026 대규모 공개 채용');
+      expect(info?.jobId).toBe('50177710');
+      expect(info?.closingDate).toBe('~10/31(토)');
+      expect(info?.isAd).toBe(false);
+
+      // 평점 뱃지 주입 검증: 관심기업 버튼(.devFavor) 뒤에 평점 래퍼가 주입되어 하트와 겹치지 않아야 함
+      adapter.injectRatingBadge(info!, {
+        platform: 'jobplanet',
+        status: 'found',
+        companyName: '테슬라코리아',
+        rating: 4.0,
+        companyId: 24558026,
+        cachedAt: Date.now(),
+      });
+
+      const coTit = card.querySelector<HTMLElement>('.coTit')!;
+      const coLink = coTit.querySelector('.coLink')!;
+      const favBtn = coTit.querySelector('.devFavor')!;
+      const ratingWrap = coTit.querySelector('.job-filter-ratings-wrap')!;
+
+      expect(favBtn).not.toBeNull();
+      expect(ratingWrap).not.toBeNull();
+      expect(coLink.nextElementSibling).toBe(favBtn);
+      expect(favBtn.nextElementSibling).toBe(ratingWrap);
+
+      // 인라인 [공고숨김 / 회사차단] 툴바 주입 검증
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+      adapter.injectInlineButton(info!, { onBlockCompany, onBlockJob });
+
+      const btnGroup = card.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+      expect(card.classList.contains('job-filter-card-host')).toBe(true);
+    });
 
     it('실제 잡코리아 HTML 픽스처(jobkorea_joblist.html)를 파싱하여 공고 카드 목록 및 필터링 동작을 완벽히 수행해야 한다', () => {
       const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/jobkorea_joblist.html');
