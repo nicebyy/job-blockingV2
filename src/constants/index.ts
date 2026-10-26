@@ -191,6 +191,35 @@ export const UI_MESSAGES = {
 } as const;
 
 /**
+ * 환경 설정(Options) 차단 목록 카테고리 필터 탭 설정 상수
+ */
+export const OPTIONS_FILTER_CONFIG = {
+  ALL: 'all',
+  COMPANY: 'company',
+  JOB: 'job',
+  KEYWORD: 'keyword',
+  LABELS: {
+    ALL: '전체',
+    COMPANY: '회사',
+    JOB: '공고',
+    KEYWORD: '키워드',
+  },
+  EMPTY_MESSAGES: {
+    ALL: '등록된 차단 항목이 없습니다.',
+    COMPANY: '차단된 회사가 없습니다.',
+    JOB: '숨긴 공고가 없습니다.',
+    KEYWORD: '차단된 키워드가 없습니다.',
+  },
+} as const;
+
+export type OptionsFilterType =
+  (typeof OPTIONS_FILTER_CONFIG)[keyof Pick<
+    typeof OPTIONS_FILTER_CONFIG,
+    'ALL' | 'COMPANY' | 'JOB' | 'KEYWORD'
+  >];
+
+
+/**
  * 공고 카드 내 인라인 액션 버튼(공고숨김 / 회사차단) UI 및 스타일 설정 상수
  */
 export const INLINE_BUTTON_CONFIG = {
