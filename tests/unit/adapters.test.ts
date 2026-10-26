@@ -99,6 +99,145 @@ describe('Site Adapters 단위 테스트', () => {
       companyBtn?.click();
       expect(onBlockCompany).toHaveBeenCalledWith('원티드랩');
     });
+
+    it('원티드 실 브라우저 렌더링 픽스처(wanted_wdlist.html)에서 20개 공고 카드를 중복 없이 파싱해야 한다', () => {
+      const fixturePath = path.resolve(__dirname, '../fixtures/wanted_wdlist.html');
+      const fixtureHtml = fs.readFileSync(fixturePath, 'utf-8');
+      const container = document.createElement('div');
+      container.innerHTML = fixtureHtml;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(20);
+
+      // 첫 번째 카드 정보 검증 (매드업)
+      const firstCard = cards[0];
+      const firstInfo = adapter.parseCard(firstCard);
+      expect(firstInfo).not.toBeNull();
+      expect(firstInfo?.companyName).toBe('매드업');
+      expect(firstInfo?.title).toBe('[AI 마케팅 개발실] Forward Deployed Engineer (FDE)');
+      expect(firstInfo?.jobId).toBe('394698');
+      expect(firstInfo?.closingDate).toContain('서울 서초구');
+      expect(firstInfo?.isAd).toBe(false);
+
+      // 두 번째 카드 정보 검증 (미소)
+      const secondCard = cards[1];
+      const secondInfo = adapter.parseCard(secondCard);
+      expect(secondInfo).not.toBeNull();
+      expect(secondInfo?.companyName).toBe('미소(miso)');
+      expect(secondInfo?.title).toBe('Back-end Engineer (견적형 서비스)');
+      expect(secondInfo?.jobId).toBe('391250');
+
+      // 세 번째 카드 정보 검증 (리스타)
+      const thirdCard = cards[2];
+      const thirdInfo = adapter.parseCard(thirdCard);
+      expect(thirdInfo).not.toBeNull();
+      expect(thirdInfo?.companyName).toBe('리스타');
+      expect(thirdInfo?.title).toBe('광고 플랫폼 풀스택 개발자');
+      expect(thirdInfo?.jobId).toBe('386949');
+    });
+
+    it('원티드 "🔥 적극 채용 중인 회사" 섹션(AdTargetList)을 hidePromotionBanners로 완전 숨김 처리해야 한다', () => {
+      const fixturePath = path.resolve(__dirname, '../fixtures/wanted_wdlist.html');
+      const fixtureHtml = fs.readFileSync(fixturePath, 'utf-8');
+      const container = document.createElement('div');
+      container.innerHTML = fixtureHtml;
+
+      const adSectionBefore = container.querySelector('section[class*="AdTargetList_"]');
+      expect(adSectionBefore).not.toBeNull();
+      expect((adSectionBefore as HTMLElement).style.display).not.toBe('none');
+
+      adapter.hidePromotionBanners(container);
+
+      const adSectionAfter = container.querySelector('section[class*="AdTargetList_"]') as HTMLElement;
+      expect(adSectionAfter.style.display).toBe('none');
+      expect(adSectionAfter.getAttribute('data-job-filtered')).toBe('true');
+      expect(adSectionAfter.getAttribute('data-filter-mode')).toBe('hide');
+    });
+
+    it('원티드 상세 페이지(/wd/394698) 상단 헤더 영역에서 공고 정보를 파싱하고 인라인 버튼을 배치해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <section class="JobHeader_JobHeader__test123">
+          <div class="JobHeader_JobHeader__Tools__test456">
+            <h1 class="montage-g4lz5p">클라우드 아키텍트 채용</h1>
+            <a class="JobHeader_JobHeader__Tools__Company__Link__abc" data-attribute-id="company__click" data-company-name="당근" href="/company/123">당근</a>
+          </div>
+        </section>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(1);
+
+      const card = cards[0];
+      const info = adapter.parseCard(card);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('당근');
+      expect(info?.title).toBe('클라우드 아키텍트 채용');
+
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+      adapter.injectInlineButton(info!, { onBlockCompany, onBlockJob });
+
+      const toolsContainer = card.querySelector('.JobHeader_JobHeader__Tools__test456');
+      const btnGroup = toolsContainer?.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+      expect(btnGroup?.classList.contains('job-filter-btn-group-detail')).toBe(true);
+    });
+
+    it('원티드 공고 카드에 잡플래닛 및 블라인드 평점 뱃지가 회사명 바로 옆에 주입되어야 한다', () => {
+      const card = document.createElement('div');
+      card.setAttribute('data-cy', 'job-card');
+      card.className = 'JobCard_JobCard__test';
+      card.innerHTML = `
+        <a href="/wd/394698">
+          <div class="JobCard_JobCard__body__test">
+            <span class="JobCard_JobCard__body__position__test">백엔드 시니어 개발자</span>
+            <span class="CompanyNameWithLocationPeriod_CompanyNameWithLocationPeriod__company__test">네이버</span>
+            <span class="CompanyNameWithLocationPeriod_CompanyNameWithLocationPeriod__location__test">경기 성남시</span>
+          </div>
+        </a>
+      `;
+
+      const cardInfo = adapter.parseCard(card)!;
+      expect(cardInfo).not.toBeNull();
+
+      // 잡플래닛 평점 주입
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        companyName: '네이버',
+        rating: 4.2,
+        status: 'found',
+        companyId: '1234',
+        cachedAt: Date.now(),
+      });
+
+      // 블라인드 평점 주입
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        companyName: '네이버',
+        rating: 4.0,
+        status: 'found',
+        companyUrl: 'https://www.teamblind.com/kr/company/%EB%84%A4%EC%9D%B4%EB%B2%84',
+        cachedAt: Date.now(),
+      });
+
+      const companyEl = adapter.getCompanyElement(card);
+      expect(companyEl).not.toBeNull();
+
+      const ratingWrap = card.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(ratingWrap).not.toBeNull();
+      expect(companyEl?.nextElementSibling).toBe(ratingWrap);
+
+      const jpBadge = ratingWrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`);
+      expect(jpBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('잡플래닛');
+      expect(jpBadge?.textContent).toContain('4.2');
+
+      const blindBadge = ratingWrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`);
+      expect(blindBadge).not.toBeNull();
+      expect(blindBadge?.textContent).toContain('블라인드');
+      expect(blindBadge?.textContent).toContain('4.0');
+    });
   });
 
   describe('SaraminAdapter DOM 파싱', () => {

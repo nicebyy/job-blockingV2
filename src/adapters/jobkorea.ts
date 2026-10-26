@@ -189,9 +189,14 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
       );
       if (hostCell && !cardInfo.cardElement.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)) {
         hostCell.style.position = 'relative';
+        const titCell = cardInfo.cardElement.querySelector<HTMLElement>('td.tplTit');
+        if (titCell) {
+          titCell.style.position = 'relative';
+        }
         super.injectInlineButton({ ...cardInfo, cardElement: hostCell }, actions);
         return;
       }
+
     }
 
     super.injectInlineButton(cardInfo, actions);
