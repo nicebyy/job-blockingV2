@@ -213,4 +213,122 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
     const emptyState = container.querySelector('.empty-state');
     expect(emptyState?.textContent?.trim()).toBe(OPTIONS_FILTER_CONFIG.EMPTY_MESSAGES.JOB);
   });
+
+  it('각 차단 항목에 어디 플랫폼에서 차단한 건지 뱃지가 올바르게 표시되어야 한다', async () => {
+    await StorageManager.addBlockItem('아와소프트', 'company', { platform: 'saramin' });
+    await StorageManager.addBlockItem('rec_saramin_1', 'job', {
+      companyName: '당근마켓',
+      title: '백엔드 개발자',
+      platform: 'saramin',
+    });
+    await StorageManager.addBlockItem('잡코리아회사', 'company', { platform: 'jobkorea' });
+    await StorageManager.addBlockItem('원티드회사', 'company', { platform: 'wanted' });
+    await StorageManager.addBlockItem('직접추가회사', 'company'); // platform 미지정 -> custom
+
+    await act(async () => {
+      root.render(<Options />);
+    });
+
+    const items = container.querySelectorAll('.block-item');
+    expect(items.length).toBe(5);
+
+    // 사람인 뱃지 검증
+    const saraminBadge = items[0].querySelector('.platform-badge');
+    expect(saraminBadge?.textContent?.trim()).toBe('사람인');
+    expect(saraminBadge?.classList.contains('platform-badge-saramin')).toBe(true);
+
+    // 잡코리아 뱃지 검증
+    const jobkoreaBadge = items[2].querySelector('.platform-badge');
+    expect(jobkoreaBadge?.textContent?.trim()).toBe('잡코리아');
+    expect(jobkoreaBadge?.classList.contains('platform-badge-jobkorea')).toBe(true);
+
+    // 원티드 뱃지 검증
+    const wantedBadge = items[3].querySelector('.platform-badge');
+    expect(wantedBadge?.textContent?.trim()).toBe('원티드');
+    expect(wantedBadge?.classList.contains('platform-badge-wanted')).toBe(true);
+
+    // 직접등록(미지정) 뱃지 검증
+    const customBadge = items[4].querySelector('.platform-badge');
+    expect(customBadge?.textContent?.trim()).toBe('직접등록');
+    expect(customBadge?.classList.contains('platform-badge-custom')).toBe(true);
+  });
+
+  it('플랫폼 필터 탭을 클릭하면 해당 플랫폼에서 차단한 항목만 필터링되어야 한다', async () => {
+    await StorageManager.addBlockItem('사람인기업', 'company', { platform: 'saramin' });
+    await StorageManager.addBlockItem('잡코리아기업', 'company', { platform: 'jobkorea' });
+    await StorageManager.addBlockItem('원티드기업', 'company', { platform: 'wanted' });
+
+    await act(async () => {
+      root.render(<Options />);
+    });
+
+    const platformTabs = container.querySelectorAll<HTMLButtonElement>('.platform-tab-btn');
+    expect(platformTabs.length).toBe(5); // 전체, 사람인, 잡코리아, 원티드, 직접등록
+
+    // '원티드' 탭 찾기
+    const wantedTab = Array.from(platformTabs).find((btn) => btn.textContent?.includes('원티드'));
+    expect(wantedTab).toBeDefined();
+
+    await act(async () => {
+      wantedTab?.click();
+    });
+
+    expect(wantedTab?.classList.contains('active')).toBe(true);
+
+    const items = container.querySelectorAll('.block-item');
+    expect(items.length).toBe(1);
+    expect(items[0].textContent).toContain('원티드기업');
+    expect(items[0].textContent).not.toContain('사람인기업');
+    expect(items[0].textContent).not.toContain('잡코리아기업');
+  });
+
+  it('유형 필터와 플랫폼 필터를 함께 선택했을 때 복합 필터링이 올바르게 동작해야 한다', async () => {
+    // 1. 사람인 회사 차단
+    await StorageManager.addBlockItem('사람인회사A', 'company', { platform: 'saramin' });
+    // 2. 사람인 공고 숨김
+    await StorageManager.addBlockItem('rec_saramin_99', 'job', {
+      companyName: '사람인회사B',
+      title: '시니어 개발자',
+      platform: 'saramin',
+    });
+    // 3. 잡코리아 공고 숨김
+    await StorageManager.addBlockItem('rec_jobkorea_88', 'job', {
+      companyName: '잡코리아회사C',
+      title: '주니어 개발자',
+      platform: 'jobkorea',
+    });
+
+    await act(async () => {
+      root.render(<Options />);
+    });
+
+    // 1. '공고' 유형 탭 선택
+    const jobTab = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.filter-tab-btn')
+    ).find((btn) => btn.textContent?.includes('공고'));
+
+    await act(async () => {
+      jobTab?.click();
+    });
+
+    expect(container.querySelectorAll('.block-item').length).toBe(2);
+
+    // 2. '사람인' 플랫폼 탭 선택
+    const saraminPlatTab = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.platform-tab-btn')
+    ).find((btn) => btn.textContent?.includes('사람인'));
+
+    await act(async () => {
+      saraminPlatTab?.click();
+    });
+
+    // 결과: 사람인에서 숨긴 공고 1개만 조회되어야 함!
+    const filteredItems = container.querySelectorAll('.block-item');
+    expect(filteredItems.length).toBe(1);
+    expect(filteredItems[0].textContent).toContain('사람인회사B');
+    expect(filteredItems[0].textContent).toContain('시니어 개발자');
+    expect(filteredItems[0].textContent).not.toContain('잡코리아회사C');
+    expect(filteredItems[0].textContent).not.toContain('사람인회사A');
+  });
 });
+

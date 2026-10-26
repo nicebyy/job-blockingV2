@@ -219,6 +219,37 @@ export type OptionsFilterType =
     'ALL' | 'COMPANY' | 'JOB' | 'KEYWORD'
   >];
 
+/**
+ * 채용 플랫폼 식별자 및 UI 레이블/뱃지 스타일 상수
+ */
+export const PLATFORM_CONFIG = {
+  ALL: 'all',
+  WANTED: 'wanted',
+  SARAMIN: 'saramin',
+  JOBKOREA: 'jobkorea',
+  CUSTOM: 'custom',
+  LABELS: {
+    all: '전체 플랫폼',
+    wanted: '원티드',
+    saramin: '사람인',
+    jobkorea: '잡코리아',
+    custom: '직접등록',
+  },
+  BADGE_CLASSES: {
+    wanted: 'platform-badge-wanted',
+    saramin: 'platform-badge-saramin',
+    jobkorea: 'platform-badge-jobkorea',
+    custom: 'platform-badge-custom',
+  },
+} as const;
+
+export type PlatformFilterType =
+  (typeof PLATFORM_CONFIG)[keyof Pick<
+    typeof PLATFORM_CONFIG,
+    'ALL' | 'WANTED' | 'SARAMIN' | 'JOBKOREA' | 'CUSTOM'
+  >];
+
+
 
 /**
  * 공고 카드 내 인라인 액션 버튼(공고숨김 / 회사차단) UI 및 스타일 설정 상수
