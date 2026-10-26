@@ -175,21 +175,48 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
   }
 
   /**
-   * 테이블 행(tr)의 경우 HTML 레이아웃을 보존하기 위해 제목 열(td.tplTit)을 버튼 호스트로 지정
+   * 테이블 행(tr)의 경우 HTML 레이아웃을 보존하기 위해 제목 열(.titBx)을 버튼 호스트로 지정하고,
+   * 차단/숨김 시 테이블 행(tr) 전체가 즉각 숨겨지도록 보장
    */
   public override injectInlineButton(
     cardInfo: JobCardInfo,
     actions: BlockActions | ((companyName: string) => void)
   ): void {
-    if (!cardInfo.cardElement) return;
+    const rawCard = cardInfo.cardElement;
+    if (!rawCard) return;
 
-    if (cardInfo.cardElement.tagName.toUpperCase() === 'TR') {
-      const hostCell = cardInfo.cardElement.querySelector<HTMLElement>(
+    if (rawCard.tagName.toUpperCase() === 'TR') {
+      const hostContainer = rawCard.querySelector<HTMLElement>(
         JOBKOREA_SELECTORS.BUTTON_HOST_CELL
       );
-      if (hostCell && !cardInfo.cardElement.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)) {
-        hostCell.style.position = 'relative';
-        super.injectInlineButton({ ...cardInfo, cardElement: hostCell }, actions);
+      if (hostContainer && !rawCard.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)) {
+        hostContainer.style.position = 'relative';
+        const titCell = rawCard.querySelector<HTMLElement>('td.tplTit');
+        if (titCell) {
+          titCell.style.position = 'relative';
+        }
+        rawCard.classList.add(INLINE_BUTTON_CONFIG.CLASSES.CARD_HOST);
+
+        const onBlockCompany = typeof actions === 'function' ? actions : actions.onBlockCompany;
+        const onBlockJob = typeof actions === 'object' ? actions.onBlockJob : undefined;
+
+        super.injectInlineButton(
+          { ...cardInfo, cardElement: hostContainer },
+          {
+            onBlockCompany: (compName) => {
+              rawCard.style.setProperty('display', 'none', 'important');
+              rawCard.setAttribute('data-job-filtered', 'true');
+              rawCard.setAttribute('data-filter-mode', 'hide');
+              onBlockCompany?.(compName);
+            },
+            onBlockJob: (info) => {
+              rawCard.style.setProperty('display', 'none', 'important');
+              rawCard.setAttribute('data-job-filtered', 'true');
+              rawCard.setAttribute('data-filter-mode', 'hide');
+              onBlockJob?.({ ...info, cardElement: rawCard });
+            },
+          }
+        );
         return;
       }
     }
