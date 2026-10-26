@@ -110,4 +110,49 @@ describe('StorageManager 단위 테스트', () => {
     expect(remaining.length).toBe(1);
     expect(remaining[0].pattern).toBe('company_1');
   });
+
+  it('리스트 페이지와 상세 페이지에서 동일 공고를 차단해도 중복 생성되지 않고 단일 항목으로 유지되어야 한다', async () => {
+    // 1. 리스트 페이지에서 jobId(55176414)로 공고 차단
+    await StorageManager.addBlockItem('55176414', 'job', {
+      title: '[㈜에스티아이] 2026년 하반기 공채',
+      companyName: '(주)에스티아이',
+      closingDate: '~ 11/30(일)',
+    });
+
+    let list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1);
+
+    // 2. 상세 페이지에서 동일한 jobId(55176414)로 다시 차단 시도
+    await StorageManager.addBlockItem('55176414', 'job', {
+      title: '[㈜에스티아이] 2026년 하반기 공채',
+      companyName: '(주)에스티아이',
+      closingDate: '~ 11/30(일)',
+    });
+
+    list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1); // 중복되지 않고 1개 유지
+  });
+
+  it('리스트에서 복합키(company:::title)로 차단 후 상세페이지에서 고유 jobId로 재차단 시 중복 없이 jobId로 업그레이드되어야 한다', async () => {
+    // 1. jobId를 알 수 없어 복합키로 등록된 경우
+    await StorageManager.addBlockItem('(주)에스티아이:::[㈜에스티아이] 2026년 하반기 공채', 'job', {
+      title: '[㈜에스티아이] 2026년 하반기 공채',
+      companyName: '(주)에스티아이',
+    });
+
+    let list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1);
+    expect(list[0].pattern).toBe('(주)에스티아이:::[㈜에스티아이] 2026년 하반기 공채');
+
+    // 2. 상세 페이지에서 정확한 고유 jobId(55176414)로 차단 시도
+    await StorageManager.addBlockItem('55176414', 'job', {
+      title: '[㈜에스티아이] 2026년 하반기 공채',
+      companyName: '(주)에스티아이',
+    });
+
+    list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1); // 2개로 중복 생성되지 않고 1개 유지
+    expect(list[0].pattern).toBe('55176414'); // 더 정밀한 고유 jobId로 패턴 업그레이드
+  });
 });
+

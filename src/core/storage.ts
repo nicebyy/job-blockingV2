@@ -183,20 +183,56 @@ export class StorageManager {
     const list = await this.getBlockList(false);
     const cleanPattern = pattern.trim();
 
-    // 중복 검사
-    const existingIndex = list.findIndex(
-      (item) => item.type === type && item.pattern.toLowerCase() === cleanPattern.toLowerCase()
-    );
+    // 중복 검사 (패턴 일치 또는 공고의 경우 회사명+공고제목 일치 여부 다층 검증)
+    const existingIndex = list.findIndex((item) => {
+      if (item.type !== type) return false;
+      // 1. pattern 동일 여부 (jobId 또는 회사명/키워드)
+      if (item.pattern.toLowerCase() === cleanPattern.toLowerCase()) return true;
+
+      // 2. 공고(job) 타입의 경우: pattern 형태가 다르더라도(예: 하나는 jobId, 하나는 company:::title)
+      // 회사명과 공고 제목이 동일하면 동일한 공고로 판별하여 중복 방지
+      if (
+        type === 'job' &&
+        metadata?.companyName &&
+        metadata?.title &&
+        item.companyName &&
+        item.title &&
+        item.companyName.trim().toLowerCase() === metadata.companyName.trim().toLowerCase() &&
+        item.title.trim().toLowerCase() === metadata.title.trim().toLowerCase()
+      ) {
+        return true;
+      }
+      return false;
+    });
+
     if (existingIndex !== -1) {
-      // 기존 항목이 만료 시각이 갱신되어야 할 경우 업데이트
       const existing = list[existingIndex];
+      let needsSave = false;
+
+      // 기존 항목이 복합 키(company:::title)였고 새 항목이 고유 jobId인 경우 더 정확한 jobId로 pattern 업그레이드
+      if (cleanPattern && !cleanPattern.includes(':::') && existing.pattern.includes(':::')) {
+        existing.pattern = cleanPattern;
+        needsSave = true;
+      }
       if (metadata?.expiresAt && metadata.expiresAt !== existing.expiresAt) {
         existing.expiresAt = metadata.expiresAt;
         existing.closingDate = metadata.closingDate || existing.closingDate;
+        needsSave = true;
+      }
+      if (metadata?.title && !existing.title) {
+        existing.title = metadata.title;
+        needsSave = true;
+      }
+      if (metadata?.companyName && !existing.companyName) {
+        existing.companyName = metadata.companyName;
+        needsSave = true;
+      }
+      if (needsSave) {
         await this.saveBlockList(list);
       }
       return existing;
     }
+
 
     const newItem: BlockItem = {
       id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
