@@ -162,6 +162,10 @@ describe('Site Adapters 단위 테스트', () => {
 
       adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
 
+      // 개별 카드 내에 버튼이 정확히 앵커되도록 relative 포지셔닝이 설정되어야 함
+      expect(card.style.position).toBe('relative');
+      expect(card.classList.contains('job-filter-card-host')).toBe(true);
+
       const hideBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-job')!;
       expect(hideBtn).not.toBeNull();
 

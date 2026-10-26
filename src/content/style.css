@@ -1,3 +1,12 @@
+/* 공고 카드 요소들의 포지셔닝 컨텍스트 보장 (버튼 툴바가 부모가 아닌 개별 카드 내에 정확히 앵커되도록 설정) */
+.job-filter-card-host,
+.item_recruit,
+.list-post,
+[data-cy="job-card"],
+.jview {
+  position: relative !important;
+}
+
 /* 채용 공고 카드 필터링 스타일 */
 [data-job-filtered="true"][data-filter-mode="blur"] {
   position: relative !important;
@@ -6,8 +15,8 @@
 }
 
 [data-job-filtered="true"][data-filter-mode="blur"]:hover {
-  filter: blur(0px) !important;
-  opacity: 0.95 !important;
+  filter: blur(2px) !important;
+  opacity: 0.75 !important;
 }
 
 [data-job-filtered="true"][data-filter-mode="hide"] {
@@ -28,12 +37,18 @@ section[aria-label="추천공고"],
   display: none !important;
 }
 
+/* 사람인 기업정보 팝업 스타일 보정 (다른 공고 카드 요소와의 겹침 방지) */
+.lpop_corp_info {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
+}
+
 /* 주입되는 인라인 [차단/숨김] 버튼 그룹 (모던 글래스모피즘 플로팅 캡슐 툴바) */
 .job-filter-btn-group {
   position: absolute !important;
   top: 10px !important;
   right: 12px !important;
-  z-index: 50 !important;
+  z-index: 100 !important;
   display: inline-flex !important;
   align-items: center !important;
   padding: 2px 4px !important;

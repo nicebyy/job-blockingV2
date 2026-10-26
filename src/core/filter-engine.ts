@@ -56,6 +56,7 @@ export class FilterEngine {
           this.normalizeCompanyName(item.companyName) === normalizedCompany
         );
         const isTitleOnlyMatch = Boolean(
+          !item.companyName &&
           item.title &&
           item.title.trim().toLowerCase() === cardInfo.title.trim().toLowerCase()
         );
