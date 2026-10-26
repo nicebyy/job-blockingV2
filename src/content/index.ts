@@ -26,6 +26,9 @@ class ContentController {
       return;
     }
 
+    // 팝업 및 외부 메시지 리스너 최우선 등록 (초기화 지연 시에도 메시지 유실 방지)
+    this.setupMessageListener();
+
     this.settings = await StorageManager.getSettings();
     const blockList = await StorageManager.getBlockList();
     this.filterEngine = new FilterEngine(this.settings, blockList);
@@ -43,9 +46,6 @@ class ContentController {
 
     // URL 변경 감지 (정렬 필터, 카테고리 탭 변경 등 대응)
     this.setupUrlChangeListener();
-
-    // 메시지 리스너 등록
-    this.setupMessageListener();
   }
 
   private setupUrlChangeListener(): void {
@@ -129,6 +129,8 @@ class ContentController {
 
     chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
       if (message.type === 'GET_PAGE_STATS') {
+        // 팝업 요청 시 최신 DOM 상태를 즉시 재스캔하여 정확한 통계 반환
+        this.scanAndFilter();
         sendResponse({ stats: this.currentStats });
         return true;
       }

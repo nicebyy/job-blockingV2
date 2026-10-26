@@ -249,6 +249,37 @@ export type PlatformFilterType =
     'ALL' | 'WANTED' | 'SARAMIN' | 'JOBKOREA' | 'CUSTOM'
   >];
 
+/**
+ * 팝업(Popup) 통계 탭 및 항목 설정 상수
+ */
+export const POPUP_STATS_CONFIG = {
+  MODES: {
+    TOTAL: 'total',
+    PAGE: 'page',
+  },
+  MODE_LABELS: {
+    TOTAL: '전체 등록',
+    PAGE: '현재 페이지',
+  },
+  TOTAL_LABELS: {
+    TOTAL: '전체 차단',
+    COMPANIES: '차단 회사',
+    JOBS: '숨긴 공고',
+    KEYWORDS: '차단 키워드',
+  },
+  PAGE_LABELS: {
+    TOTAL: '차단된 공고',
+    COMPANIES: '차단 회사',
+    JOBS: '숨긴 공고',
+    ADS: '광고 공고',
+  },
+  NOT_JOB_SITE_TOOLTIP: '현재 탭은 지원하는 채용 사이트가 아닙니다.',
+} as const;
+
+export type PopupStatsMode =
+  (typeof POPUP_STATS_CONFIG.MODES)[keyof typeof POPUP_STATS_CONFIG.MODES];
+
+
 
 
 /**
