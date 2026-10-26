@@ -46,6 +46,7 @@ export const SITE_DOMAINS = {
   SARAMIN: 'saramin.co.kr',
   JOBKOREA: 'jobkorea.co.kr',
   JOBPLANET: 'jobplanet.co.kr',
+  BLIND: 'teamblind.com',
 } as const;
 
 /**
@@ -131,6 +132,14 @@ export const UI_MESSAGES = {
   EMPTY_BLOCK_LIST: '등록된 차단 항목이 없습니다.',
   PURGE_EXPIRED_SUCCESS: (count: number) => `만료된 공고 ${count}개가 자동 정리되었습니다.`,
   EMPTY_EXPIRED_LIST: '만료된 공고가 없습니다.',
+  TOGGLE_LABELS: {
+    MODE_BLUR: '블러(흐리게) 처리',
+    MODE_HIDE: '완전 숨김 처리',
+    HIDE_ADS: '추천/광고 공고 숨김',
+    INFINITE_SCROLL: '무한 스크롤 & 자동 채우기',
+    JOBPLANET_RATING: '잡플래닛 평점 표시',
+    BLIND_RATING: '블라인드 평점 표시',
+  },
 } as const;
 
 /**
@@ -182,24 +191,54 @@ export const JOBPLANET_CONFIG = {
 } as const;
 
 /**
- * 잡플래닛 평점 뱃지 UI 설정 상수
+ * 팀블라인드(TeamBlind) 연동 및 요청 설정 상수
+ */
+export const BLIND_CONFIG = {
+  BASE_URL: 'https://www.teamblind.com',
+  SEARCH_URL: 'https://www.teamblind.com/kr/search',
+  COMPANY_BASE_URL: 'https://www.teamblind.com/kr/company',
+  HEADERS: {
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+  },
+  CACHE_KEY_PREFIX: 'blind_score_',
+  CACHE_TTL_MS: 7 * 24 * 60 * 60 * 1000, // 정상 평점 캐시 7일
+  NEGATIVE_CACHE_TTL_MS: 24 * 60 * 60 * 1000, // 미존재/동명기업/에러 캐시 1일
+  REQUEST_DELAY_MS: 300, // 순차 호출 스로틀링(ms)
+  REQUEST_TIMEOUT_MS: 8000, // 타임아웃 8초
+} as const;
+
+/**
+ * 기업 평점(잡플래닛 / 블라인드) 뱃지 UI 설정 상수
  */
 export const RATING_BADGE_CONFIG = {
   CLASSES: {
-    CONTAINER: 'job-filter-rating-badge',
+    WRAP: 'job-filter-ratings-wrap',
+    BADGE: 'job-filter-rating-badge',
+    CONTAINER: 'job-filter-rating-badge', // 하위 호환
     STAR: 'job-filter-rating-star',
     SCORE: 'job-filter-rating-score',
+    LABEL: 'job-filter-rating-label',
+    JOBPLANET: 'job-filter-rating-jobplanet',
+    BLIND: 'job-filter-rating-blind',
     HIGH: 'job-filter-rating-high',
     MEDIUM: 'job-filter-rating-medium',
     LOW: 'job-filter-rating-low',
     DEFAULT: 'job-filter-rating-default',
   },
-  THRESHOLDS: {
-    HIGH: 3.5,
-    MEDIUM: 2.8,
+  LABELS: {
+    JOBPLANET: '잡플래닛',
+    BLIND: '블라인드',
+  },
+  TOOLTIPS: {
+    JOBPLANET: (rating: number, companyName: string) =>
+      `'${companyName}' 잡플래닛 평점 ${rating.toFixed(1)} / 5.0 (클릭 시 이동 · 검색 결과 미존재, 동명 기업, 평점 미등록 시 표시 제외)`,
+    BLIND: (rating: number, companyName: string) =>
+      `'${companyName}' 블라인드 평점 ${rating.toFixed(1)} / 5.0 (클릭 시 이동 · 검색 결과 미존재, 동명 기업, 평점 미등록 시 표시 제외)`,
   },
   TOOLTIP: (rating: number, companyName: string) =>
-    `'${companyName}' 잡플래닛 평점 ${rating.toFixed(1)} / 5.0 (클릭 시 잡플래닛으로 이동)`,
+    `'${companyName}' 평점 ${rating.toFixed(1)} / 5.0 (클릭 시 이동 · 검색 결과 미존재, 동명 기업, 평점 미등록 시 표시 제외)`,
 } as const;
+
 
 

@@ -275,6 +275,7 @@ describe('Site Adapters 단위 테스트', () => {
           showInlineButton: true,
           enableInfiniteScroll: true,
           showJobplanetRating: true,
+          showBlindRating: true,
         },
         [{ id: '1', pattern: '차단기업', type: 'company', createdAt: Date.now() }]
       );
@@ -434,10 +435,10 @@ describe('Site Adapters 단위 테스트', () => {
     });
   });
 
-  describe('잡플래닛 평점 뱃지 주입 (injectRatingBadge)', () => {
+  describe('기업 평점 뱃지 주입 (injectRatingBadge - 잡플래닛 & 블라인드)', () => {
     const adapter = new WantedAdapter();
 
-    it('평점이 존재하고 단일 기업일 때 기업명 옆에 평점 뱃지를 배치해야 한다', () => {
+    it('잡플래닛 평점이 존재하고 단일 기업일 때 초록색 뱃지를 기업명 옆 래퍼에 배치해야 한다', () => {
       const card = document.createElement('div');
       card.innerHTML = `
         <span class="companyName">우아한형제들</span>
@@ -446,6 +447,7 @@ describe('Site Adapters 단위 테스트', () => {
       const cardInfo = adapter.parseCard(card)!;
 
       adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
         status: 'found',
         companyName: '우아한형제들',
         rating: 3.8,
@@ -453,15 +455,83 @@ describe('Site Adapters 단위 테스트', () => {
         cachedAt: Date.now(),
       });
 
-      const badge = card.querySelector('.job-filter-rating-badge');
-      expect(badge).not.toBeNull();
-      expect(badge?.textContent).toContain('3.8');
-      expect(badge?.classList.contains('job-filter-rating-high')).toBe(true);
-      expect(badge?.getAttribute('href')).toBe('https://www.jobplanet.co.kr/companies/61420');
+      const wrap = card.querySelector('.job-filter-ratings-wrap');
+      expect(wrap).not.toBeNull();
 
-      // 기업명 바로 다음에 배치되었는지 확인
+      const badge = wrap?.querySelector('.job-filter-rating-badge.job-filter-rating-jobplanet');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('잡플래닛');
+      expect(badge?.textContent).toContain('3.8');
+      expect(badge?.getAttribute('href')).toBe('https://www.jobplanet.co.kr/companies/61420');
+      expect(badge?.getAttribute('title')).toContain('검색 결과 미존재, 동명 기업, 평점 미등록 시 표시 제외');
+
+      // 기업명 바로 다음에 wrap이 배치되었는지 확인
       const companyEl = card.querySelector('.companyName');
-      expect(companyEl?.nextElementSibling).toBe(badge);
+      expect(companyEl?.nextElementSibling).toBe(wrap);
+    });
+
+    it('블라인드 평점이 존재하고 단일 기업일 때 빨간색 뱃지를 배치해야 한다', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <span class="companyName">카카오</span>
+      `;
+      const cardInfo = adapter.parseCard(card)!;
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        status: 'found',
+        companyName: '카카오',
+        rating: 3.5,
+        companyUrl: 'https://www.teamblind.com/kr/company/%EC%B9%B4%EC%B9%B4%EC%98%A4',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = card.querySelector('.job-filter-ratings-wrap');
+      expect(wrap).not.toBeNull();
+
+      const badge = wrap?.querySelector('.job-filter-rating-badge.job-filter-rating-blind');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('블라인드');
+      expect(badge?.textContent).toContain('3.5');
+      expect(badge?.getAttribute('href')).toBe('https://www.teamblind.com/kr/company/%EC%B9%B4%EC%B9%B4%EC%98%A4');
+      expect(badge?.getAttribute('title')).toContain('검색 결과 미존재, 동명 기업, 평점 미등록 시 표시 제외');
+    });
+
+    it('잡플래닛과 블라인드 평점이 모두 존재할 경우 동일 래퍼 내에 나란히 배치되어야 한다', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <span class="companyName">네이버</span>
+      `;
+      const cardInfo = adapter.parseCard(card)!;
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        status: 'found',
+        companyName: '네이버',
+        rating: 4.0,
+        companyId: 300,
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        status: 'found',
+        companyName: '네이버',
+        rating: 3.9,
+        companyUrl: 'https://www.teamblind.com/kr/company/%EB%84%A4%EC%9D%B4%EB%B2%84',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = card.querySelector('.job-filter-ratings-wrap');
+      expect(wrap).not.toBeNull();
+      expect(wrap?.children.length).toBe(2);
+
+      const jpBadge = wrap?.querySelector('.job-filter-rating-jobplanet');
+      const blindBadge = wrap?.querySelector('.job-filter-rating-blind');
+      expect(jpBadge).not.toBeNull();
+      expect(blindBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('4.0');
+      expect(blindBadge?.textContent).toContain('3.9');
     });
 
     it('동명의 회사가 여러 개인 경우(status: ambiguous) 뱃지를 배치하지 않아야 한다 (배치x)', () => {
@@ -472,6 +542,7 @@ describe('Site Adapters 단위 테스트', () => {
       const cardInfo = adapter.parseCard(card)!;
 
       adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
         status: 'ambiguous',
         companyName: '동명시스템',
         cachedAt: Date.now(),
@@ -489,6 +560,7 @@ describe('Site Adapters 단위 테스트', () => {
       const cardInfo = adapter.parseCard(card)!;
 
       adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
         status: 'not_found',
         companyName: '미존재기업',
         cachedAt: Date.now(),
@@ -498,7 +570,7 @@ describe('Site Adapters 단위 테스트', () => {
       expect(badge).toBeNull();
     });
 
-    it('이미 주입된 경우 중복하여 주입하지 않아야 한다', () => {
+    it('동일 플랫폼 뱃지가 이미 주입된 경우 중복하여 주입하지 않아야 한다', () => {
       const card = document.createElement('div');
       card.innerHTML = `
         <span class="companyName">카카오</span>
@@ -506,6 +578,7 @@ describe('Site Adapters 단위 테스트', () => {
       const cardInfo = adapter.parseCard(card)!;
 
       const ratingInfo = {
+        platform: 'jobplanet' as const,
         status: 'found' as const,
         companyName: '카카오',
         rating: 3.8,
@@ -528,6 +601,7 @@ describe('Site Adapters 단위 테스트', () => {
       const cardInfo = adapter.parseCard(card)!;
 
       adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
         status: 'found',
         companyName: '토스',
         rating: 4.1,

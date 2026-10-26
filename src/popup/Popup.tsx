@@ -62,6 +62,14 @@ export const Popup: React.FC = () => {
     notifyContentScript({ type: 'SETTINGS_CHANGED', settings: updated });
   };
 
+  const handleToggleBlindRating = async () => {
+    const updated = await StorageManager.saveSettings({
+      showBlindRating: !settings.showBlindRating,
+    });
+    setSettings(updated);
+    notifyContentScript({ type: 'SETTINGS_CHANGED', settings: updated });
+  };
+
   const handleAddCompany = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newCompany.trim();
@@ -127,7 +135,9 @@ export const Popup: React.FC = () => {
       <div className="section">
         <div className="toggle-row">
           <span className="toggle-label">
-            {settings.mode === 'blur' ? '블러(흐리게) 처리' : '완전 숨김 처리'}
+            {settings.mode === 'blur'
+              ? UI_MESSAGES.TOGGLE_LABELS.MODE_BLUR
+              : UI_MESSAGES.TOGGLE_LABELS.MODE_HIDE}
           </span>
           <label className="switch">
             <input
@@ -140,7 +150,7 @@ export const Popup: React.FC = () => {
         </div>
 
         <div className="toggle-row" style={{ marginTop: '10px' }}>
-          <span className="toggle-label">추천/광고 공고 숨김</span>
+          <span className="toggle-label">{UI_MESSAGES.TOGGLE_LABELS.HIDE_ADS}</span>
           <label className="switch">
             <input
               type="checkbox"
@@ -152,7 +162,7 @@ export const Popup: React.FC = () => {
         </div>
 
         <div className="toggle-row" style={{ marginTop: '10px' }}>
-          <span className="toggle-label">무한 스크롤 & 자동 채우기</span>
+          <span className="toggle-label">{UI_MESSAGES.TOGGLE_LABELS.INFINITE_SCROLL}</span>
           <label className="switch">
             <input
               type="checkbox"
@@ -164,12 +174,24 @@ export const Popup: React.FC = () => {
         </div>
 
         <div className="toggle-row" style={{ marginTop: '10px' }}>
-          <span className="toggle-label">잡플래닛 평점 표시</span>
+          <span className="toggle-label">{UI_MESSAGES.TOGGLE_LABELS.JOBPLANET_RATING}</span>
           <label className="switch">
             <input
               type="checkbox"
               checked={settings.showJobplanetRating}
               onChange={handleToggleJobplanetRating}
+            />
+            <span className="slider"></span>
+          </label>
+        </div>
+
+        <div className="toggle-row" style={{ marginTop: '10px' }}>
+          <span className="toggle-label">{UI_MESSAGES.TOGGLE_LABELS.BLIND_RATING}</span>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={settings.showBlindRating}
+              onChange={handleToggleBlindRating}
             />
             <span className="slider"></span>
           </label>
