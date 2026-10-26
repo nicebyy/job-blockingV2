@@ -54,7 +54,15 @@ const child = spawn(process.execPath, spawnArgs, {
 const timeoutMs = 10000;
 const timer = setTimeout(() => {
   console.error(`\n[eval-ts] 오류: ${timeoutMs / 1000}초 타임아웃을 초과하여 프로세스를 강제 종료합니다.`);
-  child.kill('SIGKILL');
+  if (process.platform === 'win32' && child.pid) {
+    try {
+      import('node:child_process').then(({ execSync }) => {
+        execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: 'ignore' });
+      });
+    } catch {}
+  } else {
+    child.kill('SIGKILL');
+  }
   process.exit(1);
 }, timeoutMs);
 
