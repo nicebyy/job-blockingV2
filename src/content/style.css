@@ -3,7 +3,11 @@
 .item_recruit,
 .list-post,
 [data-cy="job-card"],
-.jview {
+.jview,
+tr.devloopArea,
+tr[data-gno],
+td.tplTit,
+.job-recommendation-item {
   position: relative !important;
 }
 
@@ -19,11 +23,23 @@
   opacity: 0.75 !important;
 }
 
+/* 테이블 행(tr) 블러 처리 시 자식 td 요소 필터링 */
+tr[data-job-filtered="true"][data-filter-mode="blur"] td {
+  filter: blur(6px) !important;
+  opacity: 0.3 !important;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+tr[data-job-filtered="true"][data-filter-mode="blur"]:hover td {
+  filter: blur(2px) !important;
+  opacity: 0.75 !important;
+}
+
 [data-job-filtered="true"][data-filter-mode="hide"] {
   display: none !important;
 }
 
-/* 사람인 AI 검색 유도 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너 자동 숨김 */
+/* 사람인 및 잡코리아 AI 검색 유도 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너 자동 숨김 */
 .area_ai_search,
 section.type_searchup,
 section.keyword_up_logo_area,
@@ -33,7 +49,12 @@ section.wrap_store,
 #store_product,
 #section_contents,
 section[aria-label="추천공고"],
-.list_curation_wrap {
+.list_curation_wrap,
+.job-recommendation,
+div.job-recommendation,
+.area-recommend-job,
+.dev-banner,
+#dev-BNewsAGI {
   display: none !important;
 }
 
@@ -74,6 +95,10 @@ section[aria-label="추천공고"],
 .list-post:hover .job-filter-btn-group,
 .jview:hover .job-filter-btn-group,
 .wrap_jview .jview:hover .job-filter-btn-group,
+tr.devloopArea:hover .job-filter-btn-group,
+tr[data-gno]:hover .job-filter-btn-group,
+td.tplTit:hover .job-filter-btn-group,
+.job-recommendation-item:hover .job-filter-btn-group,
 .job-filter-btn-group:hover,
 .job-filter-btn-group:focus-within {
   opacity: 1 !important;

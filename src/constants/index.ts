@@ -109,14 +109,38 @@ export const SARAMIN_SELECTORS = {
  * 잡코리아(JobKorea) DOM 셀렉터 상수
  */
 export const JOBKOREA_SELECTORS = {
-  JOB_CARDS: '.list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
-  LIST_CONTAINER: '.lists-cnt, .lists-wrap, .list-default',
-  PAGINATION: '.tplPagination, .page-box, .pagination',
-  COMPANY_NAME: '.post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
-  POSITION_TITLE: '.post-list-info a.title, .title a, a.tit, .post-title',
+  JOB_CARDS:
+    '.tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
+  LIST_CONTAINER:
+    '.tplList.tplJobList table tbody, #dev-gi-list .tplJobList table tbody, .tplList table tbody, .lists-cnt, .lists-wrap, .list-default',
+  PAGINATION: '#dvGIPaging .tplPagination, .tplPagination, .page-box, .pagination',
+  COMPANY_NAME:
+    'td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
+  POSITION_TITLE:
+    'td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
+  BUTTON_HOST_CELL: 'td.tplTit',
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',
-  AD_CLASS: 'special-post',
-  CLOSING_DATE: '.date, .option .date, .post-list-info .date',
+  AD_CLASS: 'special-post, job-recommendation-item',
+  CLOSING_DATE: 'td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
+  PROMOTION_BANNERS:
+    '.job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
+} as const;
+
+/**
+ * 잡코리아(JobKorea) 요청 및 동작 설정 상수
+ */
+export const JOBKOREA_CONFIG = {
+  PAGING_ENDPOINT: '/Recruit/Home/_GI_List/',
+  JOBLIST_PATH: '/recruit/joblist',
+  DEFAULT_PAGE_SIZE: '40',
+  DEFAULT_ORDER: '20',
+  DEFAULT_TAB_INDEX: '0',
+  BODY_PARAMS: {
+    PAGE: 'page',
+    PAGE_SIZE: 'pagesize',
+    ORDER: 'order',
+    TAB_INDEX: 'tabindex',
+  },
 } as const;
 
 /**
