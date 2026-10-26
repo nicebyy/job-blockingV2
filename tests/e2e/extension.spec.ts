@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { test, expect } from './fixtures';
 import { UI_MESSAGES, POPUP_STATS_CONFIG } from '../../src/constants';
 
@@ -52,5 +54,38 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
 
     // 삭제 후 빈 상태가 표시되는지 확인
     await expect(page.locator('.empty-state')).toContainText('등록된 차단 항목이 없습니다');
+  });
+
+  test('점핏(Jumpit) 페이지에서 잡플래닛 및 블라인드 평점 뱃지가 공고 카드 회사명 옆에 정상 주입되어야 한다', async ({
+    page,
+  }) => {
+    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/jumpit_positions.html');
+    const fixtureHtml = fs.readFileSync(fixturePath, 'utf8');
+
+    await page.route('https://jumpit.saramin.co.kr/positions?sort=popular', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html; charset=utf-8',
+        body: fixtureHtml,
+      });
+    });
+
+    await page.goto('https://jumpit.saramin.co.kr/positions?sort=popular', {
+      waitUntil: 'domcontentloaded',
+    });
+
+    await page.waitForTimeout(3000);
+
+    const badges = await page.locator('.job-filter-rating-badge').all();
+    expect(badges.length).toBeGreaterThan(0);
+
+    // 와탭랩스 카드 평점 뱃지 가시성 및 회사명 옆 인라인 정렬 확인
+    const wtableCard = page.locator('.sc-d609d44f-0:has-text("와탭랩스")').first();
+    const wrap = wtableCard.locator('.job-filter-ratings-wrap');
+    await expect(wrap).toBeVisible();
+
+    // 썸네일 이미지 박스(.img_box) 내부가 아닌 본문(.sc-15ba67b8-0) 영역에 위치하는지 검증
+    const insideImgBox = await wtableCard.locator('.img_box .job-filter-ratings-wrap').count();
+    expect(insideImgBox).toBe(0);
   });
 });

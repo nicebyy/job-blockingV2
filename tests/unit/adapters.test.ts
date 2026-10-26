@@ -2552,6 +2552,48 @@ describe('Site Adapters 단위 테스트', () => {
       expect(blindBadge).not.toBeNull();
       expect(blindBadge?.textContent).toContain('4.1');
     });
+
+    it('점핏 상세 페이지 헤더에서 회사명 뒤에 <a> 중첩 없이 평점 뱃지 래퍼를 주입해야 한다', () => {
+      const header = document.createElement('div');
+      header.className = 'sc-80824a9d-0 gYKwrs';
+      header.innerHTML = `
+        <h1>백엔드 개발자</h1>
+        <a class="name" href="/company/123"><span>카카오</span></a>
+      `;
+
+      const cardInfo = {
+        cardElement: header,
+        companyName: '카카오',
+        title: '백엔드 개발자',
+        isAd: false,
+      };
+
+      const originalLocation = window.location;
+      delete (window as any).location;
+      window.location = {
+        ...originalLocation,
+        pathname: '/position/123456',
+        href: 'https://jumpit.saramin.co.kr/position/123456',
+      } as any;
+
+      try {
+        adapter.injectRatingBadge(cardInfo, {
+          platform: 'jobplanet',
+          status: 'found',
+          companyName: '카카오',
+          rating: 3.8,
+          cachedAt: Date.now(),
+        });
+
+        const wrap = header.querySelector('.job-filter-ratings-wrap');
+        expect(wrap).not.toBeNull();
+        // a.name 내부에 중첩되지 않고 그 뒤의 형제(sibling)로 주입되었는지 확인
+        expect(wrap?.parentElement).toBe(header);
+        expect(header.querySelector('a.name .job-filter-ratings-wrap')).toBeNull();
+      } finally {
+        (window as any).location = originalLocation;
+      }
+    });
   });
 });
 

@@ -153,6 +153,17 @@ export class JumpitAdapter extends BaseSiteAdapter {
     );
   }
 
+  public override getRatingBadgeAnchorElement(cardElement: HTMLElement): HTMLElement | null {
+    if (this.isDetailPage()) {
+      return (
+        cardElement.querySelector<HTMLElement>('a.name[href*="/company/"]') ||
+        cardElement.querySelector<HTMLElement>(JUMPIT_SELECTORS.DETAIL_COMPANY_NAME) ||
+        this.getCompanyElement(cardElement)
+      );
+    }
+    return this.getCompanyElement(cardElement);
+  }
+
   public override injectInlineButton(
     cardInfo: JobCardInfo,
     actions: BlockActions | ((companyName: string) => void)

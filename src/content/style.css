@@ -481,5 +481,52 @@ p[class*="sc-18344c98-6"] {
   vertical-align: middle !important;
 }
 
+/* 점핏(Jumpit) 공고 카드 회사명 행 및 평점 뱃지 정렬 */
+div[class*="sc-15ba67b8-2"],
+.bhnakf,
+.jkmBOM {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: auto !important;
+  max-width: calc(100% - 175px) !important;
+  vertical-align: middle !important;
+  overflow: visible !important;
+}
+
+div[class*="sc-15ba67b8-2"] > span:first-child,
+.bhnakf > span:first-child,
+.jkmBOM > span:first-child {
+  width: auto !important;
+  display: inline-block !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+div[class*="sc-15ba67b8-0"] .job-filter-ratings-wrap,
+div[class*="sc-15ba67b8-2"] .job-filter-ratings-wrap,
+.bhnakf .job-filter-ratings-wrap,
+.jkmBOM .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  flex-shrink: 0 !important;
+  margin-left: 6px !important;
+}
+
+/* 점핏 상세 페이지 헤더 평점 뱃지 정렬 */
+.sc-80824a9d-0 a.name,
+div[class*="sc-80824a9d-0"] a.name {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+div[class*="sc-80824a9d-0"] .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  vertical-align: middle !important;
+  margin-left: 8px !important;
+}
+
 
 

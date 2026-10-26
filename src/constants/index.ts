@@ -237,7 +237,7 @@ export const JUMPIT_SELECTORS = {
   GRID_ITEM:
     'div:has(> a[href*="/position/"]), div[class*="sc-d609d44f-0"], a[href*="/position/"]',
   COMPANY_NAME:
-    'div[class*="jkmBOM"] span, div[class*="bhnakf"] span, div:has(> h2.position_card_info_title) > div span, .company_name, a[href*="/position/"] img[alt]',
+    'div[class*="sc-15ba67b8-2"] span, div[class*="sc-15ba67b8-2"], div:has(> h2.position_card_info_title) > div:first-child span, div:has(> h2.position_card_info_title) > div:first-child, div[class*="jkmBOM"] span, div[class*="bhnakf"] span, .company_name',
   POSITION_TITLE:
     'h2.position_card_info_title, [class*="position_card_info_title"], h2',
   JOB_LINK: 'a[href*="/position/"]',
