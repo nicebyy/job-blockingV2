@@ -83,7 +83,7 @@ export class FilterEngine {
         if (
           normalizedCompany.length > 0 &&
           normalizedPattern.length > 0 &&
-          (normalizedCompany.includes(normalizedPattern) || normalizedPattern.includes(normalizedCompany))
+          (normalizedCompany === normalizedPattern || normalizedCompany.includes(normalizedPattern))
         ) {
           return {
             shouldFilter: true,

@@ -65,6 +65,39 @@ describe('FilterEngine 단위 테스트', () => {
       expect(result.isAdFilter).toBe(false);
     });
 
+    it('차단한 회사명이 다른 일반 회사의 부분 문자열이라고 해서 역방향 오차단이 발생하지 않아야 한다', () => {
+      const blockList: BlockItem[] = [
+        { id: '1', pattern: '삼성전자', type: 'company', createdAt: Date.now() },
+      ];
+      engine.updateBlockList(blockList);
+
+      // '삼성'이나 '전자' 등 차단 패턴의 일부분을 이름으로 갖는 별개 회사는 차단되면 안 됨
+      const otherCompany1: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '삼성',
+        title: '신입 채용',
+        isAd: false,
+      };
+      const otherCompany2: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '전자',
+        title: '신입 채용',
+        isAd: false,
+      };
+
+      expect(engine.evaluateJobCard(otherCompany1).shouldFilter).toBe(false);
+      expect(engine.evaluateJobCard(otherCompany2).shouldFilter).toBe(false);
+
+      // 반대로 '삼성전자서비스'나 '(주)삼성전자' 등 실제 차단 대상 기업은 차단되어야 함
+      const targetCompany: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '(주) 삼성전자',
+        title: '소프트웨어 개발자',
+        isAd: false,
+      };
+      expect(engine.evaluateJobCard(targetCompany).shouldFilter).toBe(true);
+    });
+
     it('차단 키워드가 제목에 포함되어 있으면 필터링되어야 한다', () => {
       const blockList: BlockItem[] = [
         { id: '2', pattern: '파견직', type: 'keyword', createdAt: Date.now() },

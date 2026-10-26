@@ -150,4 +150,90 @@ describe('InfiniteScrollManager 단위 테스트', () => {
     expect(triggered).toBe(false);
     expect(mockFetch).not.toHaveBeenCalled();
   });
+
+  it('동일한 공고가 중복 fetch될 경우 추가하지 않고 무한 루프를 방지하기 위해 탐색을 종료해야 한다', async () => {
+    document.body.innerHTML = `
+      <div id="recruit_info_list">
+        <div class="content">
+          <div class="item_recruit" value="rec_100">
+            <div class="area_corp"><span class="corp_name"><a href="#">기존기업</a></span></div>
+            <div class="area_job"><span class="job_tit"><a href="#">기존공고</a></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="pagination">
+        <a href="https://www.saramin.co.kr/zf_user/search?page=2" page="2">2</a>
+      </div>
+    `;
+
+    // 2페이지 응답이 1페이지와 동일한 중복 공고를 반환하는 경우
+    const mockDuplicateHtml = `
+      <html>
+        <body>
+          <div class="item_recruit" value="rec_100">
+            <div class="area_corp"><span class="corp_name"><a href="#">기존기업</a></span></div>
+            <div class="area_job"><span class="job_tit"><a href="#">기존공고</a></span></div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(mockDuplicateHtml),
+    });
+
+    const onAppended = vi.fn();
+    const manager = new InfiniteScrollManager({
+      adapter: new SaraminAdapter(),
+      onCardsAppended: onAppended,
+      fetchFn: mockFetch as any,
+    });
+
+    manager.init();
+
+    const success = await manager.loadNextPage();
+    // 중복 카드만 있으므로 추가되지 않고 false 반환 및 종료
+    expect(success).toBe(false);
+    expect(onAppended).not.toHaveBeenCalled();
+
+    // DOM 내 카드는 여전히 1개만 유지되어야 함
+    const cards = document.querySelectorAll('.item_recruit');
+    expect(cards.length).toBe(1);
+
+    // 로딩 인디케이터가 꺼져 있어야 함
+    const indicator = document.getElementById(INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID);
+    expect(indicator).toBeNull(); // destroy 호출로 제거됨
+  });
+
+  it('fetch 실패 또는 에러 발생 시에도 로딩 스피너가 무한히 돌지 않고 꺼져야 한다', async () => {
+    document.body.innerHTML = `
+      <div id="recruit_info_list">
+        <div class="content">
+          <div class="item_recruit">공고 1</div>
+        </div>
+      </div>
+      <div class="pagination">
+        <a href="https://www.saramin.co.kr/zf_user/search?page=2" page="2">2</a>
+      </div>
+    `;
+
+    const mockFetch = vi.fn().mockRejectedValue(new Error('Network error or WAF hang'));
+
+    const manager = new InfiniteScrollManager({
+      adapter: new SaraminAdapter(),
+      onCardsAppended: vi.fn(),
+      fetchFn: mockFetch as any,
+    });
+
+    manager.init();
+
+    const success = await manager.loadNextPage();
+    expect(success).toBe(false);
+    expect(manager.getIsLoading()).toBe(false);
+
+    const indicator = document.getElementById(INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID);
+    expect(indicator?.style.display).toBe('none');
+  });
 });

@@ -396,5 +396,40 @@ describe('Site Adapters 단위 테스트', () => {
       const nextUrl = saramin.getNextPageUrl(doc, 2);
       expect(nextUrl).toContain('page=3');
     });
+
+    it('사람인 실서비스 형태인 href="#recruit_info" 및 page="2" 링크에서 recruitPage=2 URL을 생성해야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div class="pagination">
+          <a href="#recruit_info" page="2" class="page page_move"><span>2</span></a>
+        </div>
+      `;
+
+      const nextUrl = saramin.getNextPageUrl(doc, 1);
+      expect(nextUrl).not.toBeNull();
+      expect(nextUrl).toContain('recruitPage=2');
+      expect(nextUrl).not.toContain('#recruit_info');
+    });
+
+    it('사람인 getCardListContainer는 #recruit_info_list 내부의 .content 요소를 우선 반환해야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div id="recruit_info_list">
+          <div class="content">
+            <div class="item_recruit">카드 1</div>
+          </div>
+          <div class="content_bottom">
+            <div class="pagination">1 2</div>
+          </div>
+        </div>
+      `;
+
+      const container = saramin.getCardListContainer(doc);
+      expect(container).not.toBeNull();
+      expect(container?.className).toBe('content');
+      expect(container?.parentElement?.id).toBe('recruit_info_list');
+    });
   });
 });

@@ -74,6 +74,7 @@ export const INFINITE_SCROLL_CONFIG = {
   MIN_VISIBLE_CARDS: 5,
   MAX_CONSECUTIVE_FETCHES: 5,
   FETCH_DELAY_MS: 300,
+  FETCH_TIMEOUT_MS: 10000,
   SENTINEL_ID: 'job-filter-scroll-sentinel',
   LOADING_INDICATOR_ID: 'job-filter-loading-indicator',
 } as const;
@@ -83,7 +84,7 @@ export const INFINITE_SCROLL_CONFIG = {
  */
 export const SARAMIN_SELECTORS = {
   JOB_CARDS: '.item_recruit, .list_item, div[class*="BoxAd_wrap"], .recruit_list .row',
-  LIST_CONTAINER: '#recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
+  LIST_CONTAINER: '#recruit_info_list .content, #recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
   PAGINATION: '.pagination, .page_box',
   COMPANY_NAME: '.area_corp .corp_name a, .corp_name, a[class*="company"], .company_name',
   POSITION_TITLE: '.area_job .job_tit a, .job_tit a, .job_tit, .area_job .job_tit',

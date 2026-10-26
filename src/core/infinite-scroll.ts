@@ -132,7 +132,21 @@ export class InfiniteScrollManager {
         await new Promise((resolve) => setTimeout(resolve, INFINITE_SCROLL_CONFIG.FETCH_DELAY_MS));
       }
 
-      const response = await this.fetchFn(nextUrl);
+      // 타임아웃 적용 (서버 묵묵부답/WAF 방어벽 무한 행잉 방지)
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timeoutId = controller
+        ? setTimeout(() => controller.abort(), INFINITE_SCROLL_CONFIG.FETCH_TIMEOUT_MS)
+        : null;
+
+      let response: Response;
+      try {
+        response = await this.fetchFn(nextUrl, {
+          signal: controller?.signal,
+        });
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+
       if (!response.ok) {
         throw new Error(`Fetch failed with status ${response.status}`);
       }
@@ -153,12 +167,39 @@ export class InfiniteScrollManager {
         return false;
       }
 
-      // 카드 요소들을 현재 문서에 복제/추가
+      // 기존 공고 중복 검사 (이미 DOM에 존재하는 공고는 중복 추가하지 않음)
+      const existingCards = this.adapter.getJobCardElements(document);
+      const existingKeys = new Set(
+        existingCards
+          .map((c) => {
+            const parsed = this.adapter.parseCard(c);
+            return parsed?.jobId || (parsed ? `${parsed.companyName}:::${parsed.title}` : null);
+          })
+          .filter(Boolean)
+      );
+
+      // 카드 요소들을 현재 문서에 복제/추가 (중복 제외)
       const importedCards: HTMLElement[] = [];
       for (const card of nextCards) {
+        const parsed = this.adapter.parseCard(card);
+        const key = parsed?.jobId || (parsed ? `${parsed.companyName}:::${parsed.title}` : null);
+        if (key && existingKeys.has(key)) {
+          continue;
+        }
+        if (key) {
+          existingKeys.add(key);
+        }
+
         const imported = document.importNode(card, true);
         currentContainer.appendChild(imported);
         importedCards.push(imported);
+      }
+
+      // 신규 추가된 카드가 0개라면 (동일 페이지 재반환 혹은 마지막 페이지 도달)
+      if (importedCards.length === 0) {
+        this.hasMorePages = false;
+        this.destroy();
+        return false;
       }
 
       this.currentPage++;

@@ -40,7 +40,11 @@ export class SaraminAdapter extends BaseSiteAdapter {
 
   public override getCardListContainer(doc: Document = document): HTMLElement | null {
     const container = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.LIST_CONTAINER);
-    if (container) return container;
+    if (container) {
+      const innerContent = container.querySelector<HTMLElement>('.content');
+      if (innerContent) return innerContent;
+      return container;
+    }
     const firstCard = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.JOB_CARDS);
     return firstCard?.parentElement || null;
   }
@@ -59,14 +63,36 @@ export class SaraminAdapter extends BaseSiteAdapter {
       ) ||
       doc.querySelector<HTMLAnchorElement>('.pagination .next, .page_box .btn_next');
 
-    if (pageLink?.href && !pageLink.href.includes('javascript:')) {
-      return pageLink.href;
+    // a 태그가 실제 이동 URL(page/recruitPage 쿼리가 포함되고 # 해시 전용이 아닌 URL)을 갖고 있는 경우 반환
+    const rawHref = pageLink?.getAttribute('href');
+    if (
+      rawHref &&
+      !rawHref.startsWith('#') &&
+      !rawHref.includes('javascript:') &&
+      (rawHref.includes('page=') || rawHref.includes('recruitPage='))
+    ) {
+      return pageLink!.href;
     }
 
-    // 2. 현재 URL 기준 query parameter 증가 fallback
+    // 2. 현재 URL 기준 query parameter 갱신 (사람인 검색은 recruitPage, 일반 목록은 page 사용)
     try {
-      const currentUrl = new URL(typeof window !== 'undefined' ? window.location.href : 'https://www.saramin.co.kr');
-      currentUrl.searchParams.set('page', String(nextPage));
+      const currentUrl = new URL(
+        typeof window !== 'undefined' ? window.location.href : 'https://www.saramin.co.kr/zf_user/search/recruit'
+      );
+      // 해시(#recruit_info 등) 제거
+      currentUrl.hash = '';
+
+      const isSearchPage =
+        currentUrl.pathname.includes('/search') ||
+        currentUrl.searchParams.has('recruitPage') ||
+        currentUrl.searchParams.has('searchword') ||
+        Boolean(doc.querySelector('#recruit_info, #recruit_info_list, a[href*="#recruit_info"]'));
+
+      if (isSearchPage) {
+        currentUrl.searchParams.set('recruitPage', String(nextPage));
+      } else {
+        currentUrl.searchParams.set('page', String(nextPage));
+      }
       return currentUrl.toString();
     } catch {
       return null;
