@@ -51,7 +51,9 @@ li:has([data-cy="job-card"][data-job-filtered="true"][data-filter-mode="hide"]),
 li[class*="Card_"][data-job-filtered="true"][data-filter-mode="hide"],
 li:has([class*="sc-364cfa5d"][data-job-filtered="true"][data-filter-mode="hide"]),
 li:has([class*="sc-18344c98"][data-job-filtered="true"][data-filter-mode="hide"]),
-li:has([class*="sc-d2fb7cfc"][data-job-filtered="true"][data-filter-mode="hide"]) {
+li:has([class*="sc-d2fb7cfc"][data-job-filtered="true"][data-filter-mode="hide"]),
+li:has([class*="sc-3c9cd5df"][data-job-filtered="true"][data-filter-mode="hide"]),
+li[class*="sc-3c9cd5df-0"][data-job-filtered="true"][data-filter-mode="hide"] {
   display: none !important;
 }
 
@@ -452,6 +454,20 @@ li.listItem .recruit-company .headers .job-filter-ratings-wrap {
 li.listItem .dev-btn-favor {
   position: static !important;
   display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* 리멤버(Remember) 큐레이션 공고 카드 인라인 [공고숨김 / 회사차단] 툴바 위치 최적화 */
+li[class*="sc-3c9cd5df-0"] .job-filter-btn-group {
+  top: 6px !important;
+  right: 6px !important;
+}
+
+/* 리멤버(Remember) 공고 카드 및 맞춤 큐레이션 평점 뱃지 인라인 정렬 */
+div[class*="sc-3c9cd5df-7"],
+div[class*="sc-d2fb7cfc-7"],
+p[class*="sc-18344c98-6"] {
+  display: inline !important;
   vertical-align: middle !important;
 }
 

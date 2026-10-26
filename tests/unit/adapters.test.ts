@@ -2035,6 +2035,212 @@ describe('Site Adapters 단위 테스트', () => {
       const res4 = engine.evaluateJobCard(adapter.parseCard(card4)!);
       expect(res4.shouldFilter).toBe(false);
     });
+
+    it('적극 채용 중인 공고 / 주목 받을 수 있는 기회 / 커리어 맞춤 큐레이션 카드(sc-3c9cd5df-0)를 올바르게 수집 및 파싱해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <ul class="curation-list">
+          <li class="sc-3c9cd5df-0">
+            <a href="/job/posting/63386?curationLocation=job_posting_tab">
+              <header class="sc-3c9cd5df-4">
+                <div class="sc-3c9cd5df-6">자율주행 소프트웨어 엔지니어</div>
+                <div class="sc-3c9cd5df-7">(주)포티투닷</div>
+              </header>
+            </a>
+          </li>
+          <li class="sc-3c9cd5df-0">
+            <a href="/job/postings/98765">
+              <header class="sc-3c9cd5df-4">
+                <div class="sc-3c9cd5df-6">데이터 사이언티스트</div>
+                <div class="sc-3c9cd5df-7">쿠팡(주)</div>
+              </header>
+            </a>
+          </li>
+        </ul>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(2);
+      expect(cards[0].tagName).toBe('LI');
+      expect(cards[1].tagName).toBe('LI');
+
+      const info1 = adapter.parseCard(cards[0])!;
+      expect(info1).not.toBeNull();
+      expect(info1.companyName).toBe('(주)포티투닷');
+      expect(info1.title).toBe('자율주행 소프트웨어 엔지니어');
+      expect(info1.jobId).toBe('63386');
+      expect(info1.isAd).toBe(false);
+
+      const info2 = adapter.parseCard(cards[1])!;
+      expect(info2).not.toBeNull();
+      expect(info2.companyName).toBe('쿠팡(주)');
+      expect(info2.title).toBe('데이터 사이언티스트');
+      expect(info2.jobId).toBe('98765');
+    });
+
+    it('큐레이션 카드(sc-3c9cd5df-0)에 [공고숨김] 및 [회사차단] 듀얼 버튼이 주입되고, 클릭 시 캐러셀 아이템(li)이 즉시 숨겨져야 한다', () => {
+      const li = document.createElement('li');
+      li.className = 'sc-3c9cd5df-0';
+      li.innerHTML = `
+        <a href="/job/posting/63386">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">플랫폼 백엔드 개발자</div>
+            <div class="sc-3c9cd5df-7">(주)포티투닷</div>
+          </header>
+        </a>
+      `;
+
+      const cardInfo = adapter.parseCard(li)!;
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      const btnGroup = li.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`);
+      expect(btnGroup).not.toBeNull();
+
+      // [공고숨김] 버튼 클릭
+      const jobBtn = li.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.JOB_BUTTON}`) as HTMLButtonElement;
+      expect(jobBtn).not.toBeNull();
+
+      jobBtn.click();
+      expect(onBlockJob).toHaveBeenCalledTimes(1);
+      expect(li.style.display).toBe('none');
+      expect(li.getAttribute('data-job-filtered')).toBe('true');
+      expect(li.getAttribute('data-filter-mode')).toBe('hide');
+      expect(li.getAttribute('data-blocked-type')).toBe('job');
+
+      // [회사차단] 버튼 클릭
+      li.style.display = 'block';
+      const compBtn = li.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.COMPANY_BUTTON}`) as HTMLButtonElement;
+      expect(compBtn).not.toBeNull();
+
+      compBtn.click();
+      expect(onBlockCompany).toHaveBeenCalledTimes(1);
+      expect(onBlockCompany).toHaveBeenCalledWith('(주)포티투닷');
+      expect(li.style.display).toBe('none');
+      expect(li.getAttribute('data-job-filtered')).toBe('true');
+      expect(li.getAttribute('data-filter-mode')).toBe('hide');
+      expect(li.getAttribute('data-blocked-type')).toBe('company');
+    });
+
+    it('큐레이션 카드(sc-3c9cd5df-0)에 잡플래닛 및 블라인드 평점 뱃지가 회사명(sc-3c9cd5df-7) 바로 옆에 정상 주입되어야 한다', () => {
+      const li = document.createElement('li');
+      li.className = 'sc-3c9cd5df-0';
+      li.innerHTML = `
+        <a href="/job/posting/63386">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">프론트엔드 리드</div>
+            <div class="sc-3c9cd5df-7">(주)포티투닷</div>
+          </header>
+        </a>
+      `;
+
+      const cardInfo = adapter.parseCard(li)!;
+      const companyEl = adapter.getCompanyElement(li);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent).toBe('(주)포티투닷');
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        status: 'found',
+        companyName: '(주)포티투닷',
+        rating: 4.5,
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        status: 'found',
+        companyName: '(주)포티투닷',
+        rating: 4.3,
+        cachedAt: Date.now(),
+      });
+
+      const badges = li.querySelectorAll(`.${RATING_BADGE_CONFIG.CLASSES.BADGE}`);
+      expect(badges.length).toBe(2);
+      expect(li.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`)).not.toBeNull();
+      expect(li.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`)).not.toBeNull();
+
+      // 평점 래퍼 컨테이너가 회사명 요소 바로 다음 형제로 주입되었는지 확인
+      const wrap = li.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(companyEl?.nextElementSibling).toBe(wrap);
+    });
+
+    it('FilterEngine과 연동하여 큐레이션 공고 카드가 회사명, 키워드, 공고ID로 필터링되어야 한다', () => {
+      const engine = new FilterEngine(
+        {
+          mode: 'hide',
+          blurIntensity: 6,
+          hideAds: true,
+          showInlineButton: true,
+          enableInfiniteScroll: true,
+          showJobplanetRating: true,
+          showBlindRating: true,
+        },
+        [
+          { id: '1', pattern: '포티투닷', type: 'company', createdAt: Date.now() },
+          { id: '2', pattern: '자율주행', type: 'keyword', createdAt: Date.now() },
+          { id: '3', pattern: '55555', type: 'job', createdAt: Date.now() },
+        ]
+      );
+
+      // 1. 차단 회사 매칭 (주식회사 표기 정규화 검증)
+      const li1 = document.createElement('li');
+      li1.className = 'sc-3c9cd5df-0';
+      li1.innerHTML = `
+        <a href="/job/posting/11111">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">백엔드 개발자</div>
+            <div class="sc-3c9cd5df-7">(주)포티투닷</div>
+          </header>
+        </a>
+      `;
+      const res1 = engine.evaluateJobCard(adapter.parseCard(li1)!);
+      expect(res1.shouldFilter).toBe(true);
+
+      // 2. 키워드 매칭
+      const li2 = document.createElement('li');
+      li2.className = 'sc-3c9cd5df-0';
+      li2.innerHTML = `
+        <a href="/job/posting/22222">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">자율주행 인지 알고리즘 연구원</div>
+            <div class="sc-3c9cd5df-7">현대모비스</div>
+          </header>
+        </a>
+      `;
+      const res2 = engine.evaluateJobCard(adapter.parseCard(li2)!);
+      expect(res2.shouldFilter).toBe(true);
+
+      // 3. 단일 공고 ID 매칭
+      const li3 = document.createElement('li');
+      li3.className = 'sc-3c9cd5df-0';
+      li3.innerHTML = `
+        <a href="/job/posting/55555">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">인프라 엔지니어</div>
+            <div class="sc-3c9cd5df-7">토스</div>
+          </header>
+        </a>
+      `;
+      const res3 = engine.evaluateJobCard(adapter.parseCard(li3)!);
+      expect(res3.shouldFilter).toBe(true);
+
+      // 4. 통과 공고
+      const li4 = document.createElement('li');
+      li4.className = 'sc-3c9cd5df-0';
+      li4.innerHTML = `
+        <a href="/job/posting/99999">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">프로덕트 디자이너</div>
+            <div class="sc-3c9cd5df-7">당근</div>
+          </header>
+        </a>
+      `;
+      const res4 = engine.evaluateJobCard(adapter.parseCard(li4)!);
+      expect(res4.shouldFilter).toBe(false);
+    });
   });
 });
 
