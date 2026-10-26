@@ -70,6 +70,8 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
     );
 
     const gno = element.getAttribute('data-gno') || element.getAttribute('data-info');
+    const dateEl = element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.CLOSING_DATE);
+    const closingDate = dateEl?.textContent?.trim() || undefined;
 
     return {
       cardElement: element,
@@ -77,6 +79,7 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
       title,
       isAd,
       jobId: gno || undefined,
+      closingDate,
     };
   }
 }

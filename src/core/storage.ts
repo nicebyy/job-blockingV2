@@ -1,5 +1,6 @@
 import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings } from '../types';
 import { STORAGE_KEYS } from '../constants';
+import { isJobExpired } from '../utils/date';
 
 export class StorageManager {
   private static memoryFallback: Record<string, any> = {
@@ -60,20 +61,64 @@ export class StorageManager {
   }
 
   /**
-   * 차단 목록 조회
+   * 차단 목록 조회 (기본적으로 만료된 공고는 자동 감지하여 백그라운드에서 청소)
    */
-  public static async getBlockList(): Promise<BlockItem[]> {
+  public static async getBlockList(autoClean: boolean = true): Promise<BlockItem[]> {
+    let rawList: BlockItem[] = [];
+
     if (!this.isChromeStorageAvailable()) {
-      return this.memoryFallback[STORAGE_KEYS.BLOCK_LIST] || [];
+      rawList = this.memoryFallback[STORAGE_KEYS.BLOCK_LIST] || [];
+    } else {
+      try {
+        const result = await chrome.storage.sync.get(STORAGE_KEYS.BLOCK_LIST);
+        rawList = result[STORAGE_KEYS.BLOCK_LIST] || [];
+      } catch {
+        const localResult = await chrome.storage.local.get(STORAGE_KEYS.BLOCK_LIST);
+        rawList = localResult[STORAGE_KEYS.BLOCK_LIST] || [];
+      }
     }
 
-    try {
-      const result = await chrome.storage.sync.get(STORAGE_KEYS.BLOCK_LIST);
-      return result[STORAGE_KEYS.BLOCK_LIST] || [];
-    } catch {
-      const localResult = await chrome.storage.local.get(STORAGE_KEYS.BLOCK_LIST);
-      return localResult[STORAGE_KEYS.BLOCK_LIST] || [];
+    if (!autoClean) {
+      return rawList;
     }
+
+    // 만료된 공고 자동 정리
+    const { cleanedList, purgedCount } = this.filterExpiredItems(rawList);
+    if (purgedCount > 0) {
+      await this.saveBlockList(cleanedList);
+    }
+    return cleanedList;
+  }
+
+  /**
+   * 만료된 공고 항목들을 목록에서 분리 및 필터링
+   */
+  private static filterExpiredItems(list: BlockItem[]): { cleanedList: BlockItem[]; purgedCount: number } {
+    const now = Date.now();
+    const cleanedList: BlockItem[] = [];
+    let purgedCount = 0;
+
+    for (const item of list) {
+      if (isJobExpired(item, now)) {
+        purgedCount++;
+      } else {
+        cleanedList.push(item);
+      }
+    }
+
+    return { cleanedList, purgedCount };
+  }
+
+  /**
+   * 만료된 공고 수동 일괄 정리
+   */
+  public static async purgeExpiredJobs(): Promise<number> {
+    const rawList = await this.getBlockList(false);
+    const { cleanedList, purgedCount } = this.filterExpiredItems(rawList);
+    if (purgedCount > 0) {
+      await this.saveBlockList(cleanedList);
+    }
+    return purgedCount;
   }
 
   /**
@@ -98,16 +143,29 @@ export class StorageManager {
   public static async addBlockItem(
     pattern: string,
     type: BlockType,
-    metadata?: { memo?: string; title?: string; companyName?: string }
+    metadata?: {
+      memo?: string;
+      title?: string;
+      companyName?: string;
+      closingDate?: string;
+      expiresAt?: number;
+    }
   ): Promise<BlockItem> {
-    const list = await this.getBlockList();
+    const list = await this.getBlockList(false);
     const cleanPattern = pattern.trim();
 
     // 중복 검사
-    const existing = list.find(
+    const existingIndex = list.findIndex(
       (item) => item.type === type && item.pattern.toLowerCase() === cleanPattern.toLowerCase()
     );
-    if (existing) {
+    if (existingIndex !== -1) {
+      // 기존 항목이 만료 시각이 갱신되어야 할 경우 업데이트
+      const existing = list[existingIndex];
+      if (metadata?.expiresAt && metadata.expiresAt !== existing.expiresAt) {
+        existing.expiresAt = metadata.expiresAt;
+        existing.closingDate = metadata.closingDate || existing.closingDate;
+        await this.saveBlockList(list);
+      }
       return existing;
     }
 
@@ -116,6 +174,8 @@ export class StorageManager {
       pattern: cleanPattern,
       type,
       createdAt: Date.now(),
+      expiresAt: metadata?.expiresAt,
+      closingDate: metadata?.closingDate,
       memo: metadata?.memo,
       title: metadata?.title,
       companyName: metadata?.companyName,
@@ -130,7 +190,7 @@ export class StorageManager {
    * 단일 차단 항목 삭제
    */
   public static async removeBlockItem(id: string): Promise<void> {
-    const list = await this.getBlockList();
+    const list = await this.getBlockList(false);
     const filtered = list.filter((item) => item.id !== id);
     await this.saveBlockList(filtered);
   }

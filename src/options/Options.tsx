@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BlockItem, BlockType } from '../types';
 import { StorageManager } from '../core/storage';
 import { UI_MESSAGES } from '../constants';
+import { formatDate } from '../utils/date';
 
 export const Options: React.FC = () => {
   const [blockList, setBlockList] = useState<BlockItem[]>([]);
@@ -29,6 +30,16 @@ export const Options: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     await StorageManager.removeBlockItem(id);
+    loadBlockList();
+  };
+
+  const handlePurgeExpired = async () => {
+    const purgedCount = await StorageManager.purgeExpiredJobs();
+    if (purgedCount > 0) {
+      alert(UI_MESSAGES.PURGE_EXPIRED_SUCCESS(purgedCount));
+    } else {
+      alert(UI_MESSAGES.EMPTY_EXPIRED_LIST);
+    }
     loadBlockList();
   };
 
@@ -135,6 +146,14 @@ export const Options: React.FC = () => {
                       ? `${item.companyName ? `[${item.companyName}] ` : ''}${item.title || item.pattern}`
                       : item.pattern}
                   </strong>
+                  {item.type === 'job' && item.expiresAt && (
+                    <span
+                      className="expire-tag"
+                      title={`공고 마감 정보: ${item.closingDate || '상시채용/미정'} (마감 후 30일 보관)`}
+                    >
+                      만료: {formatDate(item.expiresAt)}
+                    </span>
+                  )}
                 </div>
                 <button
                   className="btn-delete"
@@ -149,6 +168,9 @@ export const Options: React.FC = () => {
         )}
 
         <div className="action-bar">
+          <button className="btn-secondary" onClick={handlePurgeExpired} title="보관 기한이 지난 마감 공고 일괄 정리">
+            🧹 만료 공고 정리
+          </button>
           <button className="btn-secondary" onClick={handleExport}>
             📥 목록 내보내기 (Export JSON)
           </button>

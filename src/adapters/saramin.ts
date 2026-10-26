@@ -133,12 +133,17 @@ export class SaraminAdapter extends BaseSiteAdapter {
       if (match) recruitId = match[1];
     }
 
+    // 5. 마감일자 텍스트 추출 (예: "~ 11/07(토)", "D-3", "상시채용" 등)
+    const dateEl = element.querySelector<HTMLElement>(SARAMIN_SELECTORS.CLOSING_DATE);
+    const closingDate = dateEl?.textContent?.trim() || undefined;
+
     return {
       cardElement: element,
       companyName,
       title,
       isAd,
       jobId: recruitId || undefined,
+      closingDate,
     };
   }
 
