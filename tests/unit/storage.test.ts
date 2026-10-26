@@ -66,4 +66,48 @@ describe('StorageManager 단위 테스트', () => {
     expect(list.length).toBe(1);
     expect(list[0].title).toBe('프론트엔드 개발자');
   });
+
+  it('만료된 공고(expiresAt이 지난 공고)는 getBlockList 조회 시 자동으로 청소되어야 한다', async () => {
+    const pastTime = Date.now() - 10000;
+    const futureTime = Date.now() + 100000;
+
+    // 1. 이미 만료된 공고 저장
+    await StorageManager.addBlockItem('expired_job', 'job', {
+      title: '과거 공고',
+      expiresAt: pastTime,
+    });
+
+    // 2. 아직 유효한 공고 저장
+    await StorageManager.addBlockItem('active_job', 'job', {
+      title: '현재 공고',
+      expiresAt: futureTime,
+    });
+
+    // 3. 회사 차단 항목 저장 (영구 보존 대상)
+    await StorageManager.addBlockItem('영구차단회사', 'company');
+
+    // getBlockList(true) 호출 시 만료 공고는 자동 삭제되고 2개만 남아야 함
+    const list = await StorageManager.getBlockList(true);
+    expect(list.length).toBe(2);
+
+    const patterns = list.map((item) => item.pattern);
+    expect(patterns).not.toContain('expired_job');
+    expect(patterns).toContain('active_job');
+    expect(patterns).toContain('영구차단회사');
+  });
+
+  it('purgeExpiredJobs 호출 시 만료된 공고만 삭제되고 삭제된 개수가 반환되어야 한다', async () => {
+    const pastTime = Date.now() - 5000;
+
+    await StorageManager.addBlockItem('expired_1', 'job', { expiresAt: pastTime });
+    await StorageManager.addBlockItem('expired_2', 'job', { expiresAt: pastTime });
+    await StorageManager.addBlockItem('company_1', 'company');
+
+    const purged = await StorageManager.purgeExpiredJobs();
+    expect(purged).toBe(2);
+
+    const remaining = await StorageManager.getBlockList(false);
+    expect(remaining.length).toBe(1);
+    expect(remaining[0].pattern).toBe('company_1');
+  });
 });

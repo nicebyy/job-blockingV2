@@ -111,6 +111,7 @@ describe('Site Adapters 단위 테스트', () => {
         </div>
         <div class="area_job">
           <h2 class="job_tit"><a href="#">백엔드 엔지니어 채용</a></h2>
+          <span class="date">~ 11/20(금)</span>
         </div>
       `;
 
@@ -119,6 +120,7 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.companyName).toBe('당근마켓');
       expect(info?.title).toBe('백엔드 엔지니어 채용');
       expect(info?.jobId).toBe('rec_9999');
+      expect(info?.closingDate).toBe('~ 11/20(금)');
       expect(info?.isAd).toBe(false);
     });
 

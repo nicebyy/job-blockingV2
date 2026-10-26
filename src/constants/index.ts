@@ -46,6 +46,15 @@ export const SITE_DOMAINS = {
 } as const;
 
 /**
+ * 공고 마감시각 기준 만료(TTL) 설정 상수
+ */
+export const EXPIRATION_CONFIG = {
+  ADDITIONAL_DAYS_AFTER_CLOSING: 30, // 마감시각 이후 보관 유지 일수 (+30일)
+  DEFAULT_EXPIRATION_DAYS: 30, // 마감일 특정 불가 시 기본 보관 일수 (+30일)
+  MS_PER_DAY: 86_400_000, // 24 * 60 * 60 * 1000
+} as const;
+
+/**
  * 원티드(Wanted) DOM 셀렉터 상수
  */
 export const WANTED_SELECTORS = {
@@ -55,6 +64,7 @@ export const WANTED_SELECTORS = {
   POSITION_TITLE: '[data-attribute-id="position__name"], strong[class*="position"], h4, [class*="JobCard_title"], a[href*="/wd/"]',
   AD_BADGE: '[data-attribute-id="badge__ad"], [class*="ad_badge"], [class*="badge_ad"]',
   JOB_LINK: 'a[href*="/wd/"]',
+  CLOSING_DATE: '.due-date, [class*="dueDate"], [class*="due_date"]',
 } as const;
 
 /**
@@ -79,6 +89,7 @@ export const SARAMIN_SELECTORS = {
   POSITION_TITLE: '.area_job .job_tit a, .job_tit a, .job_tit, .area_job .job_tit',
   AD_BADGE: '.badge_plus, .badge_recommend, .tag_ad, .ad_tag',
   AD_CLASS: 'plus_ad',
+  CLOSING_DATE: '.area_job .date, .item_recruit .date, .date, .info_period .date, .jv_summary .date, .info_period .txt',
   // 상세 페이지 및 하단 무한 스크롤(릴레이 뷰/추천 공고) 셀렉터 (.wrap_jview는 부모 래퍼이므로 제외하고 개별 공고 단위로 지정)
   DETAIL_RELAY_CONTAINERS: '.wrap_jview > .jview, .wrap_jview > section[class*="jview"], .wrap_jview > div[class*="jview"], .wrap_jv_cont, div[id^="jview_"], .jview_box, section.jview',
   DETAIL_RECOMMEND_CARDS: '.item_recommend, .recommend_sec .list_item, .box_recommend li, .relate_job li, [class*="recommend_job"] li, .jview_wing .offer.list li',
@@ -100,6 +111,7 @@ export const JOBKOREA_SELECTORS = {
   POSITION_TITLE: '.post-list-info a.title, .title a, a.tit, .post-title',
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',
   AD_CLASS: 'special-post',
+  CLOSING_DATE: '.date, .option .date, .post-list-info .date',
 } as const;
 
 /**
@@ -113,6 +125,8 @@ export const UI_MESSAGES = {
   IMPORT_INVALID_JSON: '올바르지 않은 JSON 파일입니다.',
   EMPTY_SEARCH_RESULT: '검색 결과가 없습니다.',
   EMPTY_BLOCK_LIST: '등록된 차단 항목이 없습니다.',
+  PURGE_EXPIRED_SUCCESS: (count: number) => `만료된 공고 ${count}개가 자동 정리되었습니다.`,
+  EMPTY_EXPIRED_LIST: '만료된 공고가 없습니다.',
 } as const;
 
 /**

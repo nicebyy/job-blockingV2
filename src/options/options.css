@@ -143,6 +143,17 @@ body {
   color: #9d174d;
 }
 
+.expire-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: #64748b;
+  background-color: #f1f5f9;
+  border-radius: 4px;
+  font-weight: normal;
+}
+
 .btn-delete {
   background: none;
   border: none;

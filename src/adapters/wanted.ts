@@ -49,12 +49,16 @@ export class WantedAdapter extends BaseSiteAdapter {
     const match = link?.href?.match(/\/wd\/(\d+)/);
     const jobId = match ? match[1] : undefined;
 
+    const dateEl = element.querySelector<HTMLElement>(WANTED_SELECTORS.CLOSING_DATE);
+    const closingDate = dateEl?.textContent?.trim() || undefined;
+
     return {
       cardElement: element,
       companyName,
       title,
       isAd,
       jobId,
+      closingDate,
     };
   }
 }

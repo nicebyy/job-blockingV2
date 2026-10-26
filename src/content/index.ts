@@ -4,6 +4,7 @@ import { InfiniteScrollManager } from '../core/infinite-scroll';
 import { StorageManager } from '../core/storage';
 import { ExtensionMessage, FilterSettings, FilterStats, JobCardInfo } from '../types';
 import { FILTER_CONFIG } from '../constants';
+import { calculateJobExpiration } from '../utils/date';
 
 class ContentController {
   private adapter = AdapterRegistry.getAdapterForUrl(window.location.href);
@@ -225,9 +226,13 @@ class ContentController {
 
   private async handleBlockJob(cardInfo: JobCardInfo): Promise<void> {
     const pattern = cardInfo.jobId || `${cardInfo.companyName}:::${cardInfo.title}`;
+    const expiresAt = calculateJobExpiration(cardInfo.closingDate);
+
     await StorageManager.addBlockItem(pattern, 'job', {
       title: cardInfo.title,
       companyName: cardInfo.companyName,
+      closingDate: cardInfo.closingDate,
+      expiresAt,
     });
     const updatedList = await StorageManager.getBlockList();
     this.filterEngine?.updateBlockList(updatedList);
