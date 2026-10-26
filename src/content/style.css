@@ -13,7 +13,8 @@ td.tplTit .titBx,
 .job-recommendation-item,
 ol.rankList > li,
 li.dmpItem,
-li.listItem {
+li.listItem,
+div[class*="sc-d609d44f-0"] {
   position: relative !important;
 }
 
@@ -53,7 +54,9 @@ li:has([class*="sc-364cfa5d"][data-job-filtered="true"][data-filter-mode="hide"]
 li:has([class*="sc-18344c98"][data-job-filtered="true"][data-filter-mode="hide"]),
 li:has([class*="sc-d2fb7cfc"][data-job-filtered="true"][data-filter-mode="hide"]),
 li:has([class*="sc-3c9cd5df"][data-job-filtered="true"][data-filter-mode="hide"]),
-li[class*="sc-3c9cd5df-0"][data-job-filtered="true"][data-filter-mode="hide"] {
+li[class*="sc-3c9cd5df-0"][data-job-filtered="true"][data-filter-mode="hide"],
+div:has(> a[href*="/position/"][data-job-filtered="true"][data-filter-mode="hide"]),
+div[class*="sc-d609d44f-0"][data-job-filtered="true"][data-filter-mode="hide"] {
   display: none !important;
 }
 
@@ -88,7 +91,12 @@ section[class*="sc-79e4e802-0"],
 section:has(img[src*="ad-cdn.rememberapp.co.kr"]),
 section:has(img[alt*="광고 배너"]),
 section:has(a[href*="/job/board/premium-top-companies"]),
-section:has(a[href*="job_board_top_banner"]) {
+section:has(a[href*="job_board_top_banner"]),
+aside[class*="sc-3ef60426-1"],
+div[class*="POSITIONS_BANNER"],
+div[class*="MAIN_BANNER"],
+div[class*="MAIN_WING_BANNER"],
+div[class*="POSITION_VIEW_WING_BANNER"] {
   display: none !important;
 }
 
@@ -153,7 +161,9 @@ li.listItem:hover .job-filter-btn-group,
 .title_inner .job-filter-btn-group,
 .wrap_jv_header .job-filter-btn-group,
 section[class*="JobHeader"] .job-filter-btn-group,
-div[class*="JobHeader"] .job-filter-btn-group {
+div[class*="JobHeader"] .job-filter-btn-group,
+div[class*="sc-80824a9d-0"] .job-filter-btn-group,
+div:has(> h1):has(a[href*="/company/"]) .job-filter-btn-group {
   position: static !important;
   display: inline-flex !important;
   vertical-align: middle !important;

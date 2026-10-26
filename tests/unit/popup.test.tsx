@@ -247,6 +247,39 @@ describe('Popup 팝업 페이지 단위 테스트', () => {
     expect(addedItem?.platform).toBe('remember');
   });
 
+  it('점핏 페이지(jumpit.saramin.co.kr)에서 팝업으로 빠른 회사 차단 시 platform이 jumpit으로 저장되어야 한다', async () => {
+    (global as any).chrome.tabs.query = vi.fn((_queryInfo, callback) => {
+      callback([{ id: 204, url: 'https://jumpit.saramin.co.kr/positions?sort=popular' }]);
+    });
+
+    await act(async () => {
+      root.render(<Popup />);
+    });
+
+    const input = container.querySelector<HTMLInputElement>('.add-input');
+    const form = container.querySelector<HTMLFormElement>('.add-form');
+    expect(input).not.toBeNull();
+    expect(form).not.toBeNull();
+
+    await act(async () => {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set;
+      nativeInputValueSetter?.call(input, '점핏등록기업');
+      input?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await act(async () => {
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    const list = await StorageManager.getBlockList(false);
+    const addedItem = list.find((item) => item.pattern === '점핏등록기업');
+    expect(addedItem).toBeDefined();
+    expect(addedItem?.platform).toBe('jumpit');
+  });
+
   it('notifyContentScript는 currentWindow 쿼리 실패 시 lastFocusedWindow로 폴백하여 메시지를 전송해야 한다', async () => {
     (global as any).chrome.tabs.query = vi.fn((queryInfo, callback) => {
       if (queryInfo.currentWindow) {

@@ -47,6 +47,7 @@ export const Popup: React.FC = () => {
   const detectPlatform = (url?: string): JobPlatform => {
     if (!url) return 'custom';
     if (url.includes(SITE_DOMAINS.WANTED)) return 'wanted';
+    if (url.includes('jumpit.') || url.includes(SITE_DOMAINS.JUMPIT)) return 'jumpit';
     if (url.includes(SITE_DOMAINS.SARAMIN)) return 'saramin';
     if (url.includes(SITE_DOMAINS.JOBKOREA)) return 'jobkorea';
     if (url.includes(SITE_DOMAINS.REMEMBER)) return 'remember';

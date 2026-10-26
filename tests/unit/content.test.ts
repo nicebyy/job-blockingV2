@@ -165,3 +165,74 @@ describe('ContentController 원티드 필터링 및 카운팅 단위 테스트',
     expect(pageStats.totalBlocked).toBeGreaterThan(1);
   });
 });
+
+describe('ContentController 점핏 필터링 및 카운팅 단위 테스트', () => {
+  let originalLocation: Location;
+
+  beforeEach(async () => {
+    await StorageManager.saveBlockList([]);
+    await StorageManager.saveSettings({
+      mode: 'hide',
+      hideAds: true,
+      enableInfiniteScroll: false,
+      showJobplanetRating: false,
+      showBlindRating: false,
+    });
+
+    originalLocation = window.location;
+    delete (window as any).location;
+    (window as any).location = new URL('https://jumpit.saramin.co.kr/positions?sort=popular');
+
+    (global as any).chrome = {
+      storage: undefined,
+      runtime: {
+        lastError: null,
+        onMessage: {
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+        },
+        sendMessage: vi.fn(),
+      },
+    };
+
+    const fixturePath = path.resolve(__dirname, '../fixtures/jumpit_positions.html');
+    let html = fs.readFileSync(fixturePath, 'utf-8');
+    html = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
+    document.body.innerHTML = html;
+  });
+
+  afterEach(() => {
+    (window as any).location = originalLocation;
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  it('점핏에서 회사를 차단하면 blockedCompanies와 totalBlocked가 증가하고 GET_PAGE_STATS에 반영되어야 한다', async () => {
+    // fixture에 존재하는 회사 '위볼린' 차단 등록
+    await StorageManager.addBlockItem('위볼린', 'company', { platform: 'jumpit' });
+
+    const controller = new ContentController();
+    await controller.init();
+
+    let pageStats: any = null;
+    const addListenerMock = (global as any).chrome.runtime.onMessage.addListener;
+    const messageHandler = addListenerMock.mock.calls[0][0];
+
+    messageHandler({ type: 'GET_PAGE_STATS' }, {}, (response: any) => {
+      pageStats = response?.stats;
+    });
+
+    expect(pageStats).toBeDefined();
+    expect(pageStats.blockedCompanies).toBeGreaterThanOrEqual(1);
+    expect(pageStats.totalBlocked).toBeGreaterThanOrEqual(1);
+
+    // 위볼린 카드 요소가 숨김(display: none) 처리되었는지 확인
+    const card = document.querySelector('a[href*="/position/55185963"]') as HTMLElement;
+    expect(card).not.toBeNull();
+    const container = card.closest('div[class*="sc-d609d44f-0"]') as HTMLElement || card;
+    expect(container.style.display).toBe('none');
+    expect(container.getAttribute('data-job-filtered')).toBe('true');
+  });
+});
