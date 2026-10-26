@@ -171,8 +171,10 @@ describe('Site Adapters 단위 테스트', () => {
 
       hideBtn.click();
 
-      // 즉각적인 시각적 피드백 (낙관적 페이드아웃) 확인
-      expect(card.style.opacity).toBe('0');
+      // 즉각적인 시각적 피드백 (0ms 즉각 DOM 완전 숨김) 확인
+      expect(card.style.display).toBe('none');
+      expect(card.getAttribute('data-job-filtered')).toBe('true');
+      expect(card.getAttribute('data-filter-mode')).toBe('hide');
       expect(onBlockJob).toHaveBeenCalledWith(cardInfo);
     });
 

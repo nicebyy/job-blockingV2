@@ -12,7 +12,7 @@ export class StorageManager {
     return (
       typeof chrome !== 'undefined' &&
       typeof chrome.storage !== 'undefined' &&
-      typeof chrome.storage.sync !== 'undefined'
+      (typeof chrome.storage.local !== 'undefined' || typeof chrome.storage.sync !== 'undefined')
     );
   }
 
@@ -25,18 +25,22 @@ export class StorageManager {
     }
 
     try {
-      const result = await chrome.storage.sync.get(STORAGE_KEYS.SETTINGS);
-      return {
-        ...DEFAULT_SETTINGS,
-        ...(result[STORAGE_KEYS.SETTINGS] || {}),
-      };
+      if (chrome.storage.local) {
+        const localResult = await chrome.storage.local.get(STORAGE_KEYS.SETTINGS);
+        if (localResult[STORAGE_KEYS.SETTINGS]) {
+          return { ...DEFAULT_SETTINGS, ...localResult[STORAGE_KEYS.SETTINGS] };
+        }
+      }
+      if (chrome.storage.sync) {
+        const syncResult = await chrome.storage.sync.get(STORAGE_KEYS.SETTINGS);
+        if (syncResult[STORAGE_KEYS.SETTINGS]) {
+          return { ...DEFAULT_SETTINGS, ...syncResult[STORAGE_KEYS.SETTINGS] };
+        }
+      }
     } catch {
-      const localResult = await chrome.storage.local.get(STORAGE_KEYS.SETTINGS);
-      return {
-        ...DEFAULT_SETTINGS,
-        ...(localResult[STORAGE_KEYS.SETTINGS] || {}),
-      };
+      // fallback to memory
     }
+    return this.memoryFallback[STORAGE_KEYS.SETTINGS] || DEFAULT_SETTINGS;
   }
 
   /**
@@ -52,9 +56,14 @@ export class StorageManager {
     }
 
     try {
-      await chrome.storage.sync.set({ [STORAGE_KEYS.SETTINGS]: updated });
+      if (chrome.storage.local) {
+        await chrome.storage.local.set({ [STORAGE_KEYS.SETTINGS]: updated });
+      }
+      if (chrome.storage.sync) {
+        chrome.storage.sync.set({ [STORAGE_KEYS.SETTINGS]: updated }).catch(() => {});
+      }
     } catch {
-      await chrome.storage.local.set({ [STORAGE_KEYS.SETTINGS]: updated });
+      this.memoryFallback[STORAGE_KEYS.SETTINGS] = updated;
     }
 
     return updated;
@@ -70,11 +79,23 @@ export class StorageManager {
       rawList = this.memoryFallback[STORAGE_KEYS.BLOCK_LIST] || [];
     } else {
       try {
-        const result = await chrome.storage.sync.get(STORAGE_KEYS.BLOCK_LIST);
-        rawList = result[STORAGE_KEYS.BLOCK_LIST] || [];
+        if (chrome.storage.local) {
+          const localResult = await chrome.storage.local.get(STORAGE_KEYS.BLOCK_LIST);
+          if (localResult[STORAGE_KEYS.BLOCK_LIST]) {
+            rawList = localResult[STORAGE_KEYS.BLOCK_LIST];
+          }
+        }
+        if (rawList.length === 0 && chrome.storage.sync) {
+          const syncResult = await chrome.storage.sync.get(STORAGE_KEYS.BLOCK_LIST);
+          if (syncResult[STORAGE_KEYS.BLOCK_LIST]) {
+            rawList = syncResult[STORAGE_KEYS.BLOCK_LIST];
+            if (chrome.storage.local) {
+              await chrome.storage.local.set({ [STORAGE_KEYS.BLOCK_LIST]: rawList });
+            }
+          }
+        }
       } catch {
-        const localResult = await chrome.storage.local.get(STORAGE_KEYS.BLOCK_LIST);
-        rawList = localResult[STORAGE_KEYS.BLOCK_LIST] || [];
+        rawList = this.memoryFallback[STORAGE_KEYS.BLOCK_LIST] || [];
       }
     }
 
@@ -134,9 +155,14 @@ export class StorageManager {
     }
 
     try {
-      await chrome.storage.sync.set({ [STORAGE_KEYS.BLOCK_LIST]: sanitized });
+      if (chrome.storage.local) {
+        await chrome.storage.local.set({ [STORAGE_KEYS.BLOCK_LIST]: sanitized });
+      }
+      if (chrome.storage.sync) {
+        chrome.storage.sync.set({ [STORAGE_KEYS.BLOCK_LIST]: sanitized }).catch(() => {});
+      }
     } catch {
-      await chrome.storage.local.set({ [STORAGE_KEYS.BLOCK_LIST]: sanitized });
+      this.memoryFallback[STORAGE_KEYS.BLOCK_LIST] = sanitized;
     }
   }
 

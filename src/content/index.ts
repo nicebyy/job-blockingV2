@@ -191,6 +191,16 @@ class ContentController {
           blockedCompanySet.add(cardInfo.companyName);
         }
       } else {
+        // 이미 사용자가 명시적으로 숨김 처리한 카드는 부활시키지 않고 숨김 상태 유지
+        if (
+          cardInfo.cardElement.getAttribute('data-job-filtered') === 'true' &&
+          cardInfo.cardElement.getAttribute('data-filter-mode') === 'hide'
+        ) {
+          totalBlocked++;
+          blockedJobs++;
+          continue;
+        }
+
         this.filterEngine.removeFilter(cardInfo.cardElement);
 
         // 필터링되지 않은 정상 카드에 [공고숨김 / 회사차단] 듀얼 인라인 버튼 주입
@@ -223,6 +233,14 @@ class ContentController {
 
   private async handleBlockCompany(companyName: string): Promise<void> {
     try {
+      // 1. 필터 엔진에 즉시 반영 (0ms 지연 방지)
+      this.filterEngine?.addBlockItem({
+        id: `temp_${Date.now()}`,
+        pattern: companyName,
+        type: 'company',
+        createdAt: Date.now(),
+      });
+
       await StorageManager.addBlockItem(companyName, 'company');
       const updatedList = await StorageManager.getBlockList();
       this.filterEngine?.updateBlockList(updatedList);
@@ -236,6 +254,18 @@ class ContentController {
     try {
       const pattern = cardInfo.jobId || `${cardInfo.companyName}:::${cardInfo.title}`;
       const expiresAt = calculateJobExpiration(cardInfo.closingDate);
+
+      // 1. 필터 엔진에 즉시 반영 (0ms 지연 방지)
+      this.filterEngine?.addBlockItem({
+        id: `temp_${Date.now()}`,
+        pattern,
+        type: 'job',
+        createdAt: Date.now(),
+        title: cardInfo.title,
+        companyName: cardInfo.companyName,
+        closingDate: cardInfo.closingDate,
+        expiresAt,
+      });
 
       await StorageManager.addBlockItem(pattern, 'job', {
         title: cardInfo.title,

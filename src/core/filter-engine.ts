@@ -17,6 +17,15 @@ export class FilterEngine {
     this.blockList = blockList;
   }
 
+  public addBlockItem(item: BlockItem): void {
+    const exists = this.blockList.some(
+      (b) => b.type === item.type && b.pattern.toLowerCase() === item.pattern.toLowerCase()
+    );
+    if (!exists) {
+      this.blockList.push(item);
+    }
+  }
+
   /**
    * 회사명 문자열 정규화 (괄호, 주식회사, 공백 제거 등)
    */
