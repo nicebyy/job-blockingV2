@@ -41,13 +41,22 @@ export class WantedAdapter extends BaseSiteAdapter {
   /**
    * "🔥 적극 채용 중인 회사" 섹션 및 광고/프로모션 배너 숨김 처리
    */
-  public override hidePromotionBanners(container: Document | HTMLElement = document): void {
-    const banners = container.querySelectorAll<HTMLElement>(WANTED_SELECTORS.PROMOTION_BANNERS);
-    banners.forEach((el) => {
+  public override hidePromotionBanners(container: Document | HTMLElement = document): number {
+    const rawBanners = Array.from(
+      container.querySelectorAll<HTMLElement>(WANTED_SELECTORS.PROMOTION_BANNERS)
+    );
+    const topLevelBanners = rawBanners.filter(
+      (el) => !rawBanners.some((parent) => parent !== el && parent.contains(el))
+    );
+    let count = 0;
+    topLevelBanners.forEach((el) => {
       el.style.display = 'none';
       el.setAttribute('data-job-filtered', 'true');
       el.setAttribute('data-filter-mode', 'hide');
+      el.setAttribute('data-blocked-type', 'ad');
+      count++;
     });
+    return count;
   }
 
   public parseCard(element: HTMLElement): JobCardInfo | null {
@@ -86,7 +95,8 @@ export class WantedAdapter extends BaseSiteAdapter {
       const link =
         element.querySelector<HTMLAnchorElement>(WANTED_SELECTORS.JOB_LINK) ||
         (element instanceof HTMLAnchorElement ? element : null);
-      const match = link?.href?.match(/\/wd\/(\d+)/);
+      const href = link?.getAttribute('href') || link?.href || '';
+      const match = href.match(/\/wd\/(\d+)/);
       if (match) jobId = match[1];
     }
     if (!jobId && typeof window !== 'undefined' && window.location.pathname.includes('/wd/')) {
@@ -105,7 +115,6 @@ export class WantedAdapter extends BaseSiteAdapter {
       isAd,
       jobId: jobId || undefined,
       closingDate,
-
     };
   }
 
@@ -147,12 +156,14 @@ export class WantedAdapter extends BaseSiteAdapter {
           hostLi.style.setProperty('display', 'none', 'important');
           hostLi.setAttribute('data-job-filtered', 'true');
           hostLi.setAttribute('data-filter-mode', 'hide');
+          hostLi.setAttribute('data-blocked-type', 'company');
           onBlockCompany?.(compName);
         },
         onBlockJob: (info) => {
           hostLi.style.setProperty('display', 'none', 'important');
           hostLi.setAttribute('data-job-filtered', 'true');
           hostLi.setAttribute('data-filter-mode', 'hide');
+          hostLi.setAttribute('data-blocked-type', 'job');
           onBlockJob?.({ ...info, cardElement: hostLi });
         },
       });

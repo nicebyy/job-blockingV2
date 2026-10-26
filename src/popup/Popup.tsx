@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { FilterSettings, DEFAULT_SETTINGS, FilterStats, TotalBlockStats } from '../types';
+import { FilterSettings, DEFAULT_SETTINGS, FilterStats, TotalBlockStats, JobPlatform } from '../types';
 import { StorageManager } from '../core/storage';
-import { FILTER_CONFIG, UI_MESSAGES, POPUP_STATS_CONFIG, PopupStatsMode } from '../constants';
+import { FILTER_CONFIG, UI_MESSAGES, POPUP_STATS_CONFIG, PopupStatsMode, SITE_DOMAINS } from '../constants';
 
 export const Popup: React.FC = () => {
   const [settings, setSettings] = useState<FilterSettings>(DEFAULT_SETTINGS);
@@ -19,6 +19,7 @@ export const Popup: React.FC = () => {
     blockedAds: 0,
   });
   const [isJobSite, setIsJobSite] = useState<boolean>(false);
+  const [currentPlatform, setCurrentPlatform] = useState<JobPlatform>('custom');
   const [newCompany, setNewCompany] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
 
@@ -43,31 +44,43 @@ export const Popup: React.FC = () => {
     });
   };
 
+  const detectPlatform = (url?: string): JobPlatform => {
+    if (!url) return 'custom';
+    if (url.includes(SITE_DOMAINS.WANTED)) return 'wanted';
+    if (url.includes(SITE_DOMAINS.SARAMIN)) return 'saramin';
+    if (url.includes(SITE_DOMAINS.JOBKOREA)) return 'jobkorea';
+    return 'custom';
+  };
+
   // 2. 현재 활성 탭 페이지 필터링 통계 로드
   const loadPageStats = () => {
     if (typeof chrome === 'undefined' || !chrome.tabs?.query) return;
 
-    const queryActiveTab = (options: chrome.tabs.QueryInfo, callback: (tabId?: number) => void) => {
+    const queryActiveTab = (options: chrome.tabs.QueryInfo, callback: (tab?: chrome.tabs.Tab) => void) => {
       try {
         chrome.tabs.query(options, (tabs) => {
           if (chrome.runtime?.lastError) {
             callback(undefined);
             return;
           }
-          callback(tabs?.[0]?.id);
+          callback(tabs?.[0]);
         });
       } catch {
         callback(undefined);
       }
     };
 
-    queryActiveTab({ active: true, currentWindow: true }, (tabId) => {
-      if (!tabId) {
-        queryActiveTab({ active: true, lastFocusedWindow: true }, (fallbackId) => {
-          if (fallbackId) fetchStatsFromTab(fallbackId);
+    queryActiveTab({ active: true, currentWindow: true }, (tab) => {
+      if (!tab?.id) {
+        queryActiveTab({ active: true, lastFocusedWindow: true }, (fallbackTab) => {
+          if (fallbackTab?.id) {
+            setCurrentPlatform(detectPlatform(fallbackTab.url));
+            fetchStatsFromTab(fallbackTab.id);
+          }
         });
       } else {
-        fetchStatsFromTab(tabId);
+        setCurrentPlatform(detectPlatform(tab.url));
+        fetchStatsFromTab(tab.id);
       }
     });
   };
@@ -140,7 +153,7 @@ export const Popup: React.FC = () => {
     const trimmed = newCompany.trim();
     if (!trimmed) return;
 
-    await StorageManager.addBlockItem(trimmed, 'company');
+    await StorageManager.addBlockItem(trimmed, 'company', { platform: currentPlatform });
     const updatedList = await StorageManager.getBlockList();
     notifyContentScript({ type: 'BLOCKLIST_CHANGED', items: updatedList });
 
@@ -155,10 +168,27 @@ export const Popup: React.FC = () => {
 
   const notifyContentScript = (message: any) => {
     if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
+      const sendToTab = (tabId?: number) => {
+        if (tabId) {
+          try {
+            chrome.tabs.sendMessage(tabId, message, () => {
+              if (chrome.runtime?.lastError) {
+                // Ignore tab without listener
+              }
+            });
+          } catch {
+            // ignore
+          }
+        }
+      };
+
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const activeTabId = tabs[0]?.id;
-        if (activeTabId) {
-          chrome.tabs.sendMessage(activeTabId, message);
+        if (chrome.runtime?.lastError || !tabs?.[0]?.id) {
+          chrome.tabs.query({ active: true, lastFocusedWindow: true }, (fallbackTabs) => {
+            sendToTab(fallbackTabs?.[0]?.id);
+          });
+        } else {
+          sendToTab(tabs[0].id);
         }
       });
     }

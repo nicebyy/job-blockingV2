@@ -40,13 +40,22 @@ export class SaraminAdapter extends BaseSiteAdapter {
   /**
    * AI 검색 배너, 개인 맞춤 추천 공고 섹션, 스토어 프로모션 배너 등 불필요한 마케팅/추천 요소 숨김
    */
-  public override hidePromotionBanners(container: Document | HTMLElement = document): void {
-    const banners = container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.PROMOTION_BANNERS);
-    banners.forEach((el) => {
+  public override hidePromotionBanners(container: Document | HTMLElement = document): number {
+    const rawBanners = Array.from(
+      container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.PROMOTION_BANNERS)
+    );
+    const topLevelBanners = rawBanners.filter(
+      (el) => !rawBanners.some((parent) => parent !== el && parent.contains(el))
+    );
+    let count = 0;
+    topLevelBanners.forEach((el) => {
       el.style.display = 'none';
       el.setAttribute('data-job-filtered', 'true');
       el.setAttribute('data-filter-mode', 'hide');
+      el.setAttribute('data-blocked-type', 'ad');
+      count++;
     });
+    return count;
   }
 
   public override getCardListContainer(doc: Document = document): HTMLElement | null {

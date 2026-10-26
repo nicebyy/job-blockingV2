@@ -26,7 +26,7 @@ export interface SiteAdapter {
   ): { url: string; options?: RequestInit } | null;
   getCardListContainer?(currentDoc: Document): HTMLElement | null;
   getPaginationElement?(currentDoc: Document): HTMLElement | null;
-  hidePromotionBanners?(container?: Document | HTMLElement): void;
+  hidePromotionBanners?(container?: Document | HTMLElement): number;
 }
 
 export interface BlockActions {
@@ -43,8 +43,9 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   abstract parseCard(element: HTMLElement): JobCardInfo | null;
   abstract getCompanyElement(cardElement: HTMLElement): HTMLElement | null;
 
-  public hidePromotionBanners?(_container?: Document | HTMLElement): void {
+  public hidePromotionBanners?(_container?: Document | HTMLElement): number {
     // 기본 구현은 no-op (하위 어댑터에서 필요 시 재정의)
+    return 0;
   }
 
   public getNextPageUrl?(_currentDoc: Document, _currentPage: number): string | null {
@@ -124,6 +125,7 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
         cardInfo.cardElement.style.setProperty('display', 'none', 'important');
         cardInfo.cardElement.setAttribute('data-job-filtered', 'true');
         cardInfo.cardElement.setAttribute('data-filter-mode', 'hide');
+        cardInfo.cardElement.setAttribute('data-blocked-type', 'job');
 
         try {
           await onBlockJob(cardInfo);
@@ -159,6 +161,7 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
       cardInfo.cardElement.style.setProperty('display', 'none', 'important');
       cardInfo.cardElement.setAttribute('data-job-filtered', 'true');
       cardInfo.cardElement.setAttribute('data-filter-mode', 'hide');
+      cardInfo.cardElement.setAttribute('data-blocked-type', 'company');
 
       try {
         await onBlockCompany(cardInfo.companyName);

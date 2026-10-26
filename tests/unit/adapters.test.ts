@@ -146,12 +146,14 @@ describe('Site Adapters 단위 테스트', () => {
       expect(adSectionBefore).not.toBeNull();
       expect((adSectionBefore as HTMLElement).style.display).not.toBe('none');
 
-      adapter.hidePromotionBanners(container);
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBe(1);
 
       const adSectionAfter = container.querySelector('section[class*="AdTargetList_"]') as HTMLElement;
       expect(adSectionAfter.style.display).toBe('none');
       expect(adSectionAfter.getAttribute('data-job-filtered')).toBe('true');
       expect(adSectionAfter.getAttribute('data-filter-mode')).toBe('hide');
+      expect(adSectionAfter.getAttribute('data-blocked-type')).toBe('ad');
     });
 
     it('원티드 상세 페이지(/wd/394698) 상단 헤더 영역에서 공고 정보를 파싱하고 인라인 버튼을 배치해야 한다', () => {
