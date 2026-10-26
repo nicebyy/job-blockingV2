@@ -171,6 +171,14 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   }
 
   /**
+   * 평점 뱃지 래퍼가 삽입될 기준 앵커 요소 반환 (기본값: companyElement)
+   * 플랫폼별로 회사명 바로 뒤에 하트/찜하기 버튼이 있을 경우 해당 버튼 뒤에 앵커링하도록 오버라이드
+   */
+  public getRatingBadgeAnchorElement(cardElement: HTMLElement): HTMLElement | null {
+    return this.getCompanyElement(cardElement);
+  }
+
+  /**
    * 기업 평점 뱃지 주입 (잡플래닛: 초록색, 블라인드: 빨간색)
    * - 평점이 유효하게 존재하는 단일 기업일 때만 기업명 옆에 배치
    * - 미존재, 에러, 동명 기업(ambiguous)일 경우 배치하지 않음 (배치x)
@@ -196,7 +204,8 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
     if (!wrap) {
       wrap = document.createElement('span');
       wrap.className = RATING_BADGE_CONFIG.CLASSES.WRAP;
-      companyEl.insertAdjacentElement('afterend', wrap);
+      const anchorEl = this.getRatingBadgeAnchorElement(cardInfo.cardElement) || companyEl;
+      anchorEl.insertAdjacentElement('afterend', wrap);
     }
 
     const isBlind = ratingInfo.platform === 'blind';

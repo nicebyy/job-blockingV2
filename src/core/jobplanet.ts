@@ -203,7 +203,6 @@ export class JobplanetService {
   private memoryCache = new Map<string, JobplanetRatingInfo>();
   private inFlightRequests = new Map<string, Promise<JobplanetRatingInfo>>();
   private queue: (() => Promise<void>)[] = [];
-  private isProcessingQueue = false;
 
   public static getInstance(): JobplanetService {
     if (!JobplanetService.instance) {
@@ -259,6 +258,9 @@ export class JobplanetService {
   }
 
   private isCacheExpired(info: JobplanetRatingInfo): boolean {
+    if (info.status === 'error') {
+      return Date.now() - info.cachedAt > JOBPLANET_CONFIG.ERROR_CACHE_TTL_MS;
+    }
     const ttl =
       info.status === 'found'
         ? JOBPLANET_CONFIG.CACHE_TTL_MS
@@ -290,7 +292,7 @@ export class JobplanetService {
   }
 
   /**
-   * 봇 차단 방지 순차 호출 큐(Throttling)
+   * 봇 차단 방지 동시성 풀 요청 큐 (Rate Limiting Concurrency Pool)
    */
   private enqueueFetch(
     companyName: string,
@@ -320,20 +322,27 @@ export class JobplanetService {
     });
   }
 
+  private activeWorkers = 0;
+
   private async processQueue(): Promise<void> {
-    if (this.isProcessingQueue) return;
-    this.isProcessingQueue = true;
-
-    while (this.queue.length > 0) {
+    while (
+      this.activeWorkers < JOBPLANET_CONFIG.MAX_CONCURRENT_REQUESTS &&
+      this.queue.length > 0
+    ) {
       const task = this.queue.shift();
-      if (task) {
-        await task();
-        // 봇 탐지 우회를 위한 지연 시간 보장
-        await new Promise((res) => setTimeout(res, JOBPLANET_CONFIG.REQUEST_DELAY_MS));
-      }
-    }
+      if (!task) break;
 
-    this.isProcessingQueue = false;
+      this.activeWorkers++;
+      (async () => {
+        try {
+          await task();
+        } finally {
+          await new Promise((res) => setTimeout(res, JOBPLANET_CONFIG.REQUEST_DELAY_MS));
+          this.activeWorkers--;
+          this.processQueue();
+        }
+      })();
+    }
   }
 
   /**
@@ -389,5 +398,6 @@ export class JobplanetService {
     this.memoryCache.clear();
     this.inFlightRequests.clear();
     this.queue = [];
+    this.activeWorkers = 0;
   }
 }

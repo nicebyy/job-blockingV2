@@ -845,6 +845,38 @@ describe('Site Adapters 단위 테스트', () => {
       expect(wrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`)).not.toBeNull();
     });
 
+    it('잡코리아 테이블 행에 찜하기(하트) 버튼(.tplBtnFavOff)이 있을 때 injectRatingBadge 호출 시 하트 버튼 뒤에 평점 래퍼가 주입되어 겹치지 않아야 한다', () => {
+      const row = document.createElement('tr');
+      row.className = 'devloopArea';
+      row.innerHTML = `
+        <td class="tplCo">
+          <a href="#" class="company-link">㈜에이에이치푸드</a>
+          <button type="button" class="tplBtnTy tplBtnFavOff dev-favor"><span class="blind">관심기업</span></button>
+        </td>
+        <td class="tplTit"><a href="#">주방요리사 채용</a></td>
+      `;
+
+      const info = adapter.parseCard(row)!;
+      adapter.injectRatingBadge(info, {
+        companyName: '㈜에이에이치푸드',
+        status: 'found',
+        rating: 1.0,
+        platform: 'jobplanet',
+        cachedAt: Date.now(),
+      });
+
+      const tplCo = row.querySelector<HTMLElement>('td.tplCo')!;
+      const companyLink = tplCo.querySelector('.company-link')!;
+      const favBtn = tplCo.querySelector('.tplBtnFavOff')!;
+      const wrap = tplCo.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`)!;
+
+      expect(favBtn).not.toBeNull();
+      expect(wrap).not.toBeNull();
+      // 하트 버튼(favBtn)이 회사명 뒤에 그대로 유지되고, wrap은 하트 버튼 뒤에 배치되어야 함
+      expect(companyLink.nextElementSibling).toBe(favBtn);
+      expect(favBtn.nextElementSibling).toBe(wrap);
+    });
+
     it('잡코리아 /recruit/joblist 페이지에서 getNextPageRequest 호출 시 POST /Recruit/Home/_GI_List/ 요청을 생성해야 한다', () => {
       const origLocation = window.location;
       delete (window as any).location;

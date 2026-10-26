@@ -146,6 +146,7 @@ export const JOBKOREA_SELECTORS = {
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',
   AD_CLASS: 'special-post, job-recommendation-item',
   CLOSING_DATE: 'td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
+  FAVORITE_BUTTON: '.tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
   PROMOTION_BANNERS:
     '.job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
 } as const;
@@ -263,8 +264,10 @@ export const JOBPLANET_CONFIG = {
   },
   CACHE_KEY_PREFIX: 'jobplanet_score_',
   CACHE_TTL_MS: 7 * 24 * 60 * 60 * 1000, // 정상 평점 캐시 7일
-  NEGATIVE_CACHE_TTL_MS: 24 * 60 * 60 * 1000, // 미존재/동명기업/에러 캐시 1일
-  REQUEST_DELAY_MS: 300, // 봇 차단 방지 순차 호출 지연(ms)
+  NEGATIVE_CACHE_TTL_MS: 24 * 60 * 60 * 1000, // 미존재/동명기업 캐시 1일
+  ERROR_CACHE_TTL_MS: 5 * 60 * 1000, // 일시적 에러는 5분 후 재시도
+  REQUEST_DELAY_MS: 250, // 봇 차단 방지 지연(ms)
+  MAX_CONCURRENT_REQUESTS: 3, // 동시 요청 최대 풀 크기
   REQUEST_TIMEOUT_MS: 8000, // 타임아웃 8초
 } as const;
 
@@ -281,8 +284,10 @@ export const BLIND_CONFIG = {
   },
   CACHE_KEY_PREFIX: 'blind_score_',
   CACHE_TTL_MS: 7 * 24 * 60 * 60 * 1000, // 정상 평점 캐시 7일
-  NEGATIVE_CACHE_TTL_MS: 24 * 60 * 60 * 1000, // 미존재/동명기업/에러 캐시 1일
-  REQUEST_DELAY_MS: 300, // 순차 호출 스로틀링(ms)
+  NEGATIVE_CACHE_TTL_MS: 24 * 60 * 60 * 1000, // 미존재/동명기업 캐시 1일
+  ERROR_CACHE_TTL_MS: 5 * 60 * 1000, // 일시적 에러는 5분 후 재시도
+  REQUEST_DELAY_MS: 250, // 순차 호출 스로틀링(ms)
+  MAX_CONCURRENT_REQUESTS: 3, // 동시 요청 최대 풀 크기
   REQUEST_TIMEOUT_MS: 8000, // 타임아웃 8초
 } as const;
 

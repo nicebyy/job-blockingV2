@@ -334,9 +334,11 @@ class ContentController {
       const response = await this.requestJobplanetRating(cardInfo.companyName);
       if (response && response.status === 'found') {
         this.adapter.injectRatingBadge(cardInfo, response);
+      } else if (!response || response.status === 'error') {
+        cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
       }
     } catch {
-      // 에러 시 무시
+      cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
     }
   }
 
@@ -379,9 +381,11 @@ class ContentController {
       const response = await this.requestBlindRating(cardInfo.companyName);
       if (response && response.status === 'found') {
         this.adapter.injectRatingBadge(cardInfo, response);
+      } else if (!response || response.status === 'error') {
+        cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
       }
     } catch {
-      // 에러 시 무시
+      cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
     }
   }
 

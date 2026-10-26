@@ -184,7 +184,6 @@ export class BlindService {
   private memoryCache = new Map<string, BlindRatingInfo>();
   private inFlightRequests = new Map<string, Promise<BlindRatingInfo>>();
   private queue: (() => Promise<void>)[] = [];
-  private isProcessingQueue = false;
 
   public static getInstance(): BlindService {
     if (!BlindService.instance) {
@@ -237,6 +236,9 @@ export class BlindService {
   }
 
   private isCacheExpired(info: BlindRatingInfo): boolean {
+    if (info.status === 'error') {
+      return Date.now() - info.cachedAt > BLIND_CONFIG.ERROR_CACHE_TTL_MS;
+    }
     const ttl =
       info.status === 'found'
         ? BLIND_CONFIG.CACHE_TTL_MS
@@ -295,19 +297,27 @@ export class BlindService {
     });
   }
 
+  private activeWorkers = 0;
+
   private async processQueue(): Promise<void> {
-    if (this.isProcessingQueue) return;
-    this.isProcessingQueue = true;
-
-    while (this.queue.length > 0) {
+    while (
+      this.activeWorkers < BLIND_CONFIG.MAX_CONCURRENT_REQUESTS &&
+      this.queue.length > 0
+    ) {
       const task = this.queue.shift();
-      if (task) {
-        await task();
-        await new Promise((res) => setTimeout(res, BLIND_CONFIG.REQUEST_DELAY_MS));
-      }
-    }
+      if (!task) break;
 
-    this.isProcessingQueue = false;
+      this.activeWorkers++;
+      (async () => {
+        try {
+          await task();
+        } finally {
+          await new Promise((res) => setTimeout(res, BLIND_CONFIG.REQUEST_DELAY_MS));
+          this.activeWorkers--;
+          this.processQueue();
+        }
+      })();
+    }
   }
 
   /**
@@ -372,5 +382,6 @@ export class BlindService {
     this.memoryCache.clear();
     this.inFlightRequests.clear();
     this.queue = [];
+    this.activeWorkers = 0;
   }
 }

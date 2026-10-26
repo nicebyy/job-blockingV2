@@ -168,6 +168,34 @@ Windows PowerShell 환경에서 `npx`(`.cmd` 배치 파일)를 통해 줄바꿈(
      - `scripts/eval-ts.mjs`는 `stdin`을 닫고(`stdio: ['ignore', ...]`), 직접 `node.exe`를 구동하며, **10초 타임아웃**을 강제하므로 REPL 대기 락이 원천적으로 발생하지 않습니다.
    - **원칙 3**: 여러 줄의 스크래치 코드가 필요한 경우 임시 파일(`.ts`)을 생성하여 실행 후 완료 시 정리합니다.
 
+---
+
+## 9. 임시 스크립트 실행 및 DOM 파서(happy-dom/JSDOM) Event Loop 행잉 방지 규칙 (Event Loop & Background Task Safety Policy)
+
+사람인, 잡코리아 등 외부 채용 사이트의 HTML 샘플을 분석하기 위해 `happy-dom`의 `Window`나 `JSDOM`을 사용하는 임시 스크립트를 실행할 때, HTML 내부의 스크립트/타이머/트래커가 Node.js Event Loop에 비동기 핸들러를 등록하여 스크립트 본문이 끝난 후에도 Node 프로세스가 종료되지 않고 무한 대기(Hang / Zombie Process)하는 현상이 발생합니다. 특히 타임아웃 없이 백그라운드 태스크로 전환된 상태에서 소스 파일만 삭제할 경우 유령 프로세스가 시스템에 영구 잔존합니다.
+
+### 필수 준수 사항
+1. **DOM 파서 초기화 시 스크립트 실행 비활성화**:
+   - `happy-dom` 사용 시 반드시 JavaScript 실행 및 파일 로딩을 차단하여 외부 사이트 스크립트가 실행되지 않도록 설정합니다:
+     ```javascript
+     const window = new Window({
+       settings: {
+         disableJavaScriptEvaluation: true,
+         disableJavaScriptFileLoading: true,
+       }
+     });
+     ```
+2. **스크립트 종료 및 리소스 해제 보장**:
+   - 임시 분석 스크립트 끝에는 반드시 `window.happyDOM.destroy()`와 **`process.exit(0)`**을 명시하여 Node.js Event Loop의 잔여 타이머에 상관없이 즉시 프로세스가 종료되도록 합니다.
+3. **표준 타임아웃 래퍼(`scripts/eval-ts.mjs`)를 통한 실행**:
+   - 모든 임시 스크립트(`.ts`, `.js`, `.mjs`)는 단독 `node`로 무제한 실행하지 않고, 10초 타임아웃과 프로세스 트리 강제 정리(`taskkill`)가 내장된 `scripts/eval-ts.mjs <스크립트경로>`를 통해 실행합니다:
+     ```bash
+     node scripts/eval-ts.mjs scripts/inspect-sample.mjs
+     ```
+4. **백그라운드 태스크 생명주기 관리**:
+   - 실행 중인 태스크가 완료(Exit)되지 않은 상태에서 소스 파일만 삭제(`Remove-Item`)하는 행위를 금지하며, 불필요한 백그라운드 태스크는 명시적으로 kill/정리합니다.
+
+
 
 
 

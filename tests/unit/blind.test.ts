@@ -279,5 +279,44 @@ describe('Blind 연동 기능 단위 테스트', () => {
       expect(res3.status).toBe('found');
       expect(res1.rating).toBe(4.2);
     });
+
+    it('status: error 캐시는 5분(ERROR_CACHE_TTL_MS) 후 만료되어 재시도되어야 한다', async () => {
+      const now = Date.now();
+      const mockStorage: Record<string, any> = {};
+      (global as any).chrome = {
+        storage: {
+          local: {
+            get: vi.fn((key: string) => Promise.resolve({ [key]: mockStorage[key] })),
+            set: vi.fn((obj: Record<string, any>) => {
+              Object.assign(mockStorage, obj);
+              return Promise.resolve();
+            }),
+          },
+        },
+      };
+
+      // 6분 전 에러 캐시 세팅
+      const expiredError = {
+        platform: 'blind' as const,
+        status: 'error' as const,
+        companyName: '재시도기업',
+        cachedAt: now - 6 * 60 * 1000,
+      };
+      mockStorage['blind_score_재시도기업'] = expiredError;
+
+      // 새 요청 성공 mock
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            '<script type="application/ld+json">{"@type":"EmployerAggregateRating","ratingValue":"3.9","itemReviewed":{"name":"재시도기업"}}</script>'
+          ),
+      } as any);
+
+      const result = await service.getRating('재시도기업');
+      expect(result.status).toBe('found');
+      expect(result.rating).toBe(3.9);
+    });
   });
 });
