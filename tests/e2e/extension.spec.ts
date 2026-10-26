@@ -40,6 +40,10 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     await page.getByPlaceholder('차단할 회사명 입력').fill(testCompany);
     await page.locator('.btn-primary').click();
 
+    // 플랫폼 필터 탭에 '점핏' 탭이 노출되는지 확인
+    const jumpitTab = page.locator('.platform-tab-btn', { hasText: '점핏' });
+    await expect(jumpitTab).toBeVisible();
+
     // 목록에 추가되었는지 확인
     await expect(page.locator('.block-list')).toContainText(testCompany);
 

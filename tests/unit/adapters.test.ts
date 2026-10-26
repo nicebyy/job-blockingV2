@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   AdapterRegistry,
   WantedAdapter,
+  JumpitAdapter,
   SaraminAdapter,
   JobKoreaAdapter,
   RememberAdapter,
@@ -14,6 +15,12 @@ import { RATING_BADGE_CONFIG, INLINE_BUTTON_CONFIG } from '../../src/constants';
 describe('Site Adapters 단위 테스트', () => {
   describe('AdapterRegistry', () => {
     it('URL에 따라 올바른 어댑터를 반환해야 한다', () => {
+      const jumpit = AdapterRegistry.getAdapterForUrl('https://jumpit.saramin.co.kr/positions?sort=popular');
+      expect(jumpit?.name).toBe('Jumpit');
+
+      const jumpitLegacy = AdapterRegistry.getAdapterForUrl('https://jumpit.co.kr/positions');
+      expect(jumpitLegacy?.name).toBe('Jumpit');
+
       const wanted = AdapterRegistry.getAdapterForUrl('https://www.wanted.co.kr/wdlist/518');
       expect(wanted?.name).toBe('Wanted');
 
@@ -2034,6 +2041,516 @@ describe('Site Adapters 단위 테스트', () => {
       card4.innerHTML = `<a href="/job/posting/12345"><p class="sc-18344c98-6">네이버</p><h4>풀스택 개발자</h4></a>`;
       const res4 = engine.evaluateJobCard(adapter.parseCard(card4)!);
       expect(res4.shouldFilter).toBe(false);
+    });
+
+    it('적극 채용 중인 공고 / 주목 받을 수 있는 기회 / 커리어 맞춤 큐레이션 카드(sc-3c9cd5df-0)를 올바르게 수집 및 파싱해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <ul class="curation-list">
+          <li class="sc-3c9cd5df-0">
+            <a href="/job/posting/63386?curationLocation=job_posting_tab">
+              <header class="sc-3c9cd5df-4">
+                <div class="sc-3c9cd5df-6">자율주행 소프트웨어 엔지니어</div>
+                <div class="sc-3c9cd5df-7">(주)포티투닷</div>
+              </header>
+            </a>
+          </li>
+          <li class="sc-3c9cd5df-0">
+            <a href="/job/postings/98765">
+              <header class="sc-3c9cd5df-4">
+                <div class="sc-3c9cd5df-6">데이터 사이언티스트</div>
+                <div class="sc-3c9cd5df-7">쿠팡(주)</div>
+              </header>
+            </a>
+          </li>
+        </ul>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(2);
+      expect(cards[0].tagName).toBe('LI');
+      expect(cards[1].tagName).toBe('LI');
+
+      const info1 = adapter.parseCard(cards[0])!;
+      expect(info1).not.toBeNull();
+      expect(info1.companyName).toBe('(주)포티투닷');
+      expect(info1.title).toBe('자율주행 소프트웨어 엔지니어');
+      expect(info1.jobId).toBe('63386');
+      expect(info1.isAd).toBe(false);
+
+      const info2 = adapter.parseCard(cards[1])!;
+      expect(info2).not.toBeNull();
+      expect(info2.companyName).toBe('쿠팡(주)');
+      expect(info2.title).toBe('데이터 사이언티스트');
+      expect(info2.jobId).toBe('98765');
+    });
+
+    it('큐레이션 카드(sc-3c9cd5df-0)에 [공고숨김] 및 [회사차단] 듀얼 버튼이 주입되고, 클릭 시 캐러셀 아이템(li)이 즉시 숨겨져야 한다', () => {
+      const li = document.createElement('li');
+      li.className = 'sc-3c9cd5df-0';
+      li.innerHTML = `
+        <a href="/job/posting/63386">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">플랫폼 백엔드 개발자</div>
+            <div class="sc-3c9cd5df-7">(주)포티투닷</div>
+          </header>
+        </a>
+      `;
+
+      const cardInfo = adapter.parseCard(li)!;
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      const btnGroup = li.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`);
+      expect(btnGroup).not.toBeNull();
+
+      // [공고숨김] 버튼 클릭
+      const jobBtn = li.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.JOB_BUTTON}`) as HTMLButtonElement;
+      expect(jobBtn).not.toBeNull();
+
+      jobBtn.click();
+      expect(onBlockJob).toHaveBeenCalledTimes(1);
+      expect(li.style.display).toBe('none');
+      expect(li.getAttribute('data-job-filtered')).toBe('true');
+      expect(li.getAttribute('data-filter-mode')).toBe('hide');
+      expect(li.getAttribute('data-blocked-type')).toBe('job');
+
+      // [회사차단] 버튼 클릭
+      li.style.display = 'block';
+      const compBtn = li.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.COMPANY_BUTTON}`) as HTMLButtonElement;
+      expect(compBtn).not.toBeNull();
+
+      compBtn.click();
+      expect(onBlockCompany).toHaveBeenCalledTimes(1);
+      expect(onBlockCompany).toHaveBeenCalledWith('(주)포티투닷');
+      expect(li.style.display).toBe('none');
+      expect(li.getAttribute('data-job-filtered')).toBe('true');
+      expect(li.getAttribute('data-filter-mode')).toBe('hide');
+      expect(li.getAttribute('data-blocked-type')).toBe('company');
+    });
+
+    it('큐레이션 카드(sc-3c9cd5df-0)에 잡플래닛 및 블라인드 평점 뱃지가 회사명(sc-3c9cd5df-7) 바로 옆에 정상 주입되어야 한다', () => {
+      const li = document.createElement('li');
+      li.className = 'sc-3c9cd5df-0';
+      li.innerHTML = `
+        <a href="/job/posting/63386">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">프론트엔드 리드</div>
+            <div class="sc-3c9cd5df-7">(주)포티투닷</div>
+          </header>
+        </a>
+      `;
+
+      const cardInfo = adapter.parseCard(li)!;
+      const companyEl = adapter.getCompanyElement(li);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent).toBe('(주)포티투닷');
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        status: 'found',
+        companyName: '(주)포티투닷',
+        rating: 4.5,
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        status: 'found',
+        companyName: '(주)포티투닷',
+        rating: 4.3,
+        cachedAt: Date.now(),
+      });
+
+      const badges = li.querySelectorAll(`.${RATING_BADGE_CONFIG.CLASSES.BADGE}`);
+      expect(badges.length).toBe(2);
+      expect(li.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`)).not.toBeNull();
+      expect(li.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`)).not.toBeNull();
+
+      // 평점 래퍼 컨테이너가 회사명 요소 바로 다음 형제로 주입되었는지 확인
+      const wrap = li.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(companyEl?.nextElementSibling).toBe(wrap);
+    });
+
+    it('FilterEngine과 연동하여 큐레이션 공고 카드가 회사명, 키워드, 공고ID로 필터링되어야 한다', () => {
+      const engine = new FilterEngine(
+        {
+          mode: 'hide',
+          blurIntensity: 6,
+          hideAds: true,
+          showInlineButton: true,
+          enableInfiniteScroll: true,
+          showJobplanetRating: true,
+          showBlindRating: true,
+        },
+        [
+          { id: '1', pattern: '포티투닷', type: 'company', createdAt: Date.now() },
+          { id: '2', pattern: '자율주행', type: 'keyword', createdAt: Date.now() },
+          { id: '3', pattern: '55555', type: 'job', createdAt: Date.now() },
+        ]
+      );
+
+      // 1. 차단 회사 매칭 (주식회사 표기 정규화 검증)
+      const li1 = document.createElement('li');
+      li1.className = 'sc-3c9cd5df-0';
+      li1.innerHTML = `
+        <a href="/job/posting/11111">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">백엔드 개발자</div>
+            <div class="sc-3c9cd5df-7">(주)포티투닷</div>
+          </header>
+        </a>
+      `;
+      const res1 = engine.evaluateJobCard(adapter.parseCard(li1)!);
+      expect(res1.shouldFilter).toBe(true);
+
+      // 2. 키워드 매칭
+      const li2 = document.createElement('li');
+      li2.className = 'sc-3c9cd5df-0';
+      li2.innerHTML = `
+        <a href="/job/posting/22222">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">자율주행 인지 알고리즘 연구원</div>
+            <div class="sc-3c9cd5df-7">현대모비스</div>
+          </header>
+        </a>
+      `;
+      const res2 = engine.evaluateJobCard(adapter.parseCard(li2)!);
+      expect(res2.shouldFilter).toBe(true);
+
+      // 3. 단일 공고 ID 매칭
+      const li3 = document.createElement('li');
+      li3.className = 'sc-3c9cd5df-0';
+      li3.innerHTML = `
+        <a href="/job/posting/55555">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">인프라 엔지니어</div>
+            <div class="sc-3c9cd5df-7">토스</div>
+          </header>
+        </a>
+      `;
+      const res3 = engine.evaluateJobCard(adapter.parseCard(li3)!);
+      expect(res3.shouldFilter).toBe(true);
+
+      // 4. 통과 공고
+      const li4 = document.createElement('li');
+      li4.className = 'sc-3c9cd5df-0';
+      li4.innerHTML = `
+        <a href="/job/posting/99999">
+          <header class="sc-3c9cd5df-4">
+            <div class="sc-3c9cd5df-6">프로덕트 디자이너</div>
+            <div class="sc-3c9cd5df-7">당근</div>
+          </header>
+        </a>
+      `;
+      const res4 = engine.evaluateJobCard(adapter.parseCard(li4)!);
+      expect(res4.shouldFilter).toBe(false);
+    });
+  });
+
+  describe('JumpitAdapter DOM 파싱', () => {
+    const adapter = new JumpitAdapter();
+
+    it('점핏 공고 카드에서 회사명, 제목, Job ID, 마감일을 정확히 추출해야 한다', () => {
+      const card = document.createElement('div');
+      card.className = 'sc-d609d44f-0 hIThjB';
+      card.innerHTML = `
+        <a target="_self" title="프론트엔드 개발자 채용" href="/position/55185963">
+          <div class="img_box">
+            <img alt="위볼린" class="img" src="https://cdn.jumpit.co.kr/logo.png" />
+            <div class="sc-d609d44f-3 hHUwVZ">
+              <span class="sc-a0b0873a-0 czeWCl">D-4</span>
+            </div>
+          </div>
+          <div class="sc-15ba67b8-0 npplS">
+            <div class="sc-15ba67b8-2 jkmBOM">
+              <span>위볼린</span>
+            </div>
+            <h2 class="position_card_info_title">프론트엔드 개발자 채용</h2>
+          </div>
+        </a>
+      `;
+
+      const info = adapter.parseCard(card);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('위볼린');
+      expect(info?.title).toBe('프론트엔드 개발자 채용');
+      expect(info?.jobId).toBe('55185963');
+      expect(info?.closingDate).toBe('D-4');
+      expect(info?.isAd).toBe(false);
+    });
+
+    it('회사명 요소가 없고 img alt에 회사명이 존재하는 경우 정상 폴백 추출해야 한다', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <a href="/position/12345" title="백엔드 엔지니어">
+          <img alt="토스뱅크" src="https://cdn.jumpit.co.kr/logo.png" />
+          <h2 class="position_card_info_title">백엔드 엔지니어</h2>
+        </a>
+      `;
+
+      const info = adapter.parseCard(card);
+      expect(info?.companyName).toBe('토스뱅크');
+      expect(info?.title).toBe('백엔드 엔지니어');
+      expect(info?.jobId).toBe('12345');
+    });
+
+    it('광고 뱃지 또는 data-is-ad가 있는 공고는 isAd: true로 판정해야 한다', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <a href="/position/99999">
+          <div class="ad_badge">AD</div>
+          <div class="sc-15ba67b8-2"><span>광고회사</span></div>
+          <h2>추천 채용</h2>
+        </a>
+      `;
+
+      const info = adapter.parseCard(card);
+      expect(info?.isAd).toBe(true);
+    });
+
+    it('점핏 상세 페이지 헤더에서 제목, 회사명, Job ID, 마감일을 정확히 추출해야 한다', () => {
+      const header = document.createElement('div');
+      header.className = 'sc-80824a9d-0 gYKwrs';
+      header.innerHTML = `
+        <h1>AI 연구원 [경력]</h1>
+        <a class="name" target="_blank" href="/company/12345?company_nm=네이버">
+          <span>네이버</span>
+        </a>
+        <dl class="sc-b12ae455-1 ghXBxF">
+          <dt>마감일</dt>
+          <dd>2026-12-31</dd>
+        </dl>
+      `;
+
+      // window.location mocking
+      const originalLocation = window.location;
+      delete (window as any).location;
+      window.location = {
+        ...originalLocation,
+        pathname: '/position/887766',
+        href: 'https://jumpit.saramin.co.kr/position/887766',
+      } as any;
+
+      try {
+        const info = adapter.parseCard(header);
+        expect(info).not.toBeNull();
+        expect(info?.companyName).toBe('네이버');
+        expect(info?.title).toBe('AI 연구원 [경력]');
+        expect(info?.jobId).toBe('887766');
+        expect(info?.closingDate).toBe('2026-12-31');
+      } finally {
+        (window as any).location = originalLocation;
+      }
+    });
+
+    it('사이드 윙 배너 및 프로모션 섹션을 정확히 숨김 처리해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <aside class="sc-3ef60426-1 jBjuxU">사이드 윙 배너</aside>
+        <div class="POSITIONS_BANNER">상단 이벤트 배너</div>
+        <div class="sc-d609d44f-0"><a href="/position/1">일반 공고</a></div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBe(2);
+
+      const banners = container.querySelectorAll<HTMLElement>('[data-blocked-type="ad"]');
+      expect(banners.length).toBe(2);
+      banners.forEach((b) => {
+        expect(b.style.display).toBe('none');
+        expect(b.getAttribute('data-job-filtered')).toBe('true');
+      });
+    });
+
+    it('공고 카드에 [공고숨김] 및 [회사차단] 듀얼 버튼을 주입하고 클릭 시 상위 컨테이너까지 숨겨야 한다', () => {
+      const outerContainer = document.createElement('div');
+      outerContainer.className = 'sc-d609d44f-0 hIThjB';
+
+      const card = document.createElement('a');
+      card.setAttribute('href', '/position/112233');
+      card.innerHTML = `
+        <div class="sc-15ba67b8-2"><span>카카오</span></div>
+        <h2>서버 개발자</h2>
+      `;
+      outerContainer.appendChild(card);
+
+      const cardInfo = {
+        cardElement: card,
+        companyName: '카카오',
+        title: '서버 개발자',
+        isAd: false,
+        jobId: '112233',
+      };
+
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      // 1. 호스트 클래스 확인
+      expect(card.classList.contains(INLINE_BUTTON_CONFIG.CLASSES.CARD_HOST)).toBe(true);
+
+      // 2. 버튼 그룹 확인
+      const btnGroup = card.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+
+      const jobBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-job');
+      const companyBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-company');
+      expect(jobBtn).not.toBeNull();
+      expect(companyBtn).not.toBeNull();
+
+      // 3. 회사 차단 클릭 시 상위 컨테이너 숨김 처리 및 콜백 호출
+      companyBtn?.click();
+      expect(onBlockCompany).toHaveBeenCalledWith('카카오');
+      expect(outerContainer.style.display).toBe('none');
+      expect(outerContainer.getAttribute('data-job-filtered')).toBe('true');
+      expect(outerContainer.getAttribute('data-blocked-type')).toBe('company');
+    });
+
+    it('실제 점핏 HTML 픽스처(jumpit_positions.html)를 파싱하여 공고 카드 목록 및 필터링 동작을 완벽히 수행해야 한다', () => {
+      const fixturePath = path.resolve(__dirname, '../fixtures/jumpit_positions.html');
+      const html = fs.readFileSync(fixturePath, 'utf-8');
+
+      const container = document.createElement('div');
+      container.innerHTML = html;
+
+      // 1. 공고 카드 수집
+      const cardElements = adapter.getJobCardElements(container);
+      expect(cardElements.length).toBe(16);
+
+      // 2. 모든 카드가 올바른 공고 정보로 파싱되어야 함
+      const parsedCards = cardElements
+        .map((el) => adapter.parseCard(el))
+        .filter((info): info is NonNullable<typeof info> => info !== null);
+      expect(parsedCards.length).toBe(16);
+
+      // 첫 번째 카드 검증
+      const firstCard = parsedCards[0];
+      expect(firstCard.companyName).toBe('위볼린');
+      expect(firstCard.title).toBe('개발자 채용[신입]');
+      expect(firstCard.jobId).toBe('55185963');
+      expect(firstCard.closingDate).toBe('D-4');
+
+      // 3. FilterEngine을 통한 실전 필터링 검증
+      const engine = new FilterEngine(
+        {
+          mode: 'hide',
+          blurIntensity: 6,
+          hideAds: true,
+          showInlineButton: true,
+          enableInfiniteScroll: true,
+          showJobplanetRating: true,
+          showBlindRating: true,
+        },
+        [
+          { id: '1', pattern: '위볼린', type: 'company', createdAt: Date.now() },
+          { id: '2', pattern: '신입', type: 'keyword', createdAt: Date.now() },
+          { id: '3', pattern: '999999', type: 'job', createdAt: Date.now() },
+        ]
+      );
+
+      // 위볼린 차단 평가
+      const result1 = engine.evaluateJobCard(firstCard);
+      expect(result1.shouldFilter).toBe(true);
+      expect(result1.matchedItem?.pattern).toBe('위볼린');
+
+      // FilterEngine 필터링 실행
+      let blockedCount = 0;
+      let blockedCompanyCount = 0;
+      for (const card of parsedCards) {
+        const res = engine.evaluateJobCard(card);
+        if (res.shouldFilter) {
+          blockedCount++;
+          if (res.matchedItem?.type === 'company') {
+            blockedCompanyCount++;
+          }
+          engine.applyFilter(card.cardElement);
+        }
+      }
+      expect(blockedCount).toBeGreaterThan(0);
+      expect(blockedCompanyCount).toBeGreaterThan(0);
+    });
+
+    it('실제 점핏 상세 페이지 HTML 픽스처(jumpit_detail.html)를 파싱하여 상세 헤더 및 필터링을 검증해야 한다', () => {
+      const fixturePath = path.resolve(__dirname, '../fixtures/jumpit_detail.html');
+      const html = fs.readFileSync(fixturePath, 'utf-8');
+
+      const container = document.createElement('div');
+      container.innerHTML = html;
+
+      const originalLocation = window.location;
+      delete (window as any).location;
+      window.location = {
+        ...originalLocation,
+        pathname: '/position/55185963',
+        href: 'https://jumpit.saramin.co.kr/position/55185963',
+      } as any;
+
+      try {
+        const cardElements = adapter.getJobCardElements(container);
+        expect(cardElements.length).toBeGreaterThan(0);
+
+        const headerCard = cardElements[0];
+        const info = adapter.parseCard(headerCard);
+        expect(info).not.toBeNull();
+        expect(info?.companyName).toBe('위볼린');
+        expect(info?.title).toBe('개발자 채용[신입]');
+        expect(info?.jobId).toBe('55185963');
+        expect(info?.closingDate).toBe('2026-10-31');
+      } finally {
+        (window as any).location = originalLocation;
+      }
+    });
+
+    it('점핏 공고 카드에 잡플래닛 및 블라인드 평점 뱃지를 정확히 주입해야 한다', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <a href="/position/100">
+          <div class="sc-15ba67b8-2 jkmBOM">
+            <span>라인플러스</span>
+          </div>
+          <h2>라인 플랫폼 엔지니어</h2>
+        </a>
+      `;
+
+      const cardInfo = {
+        cardElement: card,
+        companyName: '라인플러스',
+        title: '라인 플랫폼 엔지니어',
+        isAd: false,
+      };
+
+      // 1. 잡플래닛 평점 주입 (초록색)
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        status: 'found',
+        companyName: '라인플러스',
+        rating: 4.2,
+        reviewCount: 350,
+        companyId: 8888,
+        cachedAt: Date.now(),
+      });
+
+      const jpBadge = card.querySelector('.job-filter-rating-jobplanet');
+      expect(jpBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('4.2');
+
+      // 2. 블라인드 평점 주입 (빨간색)
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        status: 'found',
+        companyName: '라인플러스',
+        rating: 4.1,
+        reviewCount: 200,
+        cachedAt: Date.now(),
+      });
+
+      const blindBadge = card.querySelector('.job-filter-rating-blind');
+      expect(blindBadge).not.toBeNull();
+      expect(blindBadge?.textContent).toContain('4.1');
     });
   });
 });

@@ -264,15 +264,16 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
     await StorageManager.addBlockItem('잡코리아기업', 'company', { platform: 'jobkorea' });
     await StorageManager.addBlockItem('원티드기업', 'company', { platform: 'wanted' });
     await StorageManager.addBlockItem('리멤버기업', 'company', { platform: 'remember' });
+    await StorageManager.addBlockItem('점핏기업', 'company', { platform: 'jumpit' });
 
     await act(async () => {
       root.render(<Options />);
     });
 
     const platformTabs = container.querySelectorAll<HTMLButtonElement>('.platform-tab-btn');
-    expect(platformTabs.length).toBe(6); // 전체, 사람인, 잡코리아, 원티드, 리멤버, 직접등록
+    expect(platformTabs.length).toBe(7); // 전체, 사람인, 잡코리아, 원티드, 리멤버, 점핏, 직접등록
 
-    // '리멤버' 탭 찾기
+    // 1. '리멤버' 탭 찾기 및 필터링 검증
     const rememberTab = Array.from(platformTabs).find((btn) => btn.textContent?.includes('리멤버'));
     expect(rememberTab).toBeDefined();
 
@@ -282,11 +283,26 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
 
     expect(rememberTab?.classList.contains('active')).toBe(true);
 
-    const items = container.querySelectorAll('.block-item');
+    let items = container.querySelectorAll('.block-item');
     expect(items.length).toBe(1);
     expect(items[0].textContent).toContain('리멤버기업');
     expect(items[0].textContent).not.toContain('사람인기업');
     expect(items[0].textContent).not.toContain('원티드기업');
+
+    // 2. '점핏' 탭 찾기 및 필터링 검증
+    const jumpitTab = Array.from(platformTabs).find((btn) => btn.textContent?.includes('점핏'));
+    expect(jumpitTab).toBeDefined();
+
+    await act(async () => {
+      jumpitTab?.click();
+    });
+
+    expect(jumpitTab?.classList.contains('active')).toBe(true);
+
+    items = container.querySelectorAll('.block-item');
+    expect(items.length).toBe(1);
+    expect(items[0].textContent).toContain('점핏기업');
+    expect(items[0].textContent).not.toContain('리멤버기업');
   });
 
   it('유형 필터와 플랫폼 필터를 함께 선택했을 때 복합 필터링이 올바르게 동작해야 한다', async () => {
