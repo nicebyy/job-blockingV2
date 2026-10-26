@@ -88,9 +88,10 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
 
     // 카드 호스트 클래스 지정
     cardInfo.cardElement.classList.add(INLINE_BUTTON_CONFIG.CLASSES.CARD_HOST);
-    if (!targetContainer && (!cardInfo.cardElement.style.position || cardInfo.cardElement.style.position === 'static')) {
-      cardInfo.cardElement.style.position = 'relative';
+    if (!host.style.position || host.style.position === 'static') {
+      host.style.position = 'relative';
     }
+
 
     const onBlockCompany = typeof actions === 'function' ? actions : actions.onBlockCompany;
     const onBlockJob = typeof actions === 'object' ? actions.onBlockJob : undefined;

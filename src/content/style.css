@@ -7,6 +7,8 @@
 tr.devloopArea,
 tr[data-gno],
 td.tplTit,
+.titBx,
+td.tplTit .titBx,
 .job-recommendation-item {
   position: relative !important;
 }
@@ -39,7 +41,7 @@ tr[data-job-filtered="true"][data-filter-mode="blur"]:hover td {
   display: none !important;
 }
 
-/* 사람인 및 잡코리아 AI 검색 유도 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너 자동 숨김 */
+/* 사람인, 잡코리아, 원티드 AI 검색/프로모션/적극채용회사 광고 배너 자동 숨김 */
 .area_ai_search,
 section.type_searchup,
 section.keyword_up_logo_area,
@@ -54,7 +56,10 @@ section[aria-label="추천공고"],
 div.job-recommendation,
 .area-recommend-job,
 .dev-banner,
-#dev-BNewsAGI {
+#dev-BNewsAGI,
+section[class*="AdTargetList_"],
+div[class*="AdTargetList_"],
+[class*="AdTargetList_AdTargetList"] {
   display: none !important;
 }
 
@@ -97,7 +102,10 @@ div.job-recommendation,
 .wrap_jview .jview:hover .job-filter-btn-group,
 tr.devloopArea:hover .job-filter-btn-group,
 tr[data-gno]:hover .job-filter-btn-group,
+.tplJobList tr:hover .job-filter-btn-group,
+tr:hover .job-filter-btn-group,
 td.tplTit:hover .job-filter-btn-group,
+.titBx:hover .job-filter-btn-group,
 .job-recommendation-item:hover .job-filter-btn-group,
 .job-filter-btn-group:hover,
 .job-filter-btn-group:focus-within {
@@ -111,7 +119,9 @@ td.tplTit:hover .job-filter-btn-group,
 .job-filter-btn-group-detail,
 .jv_header .job-filter-btn-group,
 .title_inner .job-filter-btn-group,
-.wrap_jv_header .job-filter-btn-group {
+.wrap_jv_header .job-filter-btn-group,
+section[class*="JobHeader"] .job-filter-btn-group,
+div[class*="JobHeader"] .job-filter-btn-group {
   position: static !important;
   display: inline-flex !important;
   vertical-align: middle !important;
@@ -222,6 +232,16 @@ td.tplTit:hover .job-filter-btn-group,
   gap: 4px !important;
   vertical-align: middle !important;
   margin-left: 6px !important;
+}
+
+/* 잡코리아 테이블 열(td.tplCo) 내 평점 뱃지 줄바꿈 최적화 */
+td.tplCo .job-filter-ratings-wrap,
+.tplCo .job-filter-ratings-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 3px !important;
+  margin-left: 0 !important;
+  margin-top: 4px !important;
 }
 
 .job-filter-rating-badge {

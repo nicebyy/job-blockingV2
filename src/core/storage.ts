@@ -120,12 +120,19 @@ export class StorageManager {
     let purgedCount = 0;
 
     for (const item of list) {
+      // 잘못 파싱되어 등록되었던 더미 팝업 텍스트('기업정보') 항목 자동 정화
+      if (item.type === 'company' && item.pattern.trim() === '기업정보') {
+        purgedCount++;
+        continue;
+      }
+
       if (isJobExpired(item, now)) {
         purgedCount++;
       } else {
         cleanedList.push(item);
       }
     }
+
 
     return { cleanedList, purgedCount };
   }

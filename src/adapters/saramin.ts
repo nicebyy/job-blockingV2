@@ -111,22 +111,43 @@ export class SaraminAdapter extends BaseSiteAdapter {
   }
 
   public parseCard(element: HTMLElement): JobCardInfo | null {
-    // 1. 회사명 추출 (상세 헤더 또는 일반 카드)
-    const companyEl =
-      element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME) ||
-      element.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME);
+    const isListCard =
+      element.classList.contains('item_recruit') ||
+      Boolean(element.querySelector('.area_corp, .corp_name'));
+
+    // 1. 회사명 추출 (리스트 카드 우선 탐색 또는 상세 헤더 우선 탐색)
+    let companyEl = isListCard
+      ? element.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME) ||
+        element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME)
+      : element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME) ||
+        element.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME);
+
+    // '기업정보' 팝업 버튼 링크가 잡힌 경우 실제 상호명 링크로 보정
+    if (
+      companyEl?.textContent?.trim() === '기업정보' ||
+      companyEl?.classList.contains('company_popup')
+    ) {
+      companyEl =
+        element.querySelector<HTMLElement>(
+          '.area_corp .corp_name a, .corp_name a, .area_corp .corp_name, .corp_name'
+        ) || companyEl;
+    }
 
     // 2. 공고 제목 추출
     const titleEl =
       element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_POSITION_TITLE) ||
       element.querySelector<HTMLElement>(SARAMIN_SELECTORS.POSITION_TITLE);
 
-    const companyName = companyEl?.textContent?.trim() || '';
+    let companyName = companyEl?.textContent?.trim() || '';
+    if (companyName === '기업정보') {
+      companyName = '';
+    }
     const title = titleEl?.textContent?.trim() || '';
 
     if (!companyName && !title) {
       return null;
     }
+
 
     // 3. 광고 판별 (상시, 추천, 플러스 광고 등)
     const isAd = Boolean(
@@ -203,11 +224,26 @@ export class SaraminAdapter extends BaseSiteAdapter {
 
 
   public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
-    return (
-      cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME) ||
-      cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME)
-    );
+    const isListCard =
+      cardElement.classList.contains('item_recruit') ||
+      Boolean(cardElement.querySelector('.area_corp, .corp_name'));
+
+    let el = isListCard
+      ? cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME) ||
+        cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME)
+      : cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME) ||
+        cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME);
+
+    if (el?.textContent?.trim() === '기업정보' || el?.classList.contains('company_popup')) {
+      el =
+        cardElement.querySelector<HTMLElement>(
+          '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name'
+        ) || el;
+    }
+
+    return el;
   }
+
 }
 
 

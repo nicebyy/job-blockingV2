@@ -31,6 +31,7 @@ export class FilterEngine {
    */
   public normalizeCompanyName(name: string): string {
     return name
+      .replace(/[㈜㈲㈳㈴㈵㈶㈇]/g, '')
       .replace(/\(주\)|주식회사|\(유\)|유한회사/g, '')
       .replace(/[\s\-_.,()[\]]/g, '')
       .toLowerCase()

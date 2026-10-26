@@ -12,6 +12,8 @@ describe('Jobplanet 연동 기능 단위 테스트', () => {
     it('(주), 주식회사 등 법적 형태 표기를 제거해야 한다', () => {
       expect(normalizeCompanyNameForSearch('(주) 카카오')).toBe('카카오');
       expect(normalizeCompanyNameForSearch('카카오(주)')).toBe('카카오');
+      expect(normalizeCompanyNameForSearch('㈜씨디네트웍스')).toBe('씨디네트웍스');
+      expect(normalizeCompanyNameForSearch('중앙하이텔㈜')).toBe('중앙하이텔');
       expect(normalizeCompanyNameForSearch('주식회사 우아한형제들')).toBe('우아한형제들');
       expect(normalizeCompanyNameForSearch('우아한형제들 주식회사')).toBe('우아한형제들');
       expect(normalizeCompanyNameForSearch('(유) 디캐이')).toBe('디캐이');

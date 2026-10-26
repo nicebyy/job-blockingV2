@@ -62,13 +62,31 @@ export const EXPIRATION_CONFIG = {
  * 원티드(Wanted) DOM 셀렉터 상수
  */
 export const WANTED_SELECTORS = {
-  JOB_CARDS: '[data-cy="job-card"], div[class*="JobCard_container__"], a[href*="/wd/"]',
-  CARD_CONTAINER: 'li, div[class*="Card_"]',
-  COMPANY_NAME: '[data-attribute-id="company__name"], span[class*="companyName"], span[class*="Company_name"], .company-name, span[class*="company"]',
-  POSITION_TITLE: '[data-attribute-id="position__name"], strong[class*="position"], h4, [class*="JobCard_title"], a[href*="/wd/"]',
+  JOB_CARDS:
+    '[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], a[href*="/wd/"]',
+  CARD_CONTAINER:
+    '[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], li, div[class*="Card_"]',
+  COMPANY_NAME:
+    'span[class*="CompanyNameWithLocationPeriod__company"], span[class*="__company__"], [data-attribute-id="company__name"], span[class*="companyName"], span[class*="Company_name"], .company-name',
+  POSITION_TITLE:
+    'span[class*="JobCard__body__position"], span[class*="body__position"], [data-attribute-id="position__name"], strong[class*="position"], h4, [class*="JobCard_title"]',
+  BOOKMARK_BUTTON: 'button.bookmarkBtn, button[data-position-name], button[data-company-name]',
   AD_BADGE: '[data-attribute-id="badge__ad"], [class*="ad_badge"], [class*="badge_ad"]',
   JOB_LINK: 'a[href*="/wd/"]',
-  CLOSING_DATE: '.due-date, [class*="dueDate"], [class*="due_date"]',
+  CLOSING_DATE:
+    'span[class*="CompanyNameWithLocationPeriod__location"], .due-date, [class*="dueDate"], [class*="due_date"]',
+
+  // 상세 페이지(/wd/\d+) 셀렉터
+  DETAIL_HEADER:
+    'section[class*="JobHeader_JobHeader"], div[class*="JobHeader_className"], [class*="JobHeader_JobHeader"], .job-header',
+  DETAIL_TITLE_INNER: 'div[class*="JobHeader_JobHeader__Tools"], div[class*="JobHeader__Tools"], .job-header',
+  DETAIL_POSITION_TITLE: 'h1.montage-g4lz5p, h1, [class*="JobHeader"] h1',
+  DETAIL_COMPANY_NAME:
+    'a[class*="JobHeader_JobHeader__Tools__Company__Link"], a[class*="JobHeader__Tools__Company__Link"], a[data-attribute-id="company__click"], a[data-company-name]',
+
+  // 프로모션 및 광고 배너(적극 채용 중인 회사 슬라이더, 프로모션 섹션 등)
+  PROMOTION_BANNERS:
+    'section[class*="AdTargetList_"], div[class*="AdTargetList_"], [class*="AdTargetList_AdTargetList"], [class*="AdTargetList"]',
 } as const;
 
 /**
@@ -90,7 +108,9 @@ export const SARAMIN_SELECTORS = {
   JOB_CARDS: '.item_recruit, .list_item, div[class*="BoxAd_wrap"], .recruit_list .row',
   LIST_CONTAINER: '#recruit_info_list .content, #recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
   PAGINATION: '.pagination, .page_box',
-  COMPANY_NAME: '.area_corp .corp_name a, .corp_name, a[class*="company"], .company_name',
+  COMPANY_NAME:
+    '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, a.company:not(.company_popup)',
+
   POSITION_TITLE: '.area_job .job_tit a, .job_tit a, .job_tit, .area_job .job_tit',
   AD_BADGE: '.badge_plus, .badge_recommend, .tag_ad, .ad_tag',
   AD_CLASS: 'plus_ad',
@@ -99,10 +119,11 @@ export const SARAMIN_SELECTORS = {
   DETAIL_RELAY_CONTAINERS: '.wrap_jview > .jview, .wrap_jview > section[class*="jview"], .wrap_jview > div[class*="jview"], .wrap_jv_cont, div[id^="jview_"], .jview_box, section.jview',
   DETAIL_RECOMMEND_CARDS: '.item_recommend, .recommend_sec .list_item, .box_recommend li, .relate_job li, [class*="recommend_job"] li, .jview_wing .offer.list li',
   DETAIL_COMPANY_NAME:
-    '.title_inner .company, .title_inner a, .jv_header .company, .jv_header .company_name, .jv_header a.company, .wrap_jv_header .corp_name, .company_info .name, a[class*="company"], .company_name, .corp_name',
+    '.jv_header .title_inner .company, .title_inner .company, .jv_header .title_inner a:not(.btn_interest):not(.company_popup), .title_inner a:not(.btn_interest):not(.company_popup), .jv_header a.company, .jv_header .company_name, .wrap_jv_header .corp_name, .company_info .name',
   DETAIL_POSITION_TITLE: '.jv_header .tit_job, .jv_header h1, h1.tit_job, .wrap_jv_header .tit_job, .job_tit, .tit',
   DETAIL_HEADER: '.jv_header, .wrap_jv_header, .header_jv, .view_header',
   DETAIL_TITLE_INNER: '.title_inner, .wrap_corp_info, .area_corp',
+
 
   // 프로모션 및 광고 배너(AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너)
   PROMOTION_BANNERS: '.area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, #section_contents, section[aria-label="추천공고"], .list_curation_wrap',
@@ -121,7 +142,7 @@ export const JOBKOREA_SELECTORS = {
     'td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
   POSITION_TITLE:
     'td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
-  BUTTON_HOST_CELL: 'td.tplTit',
+  BUTTON_HOST_CELL: '.titBx, td.tplTit .titBx, td.tplTit',
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',
   AD_CLASS: 'special-post, job-recommendation-item',
   CLOSING_DATE: 'td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
