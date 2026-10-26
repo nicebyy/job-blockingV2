@@ -66,15 +66,17 @@ export const EXPIRATION_CONFIG = {
  */
 export const WANTED_SELECTORS = {
   JOB_CARDS:
-    '[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], a[href*="/wd/"]',
+    '[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], a[href*="/wd/"], [class*="MiniJobCard"]',
   CARD_CONTAINER:
-    'div[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], div[class*="Card_"]',
-  GRID_ITEM: 'li[class*="Card_"], ul[class*="List_"] > li',
+    'div[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], div[class*="Card_"], [class*="MiniJobCard"]',
+  GRID_ITEM:
+    'li[class*="Card_"], ul[class*="List_"] > li, ul[class*="CarouselContainer"] > li, ul[class*="slider"] > li, ul[class*="Slider"] > li',
   COMPANY_NAME:
-    'span[class*="CompanyNameWithLocationPeriod__company"], span[class*="__company__"], [data-attribute-id="company__name"], span[class*="companyName"], span[class*="Company_name"], .company-name',
+    'span[class*="CompanyNameWithLocationPeriod__company"], span[class*="__company__"], [data-attribute-id="company__name"], [data-company-name], span[class*="companyName"], span[class*="Company_name"], .company-name, [class*="MiniJobCard"] header > *:nth-child(2)',
   POSITION_TITLE:
-    'span[class*="JobCard__body__position"], span[class*="body__position"], [data-attribute-id="position__name"], strong[class*="position"], h4, [class*="JobCard_title"]',
-  BOOKMARK_BUTTON: 'button.bookmarkBtn, button[data-position-name], button[data-company-name]',
+    'span[class*="JobCard__body__position"], span[class*="body__position"], [data-attribute-id="position__name"], [data-position-name], [class*="MiniJobCard__positionTitle"], strong[class*="position"], h4, [class*="JobCard_title"]',
+  BOOKMARK_BUTTON:
+    'button.bookmarkBtn, button[data-position-name], button[data-company-name], [data-company-name]',
   AD_BADGE: '[data-attribute-id="badge__ad"], [class*="ad_badge"], [class*="badge_ad"]',
   JOB_LINK: 'a[href*="/wd/"]',
   CLOSING_DATE:
