@@ -10,7 +10,9 @@ tr[data-gno],
 td.tplTit,
 .titBx,
 td.tplTit .titBx,
-.job-recommendation-item {
+.job-recommendation-item,
+ol.rankList > li,
+li.dmpItem {
   position: relative !important;
 }
 
@@ -65,6 +67,13 @@ div.job-recommendation,
 .area-recommend-job,
 .dev-banner,
 #dev-BNewsAGI,
+#dev-TopHeadlineAGI,
+#TopHeadlineAGI,
+#dev-HeadlineAGI,
+#HeadlineAGI,
+.listTopHeadline,
+.listHeadline,
+.listBannerWrap,
 section[class*="AdTargetList_"],
 div[class*="AdTargetList_"],
 [class*="AdTargetList_AdTargetList"] {
@@ -115,6 +124,8 @@ tr:hover .job-filter-btn-group,
 td.tplTit:hover .job-filter-btn-group,
 .titBx:hover .job-filter-btn-group,
 .job-recommendation-item:hover .job-filter-btn-group,
+.rankList li:hover .job-filter-btn-group,
+li.dmpItem:hover .job-filter-btn-group,
 .job-filter-btn-group:hover,
 .job-filter-btn-group:focus-within {
   opacity: 1 !important;
@@ -345,4 +356,70 @@ td.tplCo .tplBtnFavOn,
   color: #b91c1c !important;
   border: 1px solid #fecaca !important;
 }
+
+/* 잡코리아 상세 페이지(/Recruit/GI_Read/*) 회사명 및 평점 뱃지 정렬 */
+[data-sentry-component="CompanyName"],
+.artReadJob .coInfo {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+[data-sentry-component="CompanyName"] a {
+  display: inline-flex !important;
+  align-items: center !important;
+  text-decoration: none !important;
+}
+
+[data-sentry-component="CompanyName"] h2 {
+  display: inline-block !important;
+  margin: 0 !important;
+}
+
+/* 잡코리아 상세 페이지 액션 버튼 툴바 (#menu-buttons 내부 및 레거시 헤더) */
+#menu-buttons .job-filter-btn-group,
+[data-sentry-component="MenuButtons"] .job-filter-btn-group {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-right: 12px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 10 !important;
+  align-self: center !important;
+}
+
+.artReadJob .job-filter-btn-group-detail {
+  position: absolute !important;
+  top: 12px !important;
+  right: 12px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 100 !important;
+}
+
+/* 잡코리아 TOP 100(인기 순위) 공고 카드 및 평점 뱃지 정렬 */
+ol.rankList > li .coTit,
+li.dmpItem .coTit {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+
+ol.rankList > li .coTit .job-filter-ratings-wrap,
+li.dmpItem .coTit .job-filter-ratings-wrap {
+  margin-left: 2px !important;
+}
+
+ol.rankList > li .devFavor,
+li.dmpItem .devFavor {
+  position: static !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
 

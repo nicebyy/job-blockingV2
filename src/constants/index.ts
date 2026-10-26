@@ -135,21 +135,36 @@ export const SARAMIN_SELECTORS = {
  */
 export const JOBKOREA_SELECTORS = {
   JOB_CARDS:
-    '.tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
+    '.tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, ol.rankList > li, li.dmpItem, .rankList > li, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
   LIST_CONTAINER:
-    '.tplList.tplJobList table tbody, #dev-gi-list .tplJobList table tbody, .tplList table tbody, .lists-cnt, .lists-wrap, .list-default',
+    'ol.rankList, .rankListArea, .tplList.tplJobList table tbody, #dev-gi-list .tplJobList table tbody, .tplList table tbody, .lists-cnt, .lists-wrap, .list-default',
   PAGINATION: '#dvGIPaging .tplPagination, .tplPagination, .page-box, .pagination',
   COMPANY_NAME:
-    'td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
+    '.coTit a.coLink, .coTit a, .coLink, td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
   POSITION_TITLE:
-    'td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
+    '.info .tit a.link, .info .tit a, .tit a.dev-recruit-link, td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
   BUTTON_HOST_CELL: '.titBx, td.tplTit .titBx, td.tplTit',
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',
   AD_CLASS: 'special-post, job-recommendation-item',
-  CLOSING_DATE: 'td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
-  FAVORITE_BUTTON: '.tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
+  CLOSING_DATE: '.side .day, td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
+  FAVORITE_BUTTON: '.devFavor, .tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
   PROMOTION_BANNERS:
-    '.job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
+    '#dev-TopHeadlineAGI, #TopHeadlineAGI, #dev-HeadlineAGI, #HeadlineAGI, .listTopHeadline, .listHeadline, .listBannerWrap, .job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
+
+  // 상세 페이지(/Recruit/GI_Read/*) 셀렉터
+  DETAIL_CONTAINER:
+    'main[class*="grid"], main, [data-sentry-component="Title"], div[data-jobview-section="atf"], .artReadJob, .readJobWrap, #dev-gi-read',
+  DETAIL_HEADER:
+    '[data-sentry-component="Title"], div[data-jobview-section="atf"], .artReadJob .sumWrap, .artReadJob, .tbRow',
+  DETAIL_TITLE_INNER:
+    '[data-sentry-component="Title"] > div, div[data-jobview-section="atf"], .artReadJob .sumWrap, .artReadJob',
+  DETAIL_MENU_BUTTONS: '#menu-buttons, [data-sentry-component="MenuButtons"]',
+  DETAIL_COMPANY_NAME:
+    '[data-sentry-component="CompanyName"] a, [data-sentry-component="CompanyName"] h2, [data-sentry-component="CompanyName"], a[href*="/Recruit/Co_Read/"] h2, a[href*="/Recruit/Co_Read/"], .coInfo .coName, .corp-name, .coName',
+  DETAIL_POSITION_TITLE:
+    '[data-sentry-component="TitleContent"] h1, [data-sentry-component="Title"] h1, div[data-jobview-section="atf"] h1, h1.font-bold, .artReadJob .sumWrap h3, .artReadJob h3, .sumWrap .tit',
+  DETAIL_RECOMMEND_CARDS:
+    '#recommended-section [data-sentry-element="Grid"] > div, #recommended-section div[class*="Card"], .box-recommend li',
 } as const;
 
 /**
@@ -158,6 +173,8 @@ export const JOBKOREA_SELECTORS = {
 export const JOBKOREA_CONFIG = {
   PAGING_ENDPOINT: '/Recruit/Home/_GI_List/',
   JOBLIST_PATH: '/recruit/joblist',
+  DETAIL_PATH: '/Recruit/GI_Read/',
+  DETAIL_PATH_LOWER: '/recruit/gi_read/',
   DEFAULT_PAGE_SIZE: '40',
   DEFAULT_ORDER: '20',
   DEFAULT_TAB_INDEX: '0',

@@ -15,6 +15,12 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
     return url.includes(SITE_DOMAINS.JOBKOREA);
   }
 
+  public override isDetailPage(
+    url: string = typeof window !== 'undefined' ? window.location.href : ''
+  ): boolean {
+    return url.toLowerCase().includes(JOBKOREA_CONFIG.DETAIL_PATH_LOWER);
+  }
+
   public getJobCardElements(container: Document | HTMLElement = document): HTMLElement[] {
     const rawElements = Array.from(
       container.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.JOB_CARDS)
@@ -31,7 +37,31 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
       return true;
     });
 
-    return Array.from(new Set(validElements));
+    // 상세 페이지 컨테이너 탐색
+    const detailContainers = Array.from(
+      container.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_CONTAINER)
+    ).filter((el) => {
+      const parentDetail = el.parentElement?.closest<HTMLElement>(
+        JOBKOREA_SELECTORS.DETAIL_CONTAINER
+      );
+      if (parentDetail) return false;
+
+      if (el.tagName.toUpperCase() === 'MAIN') {
+        return Boolean(
+          el.querySelector(JOBKOREA_SELECTORS.DETAIL_COMPANY_NAME) ||
+          el.querySelector(JOBKOREA_SELECTORS.DETAIL_POSITION_TITLE) ||
+          el.querySelector(JOBKOREA_SELECTORS.DETAIL_HEADER)
+        );
+      }
+      return true;
+    });
+
+    // 하단 추천 공고 카드 탐색
+    const recommendCards = Array.from(
+      container.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_RECOMMEND_CARDS)
+    );
+
+    return Array.from(new Set([...validElements, ...detailContainers, ...recommendCards]));
   }
 
   /**
@@ -131,11 +161,31 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
   }
 
   public parseCard(element: HTMLElement): JobCardInfo | null {
+    const isDetail = this.isDetailPage();
+
     // 1. 회사명 추출
-    const companyEl = element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.COMPANY_NAME);
+    let companyEl = isDetail
+      ? element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_COMPANY_NAME) ||
+        element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.COMPANY_NAME)
+      : element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.COMPANY_NAME) ||
+        element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_COMPANY_NAME);
+
+    if (
+      companyEl?.textContent?.trim() === '기업정보 더보기' ||
+      companyEl?.textContent?.trim() === '기업정보'
+    ) {
+      const alt = element.querySelector<HTMLElement>(
+        '[data-sentry-component="CompanyName"] h2, [data-sentry-component="CompanyName"] a, a[href*="/Recruit/Co_Read/"] h2'
+      );
+      if (alt) companyEl = alt;
+    }
 
     // 2. 공고 제목 추출
-    const titleEl = element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.POSITION_TITLE);
+    const titleEl = isDetail
+      ? element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_POSITION_TITLE) ||
+        element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.POSITION_TITLE)
+      : element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.POSITION_TITLE) ||
+        element.querySelector<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_POSITION_TITLE);
 
     const companyName = companyEl?.textContent?.trim() || '';
     const title = titleEl?.textContent?.trim() || '';
@@ -160,8 +210,23 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
       element.querySelector<HTMLElement>('[data-gno]')?.getAttribute('data-gno');
 
     if (!gno) {
+      const dataSource = element.getAttribute('data-source');
+      if (dataSource) {
+        try {
+          const parsed = JSON.parse(dataSource);
+          if (parsed.gno) gno = String(parsed.gno);
+        } catch {}
+      }
+    }
+
+    if (!gno) {
       const link = element.querySelector<HTMLAnchorElement>('a[href*="/GI_Read/"]');
-      const match = link?.href?.match(/\/GI_Read\/(\d+)/);
+      const match = link?.href?.match(/\/GI_Read\/(\d+)/i);
+      if (match) gno = match[1];
+    }
+
+    if (!gno && typeof window !== 'undefined' && window.location.href.toLowerCase().includes(JOBKOREA_CONFIG.DETAIL_PATH_LOWER)) {
+      const match = window.location.href.match(/\/GI_Read\/(\d+)/i);
       if (match) gno = match[1];
     }
 
@@ -180,28 +245,56 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
   }
 
   public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
-    return cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.COMPANY_NAME);
+    const isDetail = this.isDetailPage();
+    let el = isDetail
+      ? cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_COMPANY_NAME) ||
+        cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.COMPANY_NAME)
+      : cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.COMPANY_NAME) ||
+        cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_COMPANY_NAME);
+
+    if (
+      el?.textContent?.trim() === '기업정보 더보기' ||
+      el?.textContent?.trim() === '기업정보'
+    ) {
+      const alt = cardElement.querySelector<HTMLElement>(
+        '[data-sentry-component="CompanyName"] h2, [data-sentry-component="CompanyName"] a, a[href*="/Recruit/Co_Read/"] h2'
+      );
+      if (alt) el = alt;
+    }
+
+    return el;
   }
 
   /**
    * 평점 뱃지 래퍼가 주입될 앵커 요소 반환:
-   * 회사명 바로 옆에 찜하기(하트) 버튼이 존재하면 하트 버튼 뒤에 래퍼를 주입하여 하트와 회사명의 겹침을 방지
+   * 회사명 바로 옆에 찜하기(하트) 버튼이 존재하면 하트 버튼 뒤에 래퍼를 주입하여 하트와 회사명의 겹침을 방지하고,
+   * 상세 페이지에서 회사명이 a 태그 내부(h2)일 경우 a 태그 뒤에 주입하여 a 태그 중첩을 방지
    */
   public override getRatingBadgeAnchorElement(cardElement: HTMLElement): HTMLElement | null {
     const companyEl = this.getCompanyElement(cardElement);
     if (!companyEl) return null;
 
+    // 상세 페이지에서 회사명이 a > h2 구조인 경우 a 태그 뒤에 평점 래퍼를 주입하여 <a> 중첩 방지
+    const companyLink =
+      companyEl.tagName.toUpperCase() === 'A'
+        ? companyEl
+        : companyEl.closest<HTMLAnchorElement>(
+            'a[href*="/Recruit/Co_Read/"], a[href*="/Company/"], [data-sentry-component="CompanyName"] a'
+          );
+
+    const targetEl = companyLink || companyEl;
+
     const favBtn = cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.FAVORITE_BUTTON);
-    if (favBtn && companyEl.parentElement?.contains(favBtn)) {
+    if (favBtn && targetEl.parentElement?.contains(favBtn)) {
       return favBtn;
     }
 
-    return companyEl;
+    return targetEl;
   }
 
   /**
-   * 테이블 행(tr)의 경우 HTML 레이아웃을 보존하기 위해 제목 열(.titBx)을 버튼 호스트로 지정하고,
-   * 차단/숨김 시 테이블 행(tr) 전체가 즉각 숨겨지도록 보장
+   * 테이블 행(tr)의 경우 제목 열(.titBx)을 버튼 호스트로 지정하고,
+   * 상세 페이지의 경우 타이틀 헤더 및 액션 버튼 영역(#menu-buttons)에 툴바를 주입
    */
   public override injectInlineButton(
     cardInfo: JobCardInfo,
@@ -244,8 +337,34 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
         );
         return;
       }
+    }
 
+    // 상세 페이지인 경우: 타이틀 헤더 및 메뉴 버튼(#menu-buttons)에 툴바 배치
+    const header =
+      (rawCard.matches?.(JOBKOREA_SELECTORS.DETAIL_HEADER)
+        ? rawCard
+        : rawCard.querySelector<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_HEADER)) || null;
 
+    if (header) {
+      const menuButtons = header.querySelector<HTMLElement>(
+        JOBKOREA_SELECTORS.DETAIL_MENU_BUTTONS
+      );
+      const targetContainer =
+        menuButtons ||
+        header.querySelector<HTMLElement>(JOBKOREA_SELECTORS.DETAIL_TITLE_INNER) ||
+        header;
+
+      super.injectInlineButton(cardInfo, actions, targetContainer);
+
+      if (menuButtons) {
+        const actionGroup = menuButtons.querySelector<HTMLElement>(
+          `.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`
+        );
+        if (actionGroup && menuButtons.firstChild !== actionGroup) {
+          menuButtons.insertBefore(actionGroup, menuButtons.firstChild);
+        }
+      }
+      return;
     }
 
     super.injectInlineButton(cardInfo, actions);

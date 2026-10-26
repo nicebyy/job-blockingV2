@@ -33,8 +33,12 @@ export class ContentController {
     const blockList = await StorageManager.getBlockList();
     this.filterEngine = new FilterEngine(this.settings, blockList);
 
-    // 무한 스크롤 초기화
-    if (this.settings.enableInfiniteScroll && this.adapter.supportsInfiniteScroll) {
+    // 무한 스크롤 초기화 (단, 상세 페이지에서는 비활성화)
+    if (
+      this.settings.enableInfiniteScroll &&
+      this.adapter.supportsInfiniteScroll &&
+      !this.adapter.isDetailPage?.()
+    ) {
       this.setupInfiniteScroll();
     }
 
@@ -89,7 +93,11 @@ export class ContentController {
       this.infiniteScroll = null;
     }
 
-    if (this.settings?.enableInfiniteScroll && this.adapter?.supportsInfiniteScroll) {
+    if (
+      this.settings?.enableInfiniteScroll &&
+      this.adapter?.supportsInfiniteScroll &&
+      !this.adapter.isDetailPage?.()
+    ) {
       this.setupInfiniteScroll();
     }
 
@@ -138,7 +146,12 @@ export class ContentController {
       if (message.type === 'SETTINGS_CHANGED') {
         this.settings = message.settings;
         this.filterEngine?.updateSettings(message.settings);
-        if (message.settings.enableInfiniteScroll && !this.infiniteScroll && this.adapter?.supportsInfiniteScroll) {
+        if (
+          message.settings.enableInfiniteScroll &&
+          !this.infiniteScroll &&
+          this.adapter?.supportsInfiniteScroll &&
+          !this.adapter.isDetailPage?.()
+        ) {
           this.setupInfiniteScroll();
         } else if (!message.settings.enableInfiniteScroll && this.infiniteScroll) {
           this.infiniteScroll.destroy();
@@ -256,9 +269,15 @@ export class ContentController {
         this.adapter.injectInlineButton(cardInfo, {
           onBlockCompany: async (companyName) => {
             await this.handleBlockCompany(companyName);
+            if (this.adapter?.isDetailPage?.()) {
+              this.navigateBackOrCloseTab();
+            }
           },
           onBlockJob: async (info) => {
             await this.handleBlockJob(info);
+            if (this.adapter?.isDetailPage?.()) {
+              this.navigateBackOrCloseTab();
+            }
           },
         });
 
@@ -352,6 +371,32 @@ export class ContentController {
       this.scanAndFilter();
     } catch (err) {
       console.error('[JobFilter] handleBlockJob error:', err);
+    }
+  }
+
+  /**
+   * 단일 공고 상세 페이지에서 차단 시 뒤로가기 또는 새 페이지면 탭 닫기 정책 수행
+   */
+  public navigateBackOrCloseTab(): void {
+    if (typeof window === 'undefined') return;
+
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          const res = chrome.runtime.sendMessage({ type: 'CLOSE_CURRENT_TAB' } as ExtensionMessage);
+          if (res && typeof res.catch === 'function') {
+            res.catch(() => {
+              window.close();
+            });
+          }
+        } catch {
+          window.close();
+        }
+      } else {
+        window.close();
+      }
     }
   }
 
