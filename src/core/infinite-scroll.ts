@@ -69,9 +69,16 @@ export class InfiniteScrollManager {
     sentinel.style.margin = '20px 0';
     this.sentinelElement = sentinel;
 
-    const parent = container.parentElement || container;
-    parent.appendChild(indicator);
-    parent.appendChild(sentinel);
+    let targetParent: HTMLElement = container;
+    if (container.tagName.toUpperCase() === 'TBODY' || container.tagName.toUpperCase() === 'TABLE') {
+      const tableWrapper = container.closest<HTMLElement>('.tplList, .lists-wrap, .lists-cnt');
+      targetParent =
+        tableWrapper || container.closest('table')?.parentElement || container.parentElement || container;
+    } else {
+      targetParent = container.parentElement || container;
+    }
+    targetParent.appendChild(indicator);
+    targetParent.appendChild(sentinel);
 
     if (typeof IntersectionObserver !== 'undefined') {
       this.observer = new IntersectionObserver(

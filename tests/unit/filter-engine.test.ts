@@ -12,6 +12,8 @@ describe('FilterEngine 단위 테스트', () => {
   describe('회사명 정규화 (normalizeCompanyName)', () => {
     it('주식회사, (주) 및 특수문자/공백을 정규화해야 한다', () => {
       expect(engine.normalizeCompanyName('(주)우아한형제들')).toBe('우아한형제들');
+      expect(engine.normalizeCompanyName('㈜씨디네트웍스')).toBe('씨디네트웍스');
+      expect(engine.normalizeCompanyName('중앙하이텔㈜')).toBe('중앙하이텔');
       expect(engine.normalizeCompanyName('주식회사 당근마켓')).toBe('당근마켓');
       expect(engine.normalizeCompanyName(' 토스 (비바리퍼블리카) ')).toBe('토스비바리퍼블리카');
       expect(engine.normalizeCompanyName('NAVER Cloud Corp.')).toBe('navercloudcorp');

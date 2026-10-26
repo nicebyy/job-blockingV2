@@ -139,7 +139,55 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.isAd).toBe(true);
     });
 
+    it('사람인 검색 카드에 기업정보 팝업 링크가 포함되어 있어도 실제 회사명((주)데이타뱅크)을 정확히 파싱해야 한다', () => {
+      const card = document.createElement('div');
+      card.className = 'item_recruit';
+      card.setAttribute('value', '55383565');
+      card.innerHTML = `
+        <div class="area_job">
+          <h2 class="job_tit">
+            <a href="#">[대구]미들웨어(M/W) 엔지니어를 모집합니다</a>
+          </h2>
+          <span class="date">~ 11/09(월)</span>
+        </div>
+        <div class="area_corp">
+          <strong class="corp_name">
+            <a href="/zf_user/company-info/view" class="track_event data_layer">
+              (주)데이타뱅크
+            </a>
+          </strong>
+          <div class="area_btn">
+            <div class="area_corp_info">
+              <a href="#" class="btn_info track_event data_layer company_popup">
+                기업정보
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const cardInfo = adapter.parseCard(card);
+      expect(cardInfo).not.toBeNull();
+      // '기업정보' 팝업 버튼 링크가 아닌 실제 회사명 '(주)데이타뱅크'가 파싱되어야 함
+      expect(cardInfo?.companyName).toBe('(주)데이타뱅크');
+      expect(cardInfo?.title).toBe('[대구]미들웨어(M/W) 엔지니어를 모집합니다');
+
+      const companyEl = adapter.getCompanyElement(card);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent?.trim()).toBe('(주)데이타뱅크');
+
+      // 회사차단 버튼 클릭 시 데이타뱅크가 전달되는지 확인
+      const onBlockCompany = vi.fn();
+      adapter.injectInlineButton(cardInfo!, { onBlockCompany, onBlockJob: vi.fn() });
+
+      const blockCompanyBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-company');
+      expect(blockCompanyBtn?.title).toContain('데이타뱅크');
+      blockCompanyBtn?.click();
+      expect(onBlockCompany).toHaveBeenCalledWith('(주)데이타뱅크');
+    });
+
     it('사람인 검색 목록 카드에서 [공고숨김] 클릭 시 즉각적인 낙관적 페이드아웃 및 콜백이 정상 작동해야 한다', async () => {
+
       const card = document.createElement('div');
       card.className = 'item_recruit';
       card.setAttribute('value', '55378966');
@@ -600,7 +648,7 @@ describe('Site Adapters 단위 테스트', () => {
       expect(normalList?.style.display).not.toBe('none');
     });
 
-    it('잡코리아 테이블 행(tr)에 injectInlineButton 호출 시 제목 셀(td.tplTit)에 툴바가 앵커되어야 한다', () => {
+    it('잡코리아 테이블 행(tr)에 injectInlineButton 호출 시 제목 셀(.titBx 및 td.tplTit)에 툴바가 앵커되어야 한다', () => {
       const row = document.createElement('tr');
       row.className = 'devloopArea';
       row.setAttribute('data-gno', '50226383');
@@ -615,6 +663,8 @@ describe('Site Adapters 단위 테스트', () => {
 
       adapter.injectInlineButton(info, { onBlockCompany, onBlockJob });
 
+      const titBx = row.querySelector<HTMLElement>('.titBx');
+      expect(titBx?.style.position).toBe('relative');
       const titCell = row.querySelector<HTMLElement>('td.tplTit');
       expect(titCell?.style.position).toBe('relative');
       const btnGroup = titCell?.querySelector('.job-filter-btn-group');

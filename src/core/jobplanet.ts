@@ -19,6 +19,8 @@ export function normalizeCompanyNameForSearch(rawName: string): string {
   if (!rawName) return '';
 
   let cleaned = rawName
+    // 유니코드 특수문자 법적 표기 제거: ㈜(\u321C), ㈲(\u3232), ㈳(\u3233), ㈴(\u3234), ㈵(\u3235), ㈶(\u3236), ㈇(\u3207) 등
+    .replace(/[㈜㈲㈳㈴㈵㈶㈇]/g, '')
     // (주), 주식회사, (유), 유한회사, (합), 합자회사, (사), (재) 등 법적 표기 제거
     .replace(/\((주|유|합|사|재)\)/gi, '')
     .replace(/(주식회사|유한회사|합자회사|합명회사|사단법인|재단법인)/gi, '')
