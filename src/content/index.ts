@@ -174,7 +174,11 @@ class ContentController {
       const evalResult = this.filterEngine.evaluateJobCard(cardInfo);
 
       if (evalResult.shouldFilter) {
-        this.filterEngine.applyFilter(cardInfo.cardElement);
+        // [중요] 사용자가 직접 [공고숨김]을 누른 단일 공고(type === 'job')는
+        // 사용자의 명시적 의도에 따라 blur 모드와 무관하게 항상 완전 숨김('hide') 적용
+        const effectiveMode =
+          evalResult.matchedItem?.type === 'job' ? 'hide' : (this.settings?.mode || 'blur');
+        this.filterEngine.applyFilter(cardInfo.cardElement, effectiveMode);
         totalBlocked++;
 
         if (evalResult.isAdFilter) {
@@ -218,25 +222,33 @@ class ContentController {
   }
 
   private async handleBlockCompany(companyName: string): Promise<void> {
-    await StorageManager.addBlockItem(companyName, 'company');
-    const updatedList = await StorageManager.getBlockList();
-    this.filterEngine?.updateBlockList(updatedList);
-    this.scanAndFilter();
+    try {
+      await StorageManager.addBlockItem(companyName, 'company');
+      const updatedList = await StorageManager.getBlockList();
+      this.filterEngine?.updateBlockList(updatedList);
+      this.scanAndFilter();
+    } catch (err) {
+      console.error('[JobFilter] handleBlockCompany error:', err);
+    }
   }
 
   private async handleBlockJob(cardInfo: JobCardInfo): Promise<void> {
-    const pattern = cardInfo.jobId || `${cardInfo.companyName}:::${cardInfo.title}`;
-    const expiresAt = calculateJobExpiration(cardInfo.closingDate);
+    try {
+      const pattern = cardInfo.jobId || `${cardInfo.companyName}:::${cardInfo.title}`;
+      const expiresAt = calculateJobExpiration(cardInfo.closingDate);
 
-    await StorageManager.addBlockItem(pattern, 'job', {
-      title: cardInfo.title,
-      companyName: cardInfo.companyName,
-      closingDate: cardInfo.closingDate,
-      expiresAt,
-    });
-    const updatedList = await StorageManager.getBlockList();
-    this.filterEngine?.updateBlockList(updatedList);
-    this.scanAndFilter();
+      await StorageManager.addBlockItem(pattern, 'job', {
+        title: cardInfo.title,
+        companyName: cardInfo.companyName,
+        closingDate: cardInfo.closingDate,
+        expiresAt,
+      });
+      const updatedList = await StorageManager.getBlockList();
+      this.filterEngine?.updateBlockList(updatedList);
+      this.scanAndFilter();
+    } catch (err) {
+      console.error('[JobFilter] handleBlockJob error:', err);
+    }
   }
 
   private notifyBadgeUpdate(count: number): void {

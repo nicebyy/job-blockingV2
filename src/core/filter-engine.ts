@@ -48,14 +48,19 @@ export class FilterEngine {
     for (const item of this.blockList) {
       if (item.type === 'job') {
         const isJobIdMatch = Boolean(cardInfo.jobId && item.pattern === cardInfo.jobId);
+        const isCompoundMatch = Boolean(item.pattern === `${cardInfo.companyName}:::${cardInfo.title}`);
         const isTitleAndCompanyMatch = Boolean(
           item.title &&
           item.companyName &&
           item.title.trim().toLowerCase() === cardInfo.title.trim().toLowerCase() &&
           this.normalizeCompanyName(item.companyName) === normalizedCompany
         );
+        const isTitleOnlyMatch = Boolean(
+          item.title &&
+          item.title.trim().toLowerCase() === cardInfo.title.trim().toLowerCase()
+        );
 
-        if (isJobIdMatch || isTitleAndCompanyMatch) {
+        if (isJobIdMatch || isCompoundMatch || isTitleAndCompanyMatch || isTitleOnlyMatch) {
           return {
             shouldFilter: true,
             matchedItem: item,

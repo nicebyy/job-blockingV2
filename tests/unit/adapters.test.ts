@@ -136,6 +136,42 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.isAd).toBe(true);
     });
 
+    it('사람인 검색 목록 카드에서 [공고숨김] 클릭 시 즉각적인 낙관적 페이드아웃 및 콜백이 정상 작동해야 한다', async () => {
+      const card = document.createElement('div');
+      card.className = 'item_recruit';
+      card.setAttribute('value', '55378966');
+      card.innerHTML = `
+        <div class="area_job">
+          <h2 class="job_tit">
+            <a href="#">[Global 1위 반도체 유통사] WT Technology Korea 대구 FAE 채용</a>
+          </h2>
+          <span class="date">~ 12/22(화)</span>
+        </div>
+        <div class="area_corp">
+          <strong class="corp_name"><a href="#">(주)더블유티테크놀로지코리아</a></strong>
+        </div>
+      `;
+
+      const cardInfo = adapter.parseCard(card)!;
+      expect(cardInfo).not.toBeNull();
+      expect(cardInfo.jobId).toBe('55378966');
+      expect(cardInfo.closingDate).toBe('~ 12/22(화)');
+
+      const onBlockJob = vi.fn().mockResolvedValue(undefined);
+      const onBlockCompany = vi.fn();
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      const hideBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-job')!;
+      expect(hideBtn).not.toBeNull();
+
+      hideBtn.click();
+
+      // 즉각적인 시각적 피드백 (낙관적 페이드아웃) 확인
+      expect(card.style.opacity).toBe('0');
+      expect(onBlockJob).toHaveBeenCalledWith(cardInfo);
+    });
+
     it('사람인 상세 페이지의 무한스크롤 릴레이 뷰 개별 공고 카드를 올바르게 파싱해야 한다', () => {
       const relayContainer = document.createElement('section');
       relayContainer.className = 'jview jview-0-77777';
