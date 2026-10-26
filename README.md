@@ -24,11 +24,11 @@
     - **기업 평점 뱃지(잡플래닛 & 블라인드)**: 공고 상세 페이지 헤더(`.title_inner`)의 기업명 바로 옆에 잡플래닛/블라인드 평점 뱃지를 동일하게 렌더링하여 공고 본문 확인 중에도 기업 평점을 즉시 확인 가능
     - **[공고숨김 / 회사차단] 듀얼 툴바 인라인 상시 노출**: 상세 페이지 우측 상단의 입사지원 버튼(`.btn_apply`) 및 스크랩 버튼과의 겹침/가려짐을 원천 방지하기 위해, 기업명 및 관심기업 영역(`.title_inner`) 내부에 정제된 인라인 플로팅 툴바로 상시 노출 (`job-filter-btn-group-detail`, `position: static`, `opacity: 1`)
     - **루트 카드 완전 격리 은닉(Anti-Empty Page)**: 최상위 부모 컨테이너(`.wrap_jview`)가 오은닉되어 화면 좌측 전체가 하얗게 증발하거나 헤더만 잘려나가는 문제를 원천 방지하고, 개별 공고 카드(`.jview`) 단위로 깔끔하게 격리 은닉
-  - **잡코리아 채용목록(`/recruit/joblist`), 인기 TOP 100(`/top100/`), 상세 페이지(`/Recruit/GI_Read/*`) 완벽 지원**:
-    - **채용목록 테이블 행(`tr`) 및 인기 TOP 100 순위 카드(`ol.rankList > li`) 정밀 앵커링**:
-      - 테이블 목록(`td.tplTit`) 및 TOP 100 카드(`li.dmpItem`)에 호버 시 부드러운 모던 알약 툴바 노출 (마우스 오버 시에만 표시되는 Hover Reveal)
-      - 관심기업(찜하기 하트) 버튼 바로 뒤 평점 래퍼 주입으로 회사명 텍스트 및 하트 아이콘과의 겹침 완벽 방지
-      - `data-source` JSON 및 메타데이터 파싱으로 공고 식별자(Job ID: `gno`) 정밀 추출
+  - **잡코리아 채용목록(`/recruit/joblist`), 인기 TOP 100(`/top100/`), AI 추천(`/User/AI`), 상세 페이지(`/Recruit/GI_Read/*`) 완벽 지원**:
+    - **채용목록 테이블 행(`tr`), 인기 TOP 100 순위 카드(`ol.rankList > li`), AI 추천 공고 행(`li.listItem`) 정밀 앵커링**:
+      - 테이블 목록(`td.tplTit`), TOP 100 카드(`li.dmpItem`), AI 추천 공고 행(`li.listItem`)에 호버 시 부드러운 모던 알약 툴바 노출 (마우스 오버 시에만 표시되는 Hover Reveal)
+      - 관심기업(찜하기 하트) 버튼(`.dev-btn-favor`, `.devFavor`) 바로 뒤 평점 래퍼 주입으로 회사명 텍스트 및 하트 아이콘과의 겹침 완벽 방지
+      - `data-gno`, `data-source` JSON, `dmp-collection` 메타데이터 파싱으로 공고 식별자(Job ID: `gno`) 정밀 추출
     - **"TOP 헤드라인 채용관" 및 프로모션 상품 배너 자동 숨김**: 채용목록 상단의 TOP 헤드라인 채용관 및 헤드라인 채용관 상품안내 배너(`#dev-TopHeadlineAGI`, `#HeadlineAGI`, `.listBannerWrap`, `.listTopHeadline`)를 CSS 및 스크립트로 흔적 없이 자동 차단
     - **상세 페이지(`/Recruit/GI_Read/*`) 기업 평점 뱃지(잡플래닛 & 블라인드)**: 채용 상세 타이틀 영역의 기업명 바로 옆에 초록색 잡플래닛 / 빨간색 블라인드 평점 뱃지를 자동 렌더링 (`[data-sentry-component="CompanyName"] a` 기준 앵커링으로 `<a>` 태그 중첩 원천 방지)
     - **상세 페이지 액션 버튼 툴바 상시 노출**: 스티키 타이틀 헤더 우측 액션 메뉴(`#menu-buttons`) 내부 찜하기(하트) 버튼 바로 옆에 [공고숨김 / 회사차단] 듀얼 툴바를 고정 배치하여 본문 확인 중 언제든 즉시 차단 가능
