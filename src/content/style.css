@@ -244,6 +244,18 @@ td.tplCo .job-filter-ratings-wrap,
   margin-top: 4px !important;
 }
 
+/* 잡코리아 관심기업(찜하기) 하트 버튼 겹침 방지 및 안정적 인라인 배치 */
+.tplJobList .tplCo .tplBtnFavOff,
+.tplJobList .tplCo .tplBtnFavOn,
+td.tplCo .tplBtnFavOff,
+td.tplCo .tplBtnFavOn,
+.tplCo .dev-favor {
+  position: static !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin-left: 4px !important;
+}
+
 .job-filter-rating-badge {
   display: inline-flex !important;
   align-items: center !important;

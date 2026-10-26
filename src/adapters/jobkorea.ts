@@ -175,6 +175,22 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
   }
 
   /**
+   * 평점 뱃지 래퍼가 주입될 앵커 요소 반환:
+   * 회사명 바로 옆에 찜하기(하트) 버튼이 존재하면 하트 버튼 뒤에 래퍼를 주입하여 하트와 회사명의 겹침을 방지
+   */
+  public override getRatingBadgeAnchorElement(cardElement: HTMLElement): HTMLElement | null {
+    const companyEl = this.getCompanyElement(cardElement);
+    if (!companyEl) return null;
+
+    const favBtn = cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.FAVORITE_BUTTON);
+    if (favBtn && companyEl.parentElement?.contains(favBtn)) {
+      return favBtn;
+    }
+
+    return companyEl;
+  }
+
+  /**
    * 테이블 행(tr)의 경우 HTML 레이아웃을 보존하기 위해 제목 열(.titBx)을 버튼 호스트로 지정하고,
    * 차단/숨김 시 테이블 행(tr) 전체가 즉각 숨겨지도록 보장
    */
