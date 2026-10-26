@@ -1,5 +1,10 @@
-import { JobCardInfo, JobplanetRatingInfo } from '../types';
-import { INLINE_BUTTON_CONFIG, JOBPLANET_CONFIG, RATING_BADGE_CONFIG } from '../constants';
+import { JobCardInfo, CompanyRatingInfo } from '../types';
+import {
+  INLINE_BUTTON_CONFIG,
+  JOBPLANET_CONFIG,
+  BLIND_CONFIG,
+  RATING_BADGE_CONFIG,
+} from '../constants';
 
 export interface SiteAdapter {
   readonly name: string;
@@ -12,7 +17,7 @@ export interface SiteAdapter {
     cardInfo: JobCardInfo,
     actions: BlockActions | ((companyName: string) => void)
   ): void;
-  injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: import('../types').JobplanetRatingInfo): void;
+  injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: CompanyRatingInfo): void;
   getNextPageUrl?(currentDoc: Document, currentPage: number): string | null;
   getCardListContainer?(currentDoc: Document): HTMLElement | null;
   getPaginationElement?(currentDoc: Document): HTMLElement | null;
@@ -144,11 +149,11 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   }
 
   /**
-   * 잡플래닛 평점 뱃지 주입
+   * 기업 평점 뱃지 주입 (잡플래닛: 초록색, 블라인드: 빨간색)
    * - 평점이 유효하게 존재하는 단일 기업일 때만 기업명 옆에 배치
    * - 미존재, 에러, 동명 기업(ambiguous)일 경우 배치하지 않음 (배치x)
    */
-  public injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: JobplanetRatingInfo): void {
+  public injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: CompanyRatingInfo): void {
     if (
       ratingInfo.status !== 'found' ||
       typeof ratingInfo.rating !== 'number' ||
@@ -159,25 +164,50 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
 
     if (!cardInfo.cardElement) return;
 
-    // 이미 평점 뱃지가 주입된 경우 중복 주입 방지
-    if (cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.CONTAINER}`)) {
-      return;
-    }
-
     const companyEl = this.getCompanyElement(cardInfo.cardElement);
     if (!companyEl) return;
 
+    // 래퍼 컨테이너 확인 또는 생성
+    let wrap = cardInfo.cardElement.querySelector<HTMLElement>(
+      `.${RATING_BADGE_CONFIG.CLASSES.WRAP}`
+    );
+    if (!wrap) {
+      wrap = document.createElement('span');
+      wrap.className = RATING_BADGE_CONFIG.CLASSES.WRAP;
+      companyEl.insertAdjacentElement('afterend', wrap);
+    }
+
+    const isBlind = ratingInfo.platform === 'blind';
+    const platformClass = isBlind
+      ? RATING_BADGE_CONFIG.CLASSES.BLIND
+      : RATING_BADGE_CONFIG.CLASSES.JOBPLANET;
+
+    // 해당 플랫폼 뱃지가 이미 주입되어 있다면 중복 주입 방지
+    if (wrap.querySelector(`.${platformClass}`)) {
+      return;
+    }
+
     const badge = document.createElement('a');
-    const colorClass = this.getRatingColorClass(ratingInfo.rating);
-    badge.className = `${RATING_BADGE_CONFIG.CLASSES.CONTAINER} ${colorClass}`;
+    badge.className = `${RATING_BADGE_CONFIG.CLASSES.BADGE} ${platformClass}`;
     badge.href =
       ratingInfo.companyUrl ||
-      `${JOBPLANET_CONFIG.COMPANY_BASE_URL}/${ratingInfo.companyId}`;
+      (isBlind
+        ? `${BLIND_CONFIG.COMPANY_BASE_URL}/${encodeURIComponent(cardInfo.companyName)}`
+        : `${JOBPLANET_CONFIG.COMPANY_BASE_URL}/${ratingInfo.companyId}`);
     badge.target = '_blank';
     badge.rel = 'noopener noreferrer';
-    badge.title = RATING_BADGE_CONFIG.TOOLTIP(ratingInfo.rating, cardInfo.companyName);
+
+    const labelText = isBlind
+      ? RATING_BADGE_CONFIG.LABELS.BLIND
+      : RATING_BADGE_CONFIG.LABELS.JOBPLANET;
+    const tooltipText = isBlind
+      ? RATING_BADGE_CONFIG.TOOLTIPS.BLIND(ratingInfo.rating, cardInfo.companyName)
+      : RATING_BADGE_CONFIG.TOOLTIPS.JOBPLANET(ratingInfo.rating, cardInfo.companyName);
+
+    badge.title = tooltipText;
 
     badge.innerHTML = `
+      <span class="${RATING_BADGE_CONFIG.CLASSES.LABEL}">${labelText}</span>
       <span class="${RATING_BADGE_CONFIG.CLASSES.STAR}">★</span>
       <span class="${RATING_BADGE_CONFIG.CLASSES.SCORE}">${ratingInfo.rating.toFixed(1)}</span>
     `;
@@ -187,18 +217,7 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
       e.stopPropagation();
     });
 
-    // 기업명 요소 바로 옆에 배치
-    companyEl.insertAdjacentElement('afterend', badge);
-  }
-
-  protected getRatingColorClass(rating: number): string {
-    if (rating >= RATING_BADGE_CONFIG.THRESHOLDS.HIGH) {
-      return RATING_BADGE_CONFIG.CLASSES.HIGH;
-    }
-    if (rating >= RATING_BADGE_CONFIG.THRESHOLDS.MEDIUM) {
-      return RATING_BADGE_CONFIG.CLASSES.MEDIUM;
-    }
-    return RATING_BADGE_CONFIG.CLASSES.LOW;
+    wrap.appendChild(badge);
   }
 }
 
