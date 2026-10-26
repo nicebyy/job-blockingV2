@@ -1,4 +1,5 @@
 import { BlockItem, FilterMode, FilterResult, FilterSettings, JobCardInfo } from '../types';
+import { normalizeCompanyName } from '../utils/text';
 
 export class FilterEngine {
   private blockList: BlockItem[] = [];
@@ -30,12 +31,7 @@ export class FilterEngine {
    * 회사명 문자열 정규화 (괄호, 주식회사, 공백 제거 등)
    */
   public normalizeCompanyName(name: string): string {
-    return name
-      .replace(/[㈜㈲㈳㈴㈵㈶㈇]/g, '')
-      .replace(/\(주\)|주식회사|\(유\)|유한회사/g, '')
-      .replace(/[\s\-_.,()[\]]/g, '')
-      .toLowerCase()
-      .trim();
+    return normalizeCompanyName(name);
   }
 
   /**

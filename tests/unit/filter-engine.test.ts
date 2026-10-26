@@ -420,5 +420,107 @@ describe('FilterEngine 단위 테스트', () => {
       expect(blockedJobs).toBe(0);
     });
   });
+
+  describe('회사별 차단 vs 공고별 차단 동작 및 독립성 종합 검증', () => {
+    it('회사 차단 시 해당 회사의 모든 다양한 직군 공고가 일괄 차단되고 타사 공고는 보호되어야 한다', () => {
+      engine.updateBlockList([
+        { id: 'c1', pattern: '우아한형제들', type: 'company', createdAt: Date.now() },
+      ]);
+
+      const jobs: JobCardInfo[] = [
+        { cardElement: document.createElement('div'), companyName: '(주)우아한형제들', title: '프론트엔드 개발자', jobId: 'woowahan_1', isAd: false },
+        { cardElement: document.createElement('div'), companyName: '우아한형제들', title: '백엔드 서버 개발자', jobId: 'woowahan_2', isAd: false },
+        { cardElement: document.createElement('div'), companyName: '주식회사 우아한형제들', title: '프로덕트 디자이너', jobId: 'woowahan_3', isAd: false },
+        { cardElement: document.createElement('div'), companyName: '당근마켓', title: '프론트엔드 개발자', jobId: 'daangn_1', isAd: false },
+      ];
+
+      const res1 = engine.evaluateJobCard(jobs[0]);
+      const res2 = engine.evaluateJobCard(jobs[1]);
+      const res3 = engine.evaluateJobCard(jobs[2]);
+      const res4 = engine.evaluateJobCard(jobs[3]);
+
+      expect(res1.shouldFilter).toBe(true);
+      expect(res1.matchedItem?.pattern).toBe('우아한형제들');
+      expect(res2.shouldFilter).toBe(true);
+      expect(res2.matchedItem?.pattern).toBe('우아한형제들');
+      expect(res3.shouldFilter).toBe(true);
+      expect(res3.matchedItem?.pattern).toBe('우아한형제들');
+
+      // 타사(당근마켓) 공고는 차단되지 않아야 함
+      expect(res4.shouldFilter).toBe(false);
+    });
+
+    it('특정 공고 차단 시 동일 회사의 다른 공고는 영향받지 않고 오직 대상 공고만 차단되어야 한다', () => {
+      engine.updateBlockList([
+        {
+          id: 'j1',
+          pattern: 'daangn_fe',
+          type: 'job',
+          createdAt: Date.now(),
+          title: '웹 프론트엔드 개발자',
+          companyName: '당근마켓',
+        },
+      ]);
+
+      const targetJob: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '당근마켓',
+        title: '웹 프론트엔드 개발자',
+        jobId: 'daangn_fe',
+        isAd: false,
+      };
+
+      const otherJobSameCompany: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '당근마켓',
+        title: '서버 백엔드 개발자',
+        jobId: 'daangn_be',
+        isAd: false,
+      };
+
+      const targetResult = engine.evaluateJobCard(targetJob);
+      const otherResult = engine.evaluateJobCard(otherJobSameCompany);
+
+      expect(targetResult.shouldFilter).toBe(true);
+      expect(targetResult.matchedItem?.type).toBe('job');
+      expect(targetResult.matchedItem?.pattern).toBe('daangn_fe');
+
+      // 동일 회사의 다른 공고는 차단되지 않음 (공고별 차단 독립성)
+      expect(otherResult.shouldFilter).toBe(false);
+    });
+
+    it('동일 공고 제목을 가진 서로 다른 회사의 공고가 있을 때, 특정 회사 공고만 정확히 차단되어야 한다', () => {
+      // 복합키(company:::title) 또는 companyName+title로 차단된 경우
+      engine.updateBlockList([
+        {
+          id: 'j2',
+          pattern: '카카오:::시니어 프론트엔드 개발자',
+          type: 'job',
+          createdAt: Date.now(),
+          title: '시니어 프론트엔드 개발자',
+          companyName: '카카오',
+        },
+      ]);
+
+      const kakaoCard: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '카카오',
+        title: '시니어 프론트엔드 개발자',
+        isAd: false,
+      };
+
+      const naverCard: JobCardInfo = {
+        cardElement: document.createElement('div'),
+        companyName: '네이버',
+        title: '시니어 프론트엔드 개발자',
+        isAd: false,
+      };
+
+      expect(engine.evaluateJobCard(kakaoCard).shouldFilter).toBe(true);
+      // 제목이 같더라도 회사가 다른 네이버 공고는 필터링되지 않아야 함
+      expect(engine.evaluateJobCard(naverCard).shouldFilter).toBe(false);
+    });
+  });
 });
+
 
