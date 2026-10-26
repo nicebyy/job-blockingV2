@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { updateBadge } from '../../src/background';
+import { updateBadge, handleBackgroundMessage } from '../../src/background';
 import { BADGE_CONFIG } from '../../src/constants';
 
 describe('Background Service Worker 단위 테스트', () => {
   const mockSetBadgeText = vi.fn();
   const mockSetBadgeBackgroundColor = vi.fn();
+  const mockTabsRemove = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -12,6 +13,9 @@ describe('Background Service Worker 단위 테스트', () => {
       action: {
         setBadgeText: mockSetBadgeText,
         setBadgeBackgroundColor: mockSetBadgeBackgroundColor,
+      },
+      tabs: {
+        remove: mockTabsRemove,
       },
     };
   });
@@ -34,5 +38,16 @@ describe('Background Service Worker 단위 테스트', () => {
     const resultZero = updateBadge(3, 0);
     expect(resultZero).toBe('');
     expect(mockSetBadgeText).toHaveBeenCalledWith({ tabId: 3, text: '' });
+  });
+
+  it('CLOSE_CURRENT_TAB 메시지 수신 시 sender.tab.id를 통해 chrome.tabs.remove를 호출하여 탭을 닫아야 한다', () => {
+    const sendResponse = vi.fn();
+    const sender = { tab: { id: 777 } } as any;
+
+    const result = handleBackgroundMessage({ type: 'CLOSE_CURRENT_TAB' }, sender, sendResponse);
+
+    expect(result).toBe(true);
+    expect(mockTabsRemove).toHaveBeenCalledWith(777);
+    expect(sendResponse).toHaveBeenCalledWith({ success: true });
   });
 });

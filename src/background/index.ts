@@ -31,52 +31,67 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
   });
 }
 
-// 메시지 수신 (뱃지 업데이트 및 잡플래닛/블라인드 평점 조회)
+export function handleBackgroundMessage(
+  message: ExtensionMessage,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: any) => void
+): boolean | void {
+  if (message.type === 'UPDATE_BADGE') {
+    const tabId = sender.tab?.id;
+    if (tabId !== undefined) {
+      updateBadge(tabId, message.count);
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'CLOSE_CURRENT_TAB') {
+    const tabId = sender.tab?.id;
+    if (tabId !== undefined && typeof chrome !== 'undefined' && chrome.tabs?.remove) {
+      chrome.tabs.remove(tabId).catch(() => {});
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'FETCH_JOBPLANET_RATING') {
+    JobplanetService.getInstance()
+      .getRating(message.companyName)
+      .then((info) => {
+        sendResponse(info);
+      })
+      .catch(() => {
+        sendResponse({
+          platform: 'jobplanet',
+          status: 'error',
+          companyName: message.companyName,
+          cachedAt: Date.now(),
+        });
+      });
+    return true; // 비동기 응답 유지
+  }
+
+  if (message.type === 'FETCH_BLIND_RATING') {
+    BlindService.getInstance()
+      .getRating(message.companyName)
+      .then((info) => {
+        sendResponse(info);
+      })
+      .catch(() => {
+        sendResponse({
+          platform: 'blind',
+          status: 'error',
+          companyName: message.companyName,
+          cachedAt: Date.now(),
+        });
+      });
+    return true; // 비동기 응답 유지
+  }
+}
+
+// 메시지 수신 (뱃지 업데이트, 탭 닫기 및 잡플래닛/블라인드 평점 조회)
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
-  chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
-    if (message.type === 'UPDATE_BADGE') {
-      const tabId = sender.tab?.id;
-      if (tabId !== undefined) {
-        updateBadge(tabId, message.count);
-      }
-      sendResponse({ success: true });
-      return true;
-    }
-
-    if (message.type === 'FETCH_JOBPLANET_RATING') {
-      JobplanetService.getInstance()
-        .getRating(message.companyName)
-        .then((info) => {
-          sendResponse(info);
-        })
-        .catch(() => {
-          sendResponse({
-            platform: 'jobplanet',
-            status: 'error',
-            companyName: message.companyName,
-            cachedAt: Date.now(),
-          });
-        });
-      return true; // 비동기 응답 유지
-    }
-
-    if (message.type === 'FETCH_BLIND_RATING') {
-      BlindService.getInstance()
-        .getRating(message.companyName)
-        .then((info) => {
-          sendResponse(info);
-        })
-        .catch(() => {
-          sendResponse({
-            platform: 'blind',
-            status: 'error',
-            companyName: message.companyName,
-            cachedAt: Date.now(),
-          });
-        });
-      return true; // 비동기 응답 유지
-    }
-  });
+  chrome.runtime.onMessage.addListener(handleBackgroundMessage);
 }
 
 

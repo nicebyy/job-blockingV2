@@ -18,6 +18,7 @@ export interface SiteAdapter {
     actions: BlockActions | ((companyName: string) => void)
   ): void;
   injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: CompanyRatingInfo): void;
+  isDetailPage?(url?: string): boolean;
   getNextPageUrl?(currentDoc: Document, currentPage: number): string | null;
   getNextPageRequest?(
     currentDoc: Document,
@@ -168,6 +169,13 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
     group.appendChild(blockCompanyBtn);
 
     host.appendChild(group);
+  }
+
+  /**
+   * 현재 페이지가 단일 공고 상세 페이지인지 여부 반환 (기본값: false)
+   */
+  public isDetailPage(_url: string = typeof window !== 'undefined' ? window.location.href : ''): boolean {
+    return false;
   }
 
   /**

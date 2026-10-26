@@ -150,6 +150,21 @@ export const JOBKOREA_SELECTORS = {
   FAVORITE_BUTTON: '.tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
   PROMOTION_BANNERS:
     '.job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
+
+  // 상세 페이지(/Recruit/GI_Read/*) 셀렉터
+  DETAIL_CONTAINER:
+    'main[class*="grid"], main, [data-sentry-component="Title"], div[data-jobview-section="atf"], .artReadJob, .readJobWrap, #dev-gi-read',
+  DETAIL_HEADER:
+    '[data-sentry-component="Title"], div[data-jobview-section="atf"], .artReadJob .sumWrap, .artReadJob, .tbRow',
+  DETAIL_TITLE_INNER:
+    '[data-sentry-component="Title"] > div, div[data-jobview-section="atf"], .artReadJob .sumWrap, .artReadJob',
+  DETAIL_MENU_BUTTONS: '#menu-buttons, [data-sentry-component="MenuButtons"]',
+  DETAIL_COMPANY_NAME:
+    '[data-sentry-component="CompanyName"] a, [data-sentry-component="CompanyName"] h2, [data-sentry-component="CompanyName"], a[href*="/Recruit/Co_Read/"] h2, a[href*="/Recruit/Co_Read/"], .coInfo .coName, .corp-name, .coName',
+  DETAIL_POSITION_TITLE:
+    '[data-sentry-component="TitleContent"] h1, [data-sentry-component="Title"] h1, div[data-jobview-section="atf"] h1, h1.font-bold, .artReadJob .sumWrap h3, .artReadJob h3, .sumWrap .tit',
+  DETAIL_RECOMMEND_CARDS:
+    '#recommended-section [data-sentry-element="Grid"] > div, #recommended-section div[class*="Card"], .box-recommend li',
 } as const;
 
 /**
@@ -158,6 +173,8 @@ export const JOBKOREA_SELECTORS = {
 export const JOBKOREA_CONFIG = {
   PAGING_ENDPOINT: '/Recruit/Home/_GI_List/',
   JOBLIST_PATH: '/recruit/joblist',
+  DETAIL_PATH: '/Recruit/GI_Read/',
+  DETAIL_PATH_LOWER: '/recruit/gi_read/',
   DEFAULT_PAGE_SIZE: '40',
   DEFAULT_ORDER: '20',
   DEFAULT_TAB_INDEX: '0',

@@ -139,5 +139,6 @@ export type ExtensionMessage =
   | { type: 'BLOCKLIST_CHANGED'; items: BlockItem[] }
   | { type: 'ADD_BLOCK_COMPANY'; companyName: string }
   | { type: 'FETCH_JOBPLANET_RATING'; companyName: string }
-  | { type: 'FETCH_BLIND_RATING'; companyName: string };
+  | { type: 'FETCH_BLIND_RATING'; companyName: string }
+  | { type: 'CLOSE_CURRENT_TAB' };
 
