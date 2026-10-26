@@ -312,6 +312,7 @@ export class ContentController {
   private getPlatformKey(): JobPlatform {
     if (!this.adapter) return 'custom';
     const name = this.adapter.name.toLowerCase();
+    if (name.includes('jumpit')) return 'jumpit';
     if (name.includes('saramin')) return 'saramin';
     if (name.includes('jobkorea')) return 'jobkorea';
     if (name.includes('wanted')) return 'wanted';

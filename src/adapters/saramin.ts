@@ -8,7 +8,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
   override readonly supportsInfiniteScroll = true;
 
   public matches(url: string): boolean {
-    return url.includes(SITE_DOMAINS.SARAMIN);
+    return url.includes(SITE_DOMAINS.SARAMIN) && !url.includes('jumpit.');
   }
 
   public getJobCardElements(container: Document | HTMLElement = document): HTMLElement[] {

@@ -4,7 +4,7 @@
 export const APP_INFO = {
   NAME: 'Job Blocking V2',
   FULL_NAME: 'Job Blocking V2 - 채용 사이트 공고 필터링',
-  DESCRIPTION: '원티드, 사람인, 잡코리아, 리멤버 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
+  DESCRIPTION: '원티드, 사람인, 잡코리아, 리멤버, 점핏 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
   VERSION: '0.1.0',
 } as const;
 
@@ -46,6 +46,8 @@ export const SITE_DOMAINS = {
   SARAMIN: 'saramin.co.kr',
   JOBKOREA: 'jobkorea.co.kr',
   REMEMBER: 'rememberapp.co.kr',
+  JUMPIT: 'jumpit.saramin.co.kr',
+  JUMPIT_LEGACY: 'jumpit.co.kr',
   JOBPLANET: 'jobplanet.co.kr',
   BLIND: 'teamblind.com',
 } as const;
@@ -194,17 +196,17 @@ export const JOBKOREA_CONFIG = {
  */
 export const REMEMBER_SELECTORS = {
   JOB_CARDS:
-    'li[class*="sc-364cfa5d-0"], div[class*="sc-18344c98-0"], li[class*="sc-d2fb7cfc-0"], a[href*="/job/posting/"]',
+    'li[class*="sc-364cfa5d-0"], div[class*="sc-18344c98-0"], li[class*="sc-d2fb7cfc-0"], li[class*="sc-3c9cd5df-0"], a[href*="/job/posting/"], a[href*="/job/postings/"]',
   CARD_CONTAINER:
-    'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], li:has(a[href*="/job/posting/"])',
-  GRID_ITEM: 'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], ul > li',
+    'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], li[class*="sc-3c9cd5df-0"], li:has(a[href*="/job/posting/"]), li:has(a[href*="/job/postings/"])',
+  GRID_ITEM: 'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], li[class*="sc-3c9cd5df-0"], ul > li',
   COMPANY_NAME:
-    'p[class*="sc-18344c98-6"], div[class*="sc-d2fb7cfc-7"], a[href*="/job/company/"] div, a[href*="/company/"]',
+    'p[class*="sc-18344c98-6"], div[class*="sc-d2fb7cfc-7"], div[class*="sc-3c9cd5df-7"], a[href*="/job/company/"] div, a[href*="/company/"]',
   POSITION_TITLE:
-    'h4[class*="sc-18344c98-9"], div[class*="sc-d2fb7cfc-6"], h4',
-  BOOKMARK_BUTTON: 'div[class*="sc-18344c98-8"] button, button[class*="bookmark"]',
+    'h4[class*="sc-18344c98-9"], div[class*="sc-d2fb7cfc-6"], div[class*="sc-3c9cd5df-6"], h4',
+  BOOKMARK_BUTTON: 'div[class*="sc-18344c98-8"] button, div[class*="sc-3c9cd5df-5"], button[class*="bookmark"]',
   AD_BADGE: '[class*="ad_badge"], [class*="badge_ad"]',
-  JOB_LINK: 'a[href*="/job/posting/"]',
+  JOB_LINK: 'a[href*="/job/posting/"], a[href*="/job/postings/"], a[href*="postingId="]',
   CLOSING_DATE: '[class*="chip"], span',
 
   // 상세 페이지(/job/posting/\d+) 셀렉터
@@ -222,6 +224,42 @@ export const REMEMBER_SELECTORS = {
   // 2. 상단 캐러셀 배너 광고 (sc-79e4e802-0, img[alt*="광고 배너"], a[href*="job_board_top_banner"])
   PROMOTION_BANNERS:
     '#companyJobBoard, section[class*="sc-79e4e802-0"], section:has(img[src*="ad-cdn.rememberapp.co.kr"]), section:has(img[alt*="광고 배너"]), section:has(a[href*="/job/board/premium-top-companies"]), section:has(a[href*="job_board_top_banner"])',
+} as const;
+
+/**
+ * 점핏(Jumpit) DOM 셀렉터 상수
+ */
+export const JUMPIT_SELECTORS = {
+  JOB_CARDS:
+    'div:has(> a[href*="/position/"]), div[class*="sc-d609d44f-0"], a[href*="/position/"]',
+  CARD_CONTAINER:
+    'div:has(> a[href*="/position/"]), div[class*="sc-d609d44f-0"]',
+  GRID_ITEM:
+    'div:has(> a[href*="/position/"]), div[class*="sc-d609d44f-0"], a[href*="/position/"]',
+  COMPANY_NAME:
+    'div[class*="jkmBOM"] span, div[class*="bhnakf"] span, div:has(> h2.position_card_info_title) > div span, .company_name, a[href*="/position/"] img[alt]',
+  POSITION_TITLE:
+    'h2.position_card_info_title, [class*="position_card_info_title"], h2',
+  JOB_LINK: 'a[href*="/position/"]',
+  CLOSING_DATE:
+    'span[class*="sc-a0b0873a-0"], div[class*="sc-d609d44f-3"] span, .due-date, dl.sc-b12ae455-1 dd',
+  BOOKMARK_BUTTON: 'div.counts button, button[class*="kMayiw"]',
+  AD_BADGE: '[class*="ad_badge"], [class*="badge_ad"], [data-is-ad="true"]',
+
+  // 상세 페이지(/position/\d+) 셀렉터
+  DETAIL_HEADER:
+    'div[class*="sc-80824a9d-0"], div:has(> h1):has(a[href*="/company/"]), div[class*="sc-3ef60426-4"]',
+  DETAIL_TITLE_INNER:
+    'div[class*="sc-80824a9d-0"], div:has(> h1):has(a[href*="/company/"])',
+  DETAIL_POSITION_TITLE: 'h1',
+  DETAIL_COMPANY_NAME:
+    'a.name[href*="/company/"] span, a[href*="/company/"] span, a.name, a[href*="/company/"]',
+  DETAIL_CLOSING_DATE:
+    '.due-date, .deadline, dl.sc-b12ae455-1 dd',
+
+  // 프로모션 및 광고 배너
+  PROMOTION_BANNERS:
+    'aside[class*="sc-3ef60426-1"], [class*="POSITIONS_BANNER"], section:has(a[href*="/event/"]), [class*="MAIN_BANNER"], [class*="MAIN_WING_BANNER"], [class*="POSITION_VIEW_WING_BANNER"]',
 } as const;
 
 /**
@@ -284,6 +322,7 @@ export const PLATFORM_CONFIG = {
   SARAMIN: 'saramin',
   JOBKOREA: 'jobkorea',
   REMEMBER: 'remember',
+  JUMPIT: 'jumpit',
   CUSTOM: 'custom',
   LABELS: {
     all: '전체 플랫폼',
@@ -291,6 +330,7 @@ export const PLATFORM_CONFIG = {
     saramin: '사람인',
     jobkorea: '잡코리아',
     remember: '리멤버',
+    jumpit: '점핏',
     custom: '직접등록',
   },
   BADGE_CLASSES: {
@@ -298,6 +338,7 @@ export const PLATFORM_CONFIG = {
     saramin: 'platform-badge-saramin',
     jobkorea: 'platform-badge-jobkorea',
     remember: 'platform-badge-remember',
+    jumpit: 'platform-badge-jumpit',
     custom: 'platform-badge-custom',
   },
 } as const;
@@ -305,7 +346,7 @@ export const PLATFORM_CONFIG = {
 export type PlatformFilterType =
   (typeof PLATFORM_CONFIG)[keyof Pick<
     typeof PLATFORM_CONFIG,
-    'ALL' | 'WANTED' | 'SARAMIN' | 'JOBKOREA' | 'REMEMBER' | 'CUSTOM'
+    'ALL' | 'WANTED' | 'SARAMIN' | 'JOBKOREA' | 'REMEMBER' | 'JUMPIT' | 'CUSTOM'
   >];
 
 /**

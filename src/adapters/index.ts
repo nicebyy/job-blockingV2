@@ -1,11 +1,13 @@
 import { SiteAdapter } from './base';
 import { WantedAdapter } from './wanted';
+import { JumpitAdapter } from './jumpit';
 import { SaraminAdapter } from './saramin';
 import { JobKoreaAdapter } from './jobkorea';
 import { RememberAdapter } from './remember';
 
 export class AdapterRegistry {
   private static adapters: SiteAdapter[] = [
+    new JumpitAdapter(),
     new WantedAdapter(),
     new SaraminAdapter(),
     new JobKoreaAdapter(),
@@ -36,6 +38,7 @@ export class AdapterRegistry {
 
 export * from './base';
 export * from './wanted';
+export * from './jumpit';
 export * from './saramin';
 export * from './jobkorea';
 export * from './remember';
