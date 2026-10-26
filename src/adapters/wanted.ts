@@ -16,11 +16,16 @@ export class WantedAdapter extends BaseSiteAdapter {
 
     const cardSet = new Set<HTMLElement>();
     for (const el of rawElements) {
-      // 1. data-cy="job-card"가 있으면 최우선 카드 컨테이너로 사용
-      const jobCard =
+      // 1. data-cy="job-card" 또는 CARD_CONTAINER 요소를 기준으로 카드 베이스 요소 수집
+      const baseCard =
         (el.matches('[data-cy="job-card"]') ? el : el.closest<HTMLElement>('[data-cy="job-card"]')) ||
         el.closest<HTMLElement>(WANTED_SELECTORS.CARD_CONTAINER) ||
         el;
+
+      // 2. 만약 baseCard의 상위에 li 그리드/리스트 아이템(Card_Card 또는 ul > li)이 존재하면,
+      //    숨김 시 그리드 셀 전체가 사라져 빈 공간 없이 뒤의 카드가 자연스럽게 당겨오도록(Reflow) li를 최상위 카드로 채택
+      const gridItem = baseCard.closest<HTMLElement>(WANTED_SELECTORS.GRID_ITEM);
+      const jobCard = gridItem || baseCard;
       cardSet.add(jobCard);
     }
 
@@ -124,6 +129,33 @@ export class WantedAdapter extends BaseSiteAdapter {
       const titleInner =
         detailHeader.querySelector<HTMLElement>(WANTED_SELECTORS.DETAIL_TITLE_INNER) || detailHeader;
       super.injectInlineButton(cardInfo, actions, titleInner);
+      return;
+    }
+
+    // 원티드 리스트 카드: 상위 li(그리드 셀)가 존재할 경우 숨김 시 빈칸이 남지 않고 뒤의 카드가 당겨오도록 li 전체를 함께 즉시 숨김
+    const hostLi =
+      cardInfo.cardElement.tagName.toUpperCase() === 'LI'
+        ? cardInfo.cardElement
+        : cardInfo.cardElement.closest<HTMLElement>('li');
+
+    if (hostLi && hostLi !== cardInfo.cardElement) {
+      const onBlockCompany = typeof actions === 'function' ? actions : actions.onBlockCompany;
+      const onBlockJob = typeof actions === 'object' ? actions.onBlockJob : undefined;
+
+      super.injectInlineButton(cardInfo, {
+        onBlockCompany: (compName) => {
+          hostLi.style.setProperty('display', 'none', 'important');
+          hostLi.setAttribute('data-job-filtered', 'true');
+          hostLi.setAttribute('data-filter-mode', 'hide');
+          onBlockCompany?.(compName);
+        },
+        onBlockJob: (info) => {
+          hostLi.style.setProperty('display', 'none', 'important');
+          hostLi.setAttribute('data-job-filtered', 'true');
+          hostLi.setAttribute('data-filter-mode', 'hide');
+          onBlockJob?.({ ...info, cardElement: hostLi });
+        },
+      });
       return;
     }
 

@@ -65,7 +65,8 @@ export const WANTED_SELECTORS = {
   JOB_CARDS:
     '[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], a[href*="/wd/"]',
   CARD_CONTAINER:
-    '[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], li, div[class*="Card_"]',
+    'div[data-cy="job-card"], div[class*="JobCard_JobCard"], div[class*="JobCard_container"], div[class*="Card_"]',
+  GRID_ITEM: 'li[class*="Card_"], ul[class*="List_"] > li',
   COMPANY_NAME:
     'span[class*="CompanyNameWithLocationPeriod__company"], span[class*="__company__"], [data-attribute-id="company__name"], span[class*="companyName"], span[class*="Company_name"], .company-name',
   POSITION_TITLE:

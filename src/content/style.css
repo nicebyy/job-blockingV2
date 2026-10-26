@@ -3,6 +3,7 @@
 .item_recruit,
 .list-post,
 [data-cy="job-card"],
+li[class*="Card_"],
 .jview,
 tr.devloopArea,
 tr[data-gno],
@@ -38,6 +39,13 @@ tr[data-job-filtered="true"][data-filter-mode="blur"]:hover td {
 }
 
 [data-job-filtered="true"][data-filter-mode="hide"] {
+  display: none !important;
+}
+
+/* 원티드 공고 숨김 시 상위 li 그리드 아이템도 완전 숨김 처리하여 빈 공간(빈칸) 없이 다음 공고가 즉각 당겨오도록 보장 */
+li:has(> [data-job-filtered="true"][data-filter-mode="hide"]),
+li:has([data-cy="job-card"][data-job-filtered="true"][data-filter-mode="hide"]),
+li[class*="Card_"][data-job-filtered="true"][data-filter-mode="hide"] {
   display: none !important;
 }
 
