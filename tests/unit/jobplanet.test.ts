@@ -211,5 +211,43 @@ describe('Jobplanet 연동 기능 단위 테스트', () => {
         JOBPLANET_CONFIG.HEADERS.ACCEPT_LANGUAGE
       );
     });
+
+    it('status: error 캐시는 5분(ERROR_CACHE_TTL_MS) 후 만료되어 재시도되어야 한다', async () => {
+      const now = Date.now();
+      const mockStorage: Record<string, any> = {};
+      (global as any).chrome = {
+        storage: {
+          local: {
+            get: vi.fn((key: string) => Promise.resolve({ [key]: mockStorage[key] })),
+            set: vi.fn((obj: Record<string, any>) => {
+              Object.assign(mockStorage, obj);
+              return Promise.resolve();
+            }),
+          },
+        },
+      };
+
+      // 6분 전 에러 캐시 세팅
+      const expiredError = {
+        platform: 'jobplanet' as const,
+        status: 'error' as const,
+        companyName: '재시도기업',
+        cachedAt: now - 6 * 60 * 1000,
+      };
+      mockStorage['jobplanet_score_재시도기업'] = expiredError;
+
+      // 새 요청 성공 mock
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () =>
+          Promise.resolve(
+            '1:{"queryKey":["search","companyList",{"query":"재시도기업"}],"items":[{"company_id":99,"name":"재시도기업","rate_total_avg":4.0}]}'
+          ),
+      });
+
+      const result = await service.getRating('재시도기업');
+      expect(result.status).toBe('found');
+      expect(result.rating).toBe(4.0);
+    });
   });
 });
