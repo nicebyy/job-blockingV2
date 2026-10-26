@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   AdapterRegistry,
   WantedAdapter,
@@ -6,6 +8,7 @@ import {
   JobKoreaAdapter,
 } from '../../src/adapters';
 import { FilterEngine } from '../../src/core/filter-engine';
+import { RATING_BADGE_CONFIG } from '../../src/constants';
 
 describe('Site Adapters 단위 테스트', () => {
   describe('AdapterRegistry', () => {
@@ -375,6 +378,208 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.title).toBe('데이터 엔지니어 채용');
       expect(info?.jobId).toBe('gno_8888');
       expect(info?.isAd).toBe(false);
+    });
+
+    it('잡코리아 채용목록 테이블 행(tr.devloopArea)에서 회사명, 공고제목, data-gno, 마감일을 정확히 파싱해야 한다', () => {
+      const row = document.createElement('tr');
+      row.className = 'devloopArea';
+      row.setAttribute('data-gno', '50226383');
+      row.setAttribute('data-info', ' 50226383|51825874|judarobe|C|AM||29205629');
+      row.innerHTML = `
+        <th scope="row"><span class="tplChkRect"></span></th>
+        <td class="tplCo">
+          <a href="/Recruit/Co_Read/C/29205629" class="link normalLog">㈜다로베</a>
+        </td>
+        <td class="tplTit">
+          <div class="titBx">
+            <strong><a href="/Recruit/GI_Read/50226383" class="link normalLog">[서울숲 다로베] 홀직원 채용공고</a></strong>
+          </div>
+        </td>
+        <td class="tplPrv"><button type="button">미리보기</button></td>
+        <td class="odd">
+          <button type="button" class="tplBtn">즉시지원</button>
+          <span class="time dotum">3일 전 등록</span>
+          <span class="date dotum"><span class="tahoma">~11/22</span>(일)</span>
+        </td>
+      `;
+
+      const info = adapter.parseCard(row);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('㈜다로베');
+      expect(info?.title).toBe('[서울숲 다로베] 홀직원 채용공고');
+      expect(info?.jobId).toBe('50226383');
+      expect(info?.closingDate).toBe('~11/22(일)');
+      expect(info?.isAd).toBe(false);
+    });
+
+    it('잡코리아 상단 퍼포먼스 추천공고(.job-recommendation-item)는 isAd: true로 판정되어야 한다', () => {
+      const recoItem = document.createElement('li');
+      recoItem.className = 'job-recommendation-item devloopArea';
+      recoItem.setAttribute('data-info', ' 50239993|51837473|hkconsulting89|C|AM||49997886');
+      recoItem.innerHTML = `
+        <div class="job-recommendation-details">
+          <span class="company-name"><a href="#">케이에이치컨설팅㈜</a></span>
+          <p class="title"><a href="#">기계설비 기술인 채용</a></p>
+          <div class="info"><div class="deadline">D-30</div></div>
+        </div>
+      `;
+
+      const info = adapter.parseCard(recoItem);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('케이에이치컨설팅㈜');
+      expect(info?.title).toBe('기계설비 기술인 채용');
+      expect(info?.jobId).toBe('50239993');
+      expect(info?.closingDate).toBe('D-30');
+      expect(info?.isAd).toBe(true);
+    });
+
+    it('잡코리아 hidePromotionBanners 호출 시 추천 공고 섹션 및 배너들이 숨김 처리되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="job-recommendation">
+          <h2>추천 채용정보</h2>
+        </div>
+        <div id="dev-BNewsAGI">배너 광고</div>
+        <div class="tplList tplJobList">
+          <table><tbody><tr><td>일반 공고</td></tr></tbody></table>
+        </div>
+      `;
+
+      adapter.hidePromotionBanners(container);
+
+      const recoSection = container.querySelector<HTMLElement>('.job-recommendation');
+      const banner = container.querySelector<HTMLElement>('#dev-BNewsAGI');
+      const normalList = container.querySelector<HTMLElement>('.tplList');
+
+      expect(recoSection?.style.display).toBe('none');
+      expect(recoSection?.getAttribute('data-job-filtered')).toBe('true');
+      expect(banner?.style.display).toBe('none');
+      expect(banner?.getAttribute('data-job-filtered')).toBe('true');
+      expect(normalList?.style.display).not.toBe('none');
+    });
+
+    it('잡코리아 테이블 행(tr)에 injectInlineButton 호출 시 제목 셀(td.tplTit)에 툴바가 앵커되어야 한다', () => {
+      const row = document.createElement('tr');
+      row.className = 'devloopArea';
+      row.setAttribute('data-gno', '50226383');
+      row.innerHTML = `
+        <td class="tplCo"><a href="#">㈜다로베</a></td>
+        <td class="tplTit"><div class="titBx"><a href="#">홀직원 채용</a></div></td>
+      `;
+
+      const info = adapter.parseCard(row)!;
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(info, { onBlockCompany, onBlockJob });
+
+      const titCell = row.querySelector<HTMLElement>('td.tplTit');
+      expect(titCell?.style.position).toBe('relative');
+      const btnGroup = titCell?.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+
+      // tr 자체의 자식으로 직접 삽입되지 않고 td.tplTit 내부에 삽입되었는지 검증
+      expect(row.children.length).toBe(2);
+    });
+
+    it('잡코리아 테이블 행(tr)에 injectRatingBadge 호출 시 회사명 바로 옆에 뱃지가 삽입되어야 한다', () => {
+      const row = document.createElement('tr');
+      row.className = 'devloopArea';
+      row.innerHTML = `
+        <td class="tplCo"><a href="#" class="company-link">㈜다로베</a></td>
+        <td class="tplTit"><a href="#">홀직원 채용</a></td>
+      `;
+
+      const info = adapter.parseCard(row)!;
+      adapter.injectRatingBadge(info, {
+        companyName: '㈜다로베',
+        status: 'found',
+        rating: 4.2,
+        platform: 'jobplanet',
+        companyId: 12345,
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(info, {
+        companyName: '㈜다로베',
+        status: 'found',
+        rating: 3.8,
+        platform: 'blind',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = row.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(wrap).not.toBeNull();
+      expect(wrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`)).not.toBeNull();
+      expect(wrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`)).not.toBeNull();
+    });
+
+    it('잡코리아 /recruit/joblist 페이지에서 getNextPageRequest 호출 시 POST /Recruit/Home/_GI_List/ 요청을 생성해야 한다', () => {
+      const origLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = new URL('https://www.jobkorea.co.kr/recruit/joblist?menucode=local&localorder=1');
+
+      try {
+        const req = adapter.getNextPageRequest(document, 1);
+        expect(req).not.toBeNull();
+        expect(req?.url).toBe('/Recruit/Home/_GI_List/');
+        expect(req?.options?.method).toBe('POST');
+        expect(req?.options?.body).toContain('page=2');
+        expect(req?.options?.body).toContain('pagesize=40');
+      } finally {
+        (window as any).location = origLocation;
+      }
+    });
+
+    it('실제 잡코리아 HTML 픽스처(jobkorea_joblist.html)를 파싱하여 공고 카드 목록 및 필터링 동작을 완벽히 수행해야 한다', () => {
+      const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/jobkorea_joblist.html');
+      if (!fs.existsSync(fixturePath)) {
+        return; // 파일 없을 시 건너뜀
+      }
+
+      const rawHtml = fs.readFileSync(fixturePath, 'utf-8');
+      const cleanHtml = rawHtml
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<link[\s\S]*?>/gi, '')
+        .replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
+      const doc = document.implementation.createHTMLDocument();
+      doc.documentElement.innerHTML = cleanHtml;
+
+      const cards = adapter.getJobCardElements(doc);
+      expect(cards.length).toBeGreaterThan(30);
+
+      // 1번째 공고 카드 파싱 검증
+      const firstCard = cards[0];
+      const parsed = adapter.parseCard(firstCard);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.companyName.length).toBeGreaterThan(0);
+      expect(parsed?.title.length).toBeGreaterThan(0);
+
+      // 필터 엔진과 연동 검증
+      const engine = new FilterEngine(
+        {
+          mode: 'hide',
+          blurIntensity: 6,
+          hideAds: true,
+          showInlineButton: true,
+          enableInfiniteScroll: true,
+          showJobplanetRating: true,
+          showBlindRating: true,
+        },
+        [{ id: '1', pattern: parsed!.companyName, type: 'company', createdAt: Date.now() }]
+      );
+
+      const evalResult = engine.evaluateJobCard(parsed!);
+      expect(evalResult.shouldFilter).toBe(true);
+
+      // 카드 목록 컨테이너 확인
+      const container = adapter.getCardListContainer(doc);
+      expect(container).not.toBeNull();
+      expect(container?.tagName.toUpperCase()).toBe('TBODY');
+
+      // 페이지네이션 요소 확인
+      const pagination = adapter.getPaginationElement(doc);
+      expect(pagination).not.toBeNull();
     });
 
     it('사람인 및 잡코리아는 supportsInfiniteScroll이 true여야 한다', () => {

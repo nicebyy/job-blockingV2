@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { InfiniteScrollManager } from '../../src/core/infinite-scroll';
 import { SaraminAdapter } from '../../src/adapters/saramin';
 import { WantedAdapter } from '../../src/adapters/wanted';
+import { JobKoreaAdapter } from '../../src/adapters/jobkorea';
 import { INFINITE_SCROLL_CONFIG } from '../../src/constants';
 
 describe('InfiniteScrollManager 단위 테스트', () => {
@@ -235,5 +236,79 @@ describe('InfiniteScrollManager 단위 테스트', () => {
 
     const indicator = document.getElementById(INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID);
     expect(indicator?.style.display).toBe('none');
+  });
+
+  it('잡코리아 어댑터는 getNextPageRequest를 통해 POST 요청 옵션으로 다음 페이지를 로드해야 한다', async () => {
+    const origLocation = window.location;
+    delete (window as any).location;
+    (window as any).location = new URL('https://www.jobkorea.co.kr/recruit/joblist?menucode=local&localorder=1');
+
+    try {
+      document.body.innerHTML = `
+        <div id="dev-gi-list">
+          <div class="tplList tplJobList">
+            <table>
+              <tbody>
+                <tr class="devloopArea" data-gno="1001">
+                  <td class="tplCo"><a href="#">기존회사</a></td>
+                  <td class="tplTit"><a href="#">기존공고</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div id="dvGIPaging">
+          <div class="tplPagination">1 2</div>
+        </div>
+      `;
+
+      const mockResponseHtml = `
+        <div class="tplList tplJobList">
+          <table>
+            <tbody>
+              <tr class="devloopArea" data-gno="1002">
+                <td class="tplCo"><a href="#">신규회사</a></td>
+                <td class="tplTit"><a href="#">신규공고</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      let capturedUrl = '';
+      let capturedInit: RequestInit | undefined;
+      const mockFetch = vi.fn().mockImplementation((url, init) => {
+        capturedUrl = url;
+        capturedInit = init;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(mockResponseHtml),
+        });
+      });
+
+      const onAppended = vi.fn();
+      const manager = new InfiniteScrollManager({
+        adapter: new JobKoreaAdapter(),
+        onCardsAppended: onAppended,
+        fetchFn: mockFetch as any,
+      });
+
+      manager.init();
+
+      const success = await manager.loadNextPage();
+      expect(success).toBe(true);
+      expect(capturedUrl).toBe('/Recruit/Home/_GI_List/');
+      expect(capturedInit?.method).toBe('POST');
+      expect(capturedInit?.body).toContain('page=2');
+      expect(capturedInit?.body).toContain('pagesize=40');
+
+      // 기존 tbody에 새 행이 append되었는지 검증
+      const rows = document.querySelectorAll('.tplList.tplJobList table tbody tr');
+      expect(rows.length).toBe(2);
+      expect(onAppended).toHaveBeenCalled();
+    } finally {
+      (window as any).location = origLocation;
+    }
   });
 });
