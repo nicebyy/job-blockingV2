@@ -194,17 +194,17 @@ export const JOBKOREA_CONFIG = {
  */
 export const REMEMBER_SELECTORS = {
   JOB_CARDS:
-    'li[class*="sc-364cfa5d-0"], div[class*="sc-18344c98-0"], li[class*="sc-d2fb7cfc-0"], a[href*="/job/posting/"]',
+    'li[class*="sc-364cfa5d-0"], div[class*="sc-18344c98-0"], li[class*="sc-d2fb7cfc-0"], li[class*="sc-3c9cd5df-0"], a[href*="/job/posting/"], a[href*="/job/postings/"]',
   CARD_CONTAINER:
-    'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], li:has(a[href*="/job/posting/"])',
-  GRID_ITEM: 'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], ul > li',
+    'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], li[class*="sc-3c9cd5df-0"], li:has(a[href*="/job/posting/"]), li:has(a[href*="/job/postings/"])',
+  GRID_ITEM: 'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], li[class*="sc-3c9cd5df-0"], ul > li',
   COMPANY_NAME:
-    'p[class*="sc-18344c98-6"], div[class*="sc-d2fb7cfc-7"], a[href*="/job/company/"] div, a[href*="/company/"]',
+    'p[class*="sc-18344c98-6"], div[class*="sc-d2fb7cfc-7"], div[class*="sc-3c9cd5df-7"], a[href*="/job/company/"] div, a[href*="/company/"]',
   POSITION_TITLE:
-    'h4[class*="sc-18344c98-9"], div[class*="sc-d2fb7cfc-6"], h4',
-  BOOKMARK_BUTTON: 'div[class*="sc-18344c98-8"] button, button[class*="bookmark"]',
+    'h4[class*="sc-18344c98-9"], div[class*="sc-d2fb7cfc-6"], div[class*="sc-3c9cd5df-6"], h4',
+  BOOKMARK_BUTTON: 'div[class*="sc-18344c98-8"] button, div[class*="sc-3c9cd5df-5"], button[class*="bookmark"]',
   AD_BADGE: '[class*="ad_badge"], [class*="badge_ad"]',
-  JOB_LINK: 'a[href*="/job/posting/"]',
+  JOB_LINK: 'a[href*="/job/posting/"], a[href*="/job/postings/"], a[href*="postingId="]',
   CLOSING_DATE: '[class*="chip"], span',
 
   // 상세 페이지(/job/posting/\d+) 셀렉터

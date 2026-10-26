@@ -12,7 +12,7 @@ export class RememberAdapter extends BaseSiteAdapter {
   public override isDetailPage(
     url: string = typeof window !== 'undefined' ? window.location.href : ''
   ): boolean {
-    return /\/job\/posting\/\d+/.test(url);
+    return /\/job\/postings?\/\d+/.test(url);
   }
 
   public getJobCardElements(container: Document | HTMLElement = document): HTMLElement[] {
@@ -25,7 +25,11 @@ export class RememberAdapter extends BaseSiteAdapter {
       // 1. 공고 링크나 카드 내부 요소 기준 최상위 컨테이너 탐색
       const baseCard =
         el.closest<HTMLElement>(REMEMBER_SELECTORS.CARD_CONTAINER) ||
-        (el.matches('a[href*="/job/posting/"]') ? el : el.closest<HTMLElement>('a[href*="/job/posting/"]')) ||
+        (el.matches('a[href*="/job/posting/"], a[href*="/job/postings/"], a[href*="postingId="]')
+          ? el
+          : el.closest<HTMLElement>(
+              'a[href*="/job/posting/"], a[href*="/job/postings/"], a[href*="postingId="]'
+            )) ||
         el;
 
       // 2. 그리드/리스트 아이템(li)이 상위에 존재하면 li를 최상위 카드로 채택 (숨김 시 그리드 자연스러운 재배치/Reflow)
@@ -84,8 +88,10 @@ export class RememberAdapter extends BaseSiteAdapter {
       const titleEl = element.querySelector<HTMLElement>(REMEMBER_SELECTORS.DETAIL_POSITION_TITLE);
       title = titleEl?.textContent?.trim() || '';
 
-      if (typeof window !== 'undefined' && window.location.pathname) {
-        const match = window.location.pathname.match(/\/job\/posting\/(\d+)/);
+      if (typeof window !== 'undefined' && window.location) {
+        const match =
+          window.location.pathname.match(/\/job\/postings?\/(\d+)/) ||
+          window.location.search.match(/postingId=(\d+)/);
         if (match) jobId = match[1];
       }
     } else {
@@ -100,7 +106,7 @@ export class RememberAdapter extends BaseSiteAdapter {
         element.querySelector<HTMLAnchorElement>(REMEMBER_SELECTORS.JOB_LINK) ||
         (element instanceof HTMLAnchorElement ? element : null);
       const href = link?.getAttribute('href') || link?.href || '';
-      const match = href.match(/\/job\/posting\/(\d+)/);
+      const match = href.match(/\/job\/postings?\/(\d+)/) || href.match(/postingId=(\d+)/);
       if (match) {
         jobId = match[1];
       }
@@ -152,30 +158,30 @@ export class RememberAdapter extends BaseSiteAdapter {
       return;
     }
 
-    // 리멤버 리스트 카드: 상위 li(그리드 셀)가 존재할 경우 숨김 시 빈칸이 남지 않고 뒤의 카드가 당겨오도록 li 전체를 함께 즉시 숨김
-    const hostLi =
+    // 리멤버 리스트/큐레이션 카드: 상위 li(그리드 또는 캐러셀 셀)가 존재할 경우 숨김 시 빈칸이 남지 않고 뒤의 카드가 당겨오도록 li 전체를 함께 즉시 숨김
+    const targetLi =
       cardInfo.cardElement.tagName.toUpperCase() === 'LI'
         ? cardInfo.cardElement
         : cardInfo.cardElement.closest<HTMLElement>('li');
 
-    if (hostLi && hostLi !== cardInfo.cardElement) {
+    if (targetLi) {
       const onBlockCompany = typeof actions === 'function' ? actions : actions.onBlockCompany;
       const onBlockJob = typeof actions === 'object' ? actions.onBlockJob : undefined;
 
       super.injectInlineButton(cardInfo, {
         onBlockCompany: (compName) => {
-          hostLi.style.setProperty('display', 'none', 'important');
-          hostLi.setAttribute('data-job-filtered', 'true');
-          hostLi.setAttribute('data-filter-mode', 'hide');
-          hostLi.setAttribute('data-blocked-type', 'company');
+          targetLi.style.setProperty('display', 'none', 'important');
+          targetLi.setAttribute('data-job-filtered', 'true');
+          targetLi.setAttribute('data-filter-mode', 'hide');
+          targetLi.setAttribute('data-blocked-type', 'company');
           onBlockCompany?.(compName);
         },
         onBlockJob: (info) => {
-          hostLi.style.setProperty('display', 'none', 'important');
-          hostLi.setAttribute('data-job-filtered', 'true');
-          hostLi.setAttribute('data-filter-mode', 'hide');
-          hostLi.setAttribute('data-blocked-type', 'job');
-          onBlockJob?.({ ...info, cardElement: hostLi });
+          targetLi.style.setProperty('display', 'none', 'important');
+          targetLi.setAttribute('data-job-filtered', 'true');
+          targetLi.setAttribute('data-filter-mode', 'hide');
+          targetLi.setAttribute('data-blocked-type', 'job');
+          onBlockJob?.({ ...info, cardElement: targetLi });
         },
       });
       return;
