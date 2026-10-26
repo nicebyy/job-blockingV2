@@ -76,7 +76,8 @@ src/
 │   ├── index.ts               # MutationObserver 무한 스크롤 감지 및 실시간 필터링
 │   └── style.css              # 블러/숨김 효과 및 인라인 [차단] 버튼 UI 스타일
 ├── background/                # Background Service Worker
-│   └── index.ts               # 브라우저 툴바 뱃지(차단 카운트) 관리
+│   └── index.ts               # 백그라운드 서비스 워커 (설정 및 툴바 뱃지 제어)
+
 ├── popup/                     # 브라우저 툴바 팝업 UI
 │   ├── index.html
 │   ├── main.tsx

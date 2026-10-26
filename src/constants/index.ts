@@ -20,10 +20,12 @@ export const STORAGE_KEYS = {
  * 브라우저 툴바 뱃지 설정 상수
  */
 export const BADGE_CONFIG = {
+  ENABLED: false, // 툴바 아이콘 뱃지 카운트 표시 여부 (사용자 요청: 미표시)
   COLOR: '#ef4444',
   MAX_DISPLAY_COUNT: 99,
   OVERFLOW_TEXT: '99+',
 } as const;
+
 
 /**
  * 필터 엔진 및 옵저버 동작 상수
