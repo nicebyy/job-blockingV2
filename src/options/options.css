@@ -98,9 +98,74 @@ body {
   background-color: #e2e8f0;
 }
 
+/* 차단 목록 카테고리 필터 탭 바 */
+.filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.filter-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  outline: none;
+  user-select: none;
+}
+
+.filter-tab-btn:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.filter-tab-btn.active {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+}
+
+.filter-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  border-radius: 10px;
+  background-color: rgba(100, 116, 139, 0.12);
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.filter-tab-btn:hover .filter-tab-count {
+  background-color: rgba(100, 116, 139, 0.2);
+  color: #1e293b;
+}
+
+.filter-tab-btn.active .filter-tab-count {
+  background-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
 .block-list {
   list-style: none;
 }
+
 
 .block-item {
   display: flex;

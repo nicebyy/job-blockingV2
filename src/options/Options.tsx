@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { BlockItem, BlockType } from '../types';
 import { StorageManager } from '../core/storage';
-import { UI_MESSAGES } from '../constants';
+import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType } from '../constants';
 import { formatDate } from '../utils/date';
 
 export const Options: React.FC = () => {
@@ -9,6 +9,7 @@ export const Options: React.FC = () => {
   const [pattern, setPattern] = useState('');
   const [type, setType] = useState<BlockType>('company');
   const [search, setSearch] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<OptionsFilterType>(OPTIONS_FILTER_CONFIG.ALL);
 
   useEffect(() => {
     loadBlockList();
@@ -73,9 +74,50 @@ export const Options: React.FC = () => {
     reader.readAsText(file);
   };
 
-  const filteredList = blockList.filter((item) =>
-    item.pattern.toLowerCase().includes(search.toLowerCase())
-  );
+  // 카테고리별 차단 개수 계산
+  const counts = useMemo(() => {
+    return {
+      [OPTIONS_FILTER_CONFIG.ALL]: blockList.length,
+      [OPTIONS_FILTER_CONFIG.COMPANY]: blockList.filter((item) => item.type === 'company').length,
+      [OPTIONS_FILTER_CONFIG.JOB]: blockList.filter((item) => item.type === 'job').length,
+      [OPTIONS_FILTER_CONFIG.KEYWORD]: blockList.filter((item) => item.type === 'keyword').length,
+    };
+  }, [blockList]);
+
+  // 카테고리 탭 및 검색어 복합 필터링
+  const filteredList = useMemo(() => {
+    return blockList.filter((item) => {
+      // 1. 카테고리 필터 검사
+      if (selectedFilter !== OPTIONS_FILTER_CONFIG.ALL && item.type !== selectedFilter) {
+        return false;
+      }
+      // 2. 검색어 검사 (패턴, 회사명, 공고제목 통합 검색)
+      if (search.trim()) {
+        const q = search.toLowerCase().trim();
+        const matchPattern = item.pattern.toLowerCase().includes(q);
+        const matchCompany = item.companyName?.toLowerCase().includes(q) ?? false;
+        const matchTitle = item.title?.toLowerCase().includes(q) ?? false;
+        return matchPattern || matchCompany || matchTitle;
+      }
+      return true;
+    });
+  }, [blockList, selectedFilter, search]);
+
+  const getEmptyMessage = () => {
+    if (search.trim()) {
+      return UI_MESSAGES.EMPTY_SEARCH_RESULT;
+    }
+    switch (selectedFilter) {
+      case OPTIONS_FILTER_CONFIG.COMPANY:
+        return OPTIONS_FILTER_CONFIG.EMPTY_MESSAGES.COMPANY;
+      case OPTIONS_FILTER_CONFIG.JOB:
+        return OPTIONS_FILTER_CONFIG.EMPTY_MESSAGES.JOB;
+      case OPTIONS_FILTER_CONFIG.KEYWORD:
+        return OPTIONS_FILTER_CONFIG.EMPTY_MESSAGES.KEYWORD;
+      default:
+        return OPTIONS_FILTER_CONFIG.EMPTY_MESSAGES.ALL;
+    }
+  };
 
   return (
     <div className="options-container">
@@ -110,23 +152,61 @@ export const Options: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ marginBottom: '14px' }}>
+        <div style={{ marginBottom: '12px' }}>
           <input
             type="text"
             className="input-text"
             style={{ width: '100%' }}
-            placeholder="등록된 목록 검색..."
+            placeholder="등록된 목록 검색 (회사명, 공고명, 패턴)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
+        {/* 차단 유형 카테고리 필터 탭 */}
+        <div className="filter-tabs" role="tablist" aria-label="차단 항목 필터">
+          {(
+            [
+              OPTIONS_FILTER_CONFIG.ALL,
+              OPTIONS_FILTER_CONFIG.COMPANY,
+              OPTIONS_FILTER_CONFIG.JOB,
+              OPTIONS_FILTER_CONFIG.KEYWORD,
+            ] as const
+          ).map((tabKey) => {
+            const label =
+              tabKey === OPTIONS_FILTER_CONFIG.ALL
+                ? OPTIONS_FILTER_CONFIG.LABELS.ALL
+                : tabKey === OPTIONS_FILTER_CONFIG.COMPANY
+                ? OPTIONS_FILTER_CONFIG.LABELS.COMPANY
+                : tabKey === OPTIONS_FILTER_CONFIG.JOB
+                ? OPTIONS_FILTER_CONFIG.LABELS.JOB
+                : OPTIONS_FILTER_CONFIG.LABELS.KEYWORD;
+            const count = counts[tabKey];
+            const isActive = selectedFilter === tabKey;
+
+            return (
+              <button
+                key={tabKey}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`filter-tab-btn ${isActive ? 'active' : ''}`}
+                onClick={() => setSelectedFilter(tabKey)}
+              >
+                <span>{label}</span>
+                <span className="filter-tab-count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {filteredList.length === 0 ? (
           <div className="empty-state">
-            {search ? UI_MESSAGES.EMPTY_SEARCH_RESULT : UI_MESSAGES.EMPTY_BLOCK_LIST}
+            {getEmptyMessage()}
           </div>
         ) : (
           <ul className="block-list">
+
             {filteredList.map((item) => (
               <li key={item.id} className="block-item">
                 <div>

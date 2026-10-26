@@ -219,6 +219,8 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
         );
         return;
       }
+
+
     }
 
     super.injectInlineButton(cardInfo, actions);
