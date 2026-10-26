@@ -16,8 +16,9 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     await expect(page.locator('.add-input')).toBeVisible();
     await expect(page.locator('.add-btn')).toBeVisible();
 
-    // 무한 스크롤 토글 옵션 확인
+    // 무한 스크롤 및 잡플래닛 평점 표시 토글 옵션 확인
     await expect(page.locator('.section').first()).toContainText('무한 스크롤 & 자동 채우기');
+    await expect(page.locator('.section').first()).toContainText('잡플래닛 평점 표시');
   });
 
   test('옵션 페이지(Options UI)에서 회사를 차단 목록에 등록하고 삭제할 수 있어야 한다', async ({

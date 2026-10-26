@@ -274,6 +274,7 @@ describe('Site Adapters 단위 테스트', () => {
           hideAds: false,
           showInlineButton: true,
           enableInfiniteScroll: true,
+          showJobplanetRating: true,
         },
         [{ id: '1', pattern: '차단기업', type: 'company', createdAt: Date.now() }]
       );
@@ -432,4 +433,116 @@ describe('Site Adapters 단위 테스트', () => {
       expect(container?.parentElement?.id).toBe('recruit_info_list');
     });
   });
+
+  describe('잡플래닛 평점 뱃지 주입 (injectRatingBadge)', () => {
+    const adapter = new WantedAdapter();
+
+    it('평점이 존재하고 단일 기업일 때 기업명 옆에 평점 뱃지를 배치해야 한다', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <span class="companyName">우아한형제들</span>
+        <strong class="JobCard_title">백엔드 개발자</strong>
+      `;
+      const cardInfo = adapter.parseCard(card)!;
+
+      adapter.injectRatingBadge(cardInfo, {
+        status: 'found',
+        companyName: '우아한형제들',
+        rating: 3.8,
+        companyId: 61420,
+        cachedAt: Date.now(),
+      });
+
+      const badge = card.querySelector('.job-filter-rating-badge');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('3.8');
+      expect(badge?.classList.contains('job-filter-rating-high')).toBe(true);
+      expect(badge?.getAttribute('href')).toBe('https://www.jobplanet.co.kr/companies/61420');
+
+      // 기업명 바로 다음에 배치되었는지 확인
+      const companyEl = card.querySelector('.companyName');
+      expect(companyEl?.nextElementSibling).toBe(badge);
+    });
+
+    it('동명의 회사가 여러 개인 경우(status: ambiguous) 뱃지를 배치하지 않아야 한다 (배치x)', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <span class="companyName">동명시스템</span>
+      `;
+      const cardInfo = adapter.parseCard(card)!;
+
+      adapter.injectRatingBadge(cardInfo, {
+        status: 'ambiguous',
+        companyName: '동명시스템',
+        cachedAt: Date.now(),
+      });
+
+      const badge = card.querySelector('.job-filter-rating-badge');
+      expect(badge).toBeNull();
+    });
+
+    it('회사가 존재하지 않는 경우(status: not_found) 뱃지를 배치하지 않아야 한다 (배치x)', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <span class="companyName">미존재기업</span>
+      `;
+      const cardInfo = adapter.parseCard(card)!;
+
+      adapter.injectRatingBadge(cardInfo, {
+        status: 'not_found',
+        companyName: '미존재기업',
+        cachedAt: Date.now(),
+      });
+
+      const badge = card.querySelector('.job-filter-rating-badge');
+      expect(badge).toBeNull();
+    });
+
+    it('이미 주입된 경우 중복하여 주입하지 않아야 한다', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <span class="companyName">카카오</span>
+      `;
+      const cardInfo = adapter.parseCard(card)!;
+
+      const ratingInfo = {
+        status: 'found' as const,
+        companyName: '카카오',
+        rating: 3.8,
+        companyId: 93880,
+        cachedAt: Date.now(),
+      };
+
+      adapter.injectRatingBadge(cardInfo, ratingInfo);
+      adapter.injectRatingBadge(cardInfo, ratingInfo);
+
+      const badges = card.querySelectorAll('.job-filter-rating-badge');
+      expect(badges.length).toBe(1);
+    });
+
+    it('뱃지 클릭 시 공고 카드로의 이벤트 전파(stopPropagation)를 차단해야 한다', () => {
+      const card = document.createElement('div');
+      card.innerHTML = `
+        <span class="companyName">토스</span>
+      `;
+      const cardInfo = adapter.parseCard(card)!;
+
+      adapter.injectRatingBadge(cardInfo, {
+        status: 'found',
+        companyName: '토스',
+        rating: 4.1,
+        companyId: 1234,
+        cachedAt: Date.now(),
+      });
+
+      const badge = card.querySelector('.job-filter-rating-badge') as HTMLElement;
+      expect(badge).not.toBeNull();
+
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const stopSpy = vi.spyOn(event, 'stopPropagation');
+      badge.dispatchEvent(event);
+      expect(stopSpy).toHaveBeenCalled();
+    });
+  });
 });
+
