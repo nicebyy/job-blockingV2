@@ -520,6 +520,69 @@ describe('FilterEngine 단위 테스트', () => {
       // 제목이 같더라도 회사가 다른 네이버 공고는 필터링되지 않아야 함
       expect(engine.evaluateJobCard(naverCard).shouldFilter).toBe(false);
     });
+
+    it('FilterEngine.addBlockItem에 (주)가 포함된 회사와 순수 회사를 연속 추가 시 중복 없이 단일 항목으로 유지되어야 한다', () => {
+      engine.addBlockItem({
+        id: '1',
+        pattern: '(주)카카오',
+        type: 'company',
+        createdAt: Date.now(),
+      });
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList.length).toBe(1);
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList[0].pattern).toBe('(주)카카오');
+
+      // '카카오' 추가 시 중복 없이 1개 유지 & 간결한 명칭으로 패턴 개선
+      engine.addBlockItem({
+        id: '2',
+        pattern: '카카오',
+        type: 'company',
+        createdAt: Date.now(),
+      });
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList.length).toBe(1);
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList[0].pattern).toBe('카카오');
+
+      // '주식회사 카카오' 추가 시 중복 없이 1개 유지
+      engine.addBlockItem({
+        id: '3',
+        pattern: '주식회사 카카오',
+        type: 'company',
+        createdAt: Date.now(),
+      });
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList.length).toBe(1);
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList[0].pattern).toBe('카카오');
+    });
+
+    it('FilterEngine.addBlockItem에 복합키 공고와 고유 jobId 공고 추가 시 중복 없이 jobId로 업그레이드되어야 한다', () => {
+      engine.addBlockItem({
+        id: 'j1',
+        pattern: '토스:::Frontend Engineer',
+        type: 'job',
+        createdAt: Date.now(),
+        companyName: '토스',
+        title: 'Frontend Engineer',
+      });
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList.length).toBe(1);
+
+      engine.addBlockItem({
+        id: 'j2',
+        pattern: 'job_toss_12345',
+        type: 'job',
+        createdAt: Date.now(),
+        companyName: '(주)토스',
+        title: 'Frontend Engineer',
+      });
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList.length).toBe(1);
+      // @ts-expect-error accessing private for test verification
+      expect(engine.blockList[0].pattern).toBe('job_toss_12345');
+    });
   });
 });
 

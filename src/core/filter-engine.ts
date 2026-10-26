@@ -19,12 +19,51 @@ export class FilterEngine {
   }
 
   public addBlockItem(item: BlockItem): void {
-    const exists = this.blockList.some(
-      (b) => b.type === item.type && b.pattern.toLowerCase() === item.pattern.toLowerCase()
-    );
-    if (!exists) {
-      this.blockList.push(item);
+    const existingIndex = this.blockList.findIndex((b) => {
+      if (b.type !== item.type) return false;
+      if (b.pattern.toLowerCase() === item.pattern.toLowerCase()) return true;
+
+      // 1. 회사(company) 타입: 정규화된 상호명이 일치하는 경우 중복 방지
+      if (item.type === 'company') {
+        const normItem = this.normalizeCompanyName(item.pattern);
+        const normB = this.normalizeCompanyName(b.pattern);
+        if (normItem.length > 0 && normItem === normB) return true;
+      }
+
+      // 2. 공고(job) 타입: 회사명과 공고 제목이 동일한 경우 중복 방지
+      if (
+        item.type === 'job' &&
+        b.companyName &&
+        b.title &&
+        item.companyName &&
+        item.title &&
+        this.normalizeCompanyName(b.companyName) === this.normalizeCompanyName(item.companyName) &&
+        b.title.trim().toLowerCase() === item.title.trim().toLowerCase()
+      ) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (existingIndex !== -1) {
+      const existing = this.blockList[existingIndex];
+      // 기존 패턴에 (주)/주식회사 등이 있고 새 패턴이 더 간결한 경우 간결한 패턴으로 개선
+      if (item.type === 'company') {
+        const existingHasAffix = /[㈜(주)주식회사]/.test(existing.pattern);
+        const newHasAffix = /[㈜(주)주식회사]/.test(item.pattern);
+        if (existingHasAffix && !newHasAffix) {
+          existing.pattern = item.pattern;
+        }
+      }
+      // 기존 패턴이 복합키이고 새 패턴이 고유 jobId인 경우 업그레이드
+      if (item.type === 'job' && item.pattern && !item.pattern.includes(':::') && existing.pattern.includes(':::')) {
+        existing.pattern = item.pattern;
+      }
+      return;
     }
+
+    this.blockList.push(item);
   }
 
   /**
