@@ -19,6 +19,10 @@ export interface SiteAdapter {
   ): void;
   injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: CompanyRatingInfo): void;
   getNextPageUrl?(currentDoc: Document, currentPage: number): string | null;
+  getNextPageRequest?(
+    currentDoc: Document,
+    currentPage: number
+  ): { url: string; options?: RequestInit } | null;
   getCardListContainer?(currentDoc: Document): HTMLElement | null;
   getPaginationElement?(currentDoc: Document): HTMLElement | null;
   hidePromotionBanners?(container?: Document | HTMLElement): void;
@@ -43,6 +47,13 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   }
 
   public getNextPageUrl?(_currentDoc: Document, _currentPage: number): string | null {
+    return null;
+  }
+
+  public getNextPageRequest?(
+    _currentDoc: Document,
+    _currentPage: number
+  ): { url: string; options?: RequestInit } | null {
     return null;
   }
 

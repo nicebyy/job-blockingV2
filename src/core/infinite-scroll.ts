@@ -116,7 +116,11 @@ export class InfiniteScrollManager {
       return false;
     }
 
-    const nextUrl = this.adapter.getNextPageUrl?.(document, this.currentPage);
+    const nextRequest = this.adapter.getNextPageRequest
+      ? this.adapter.getNextPageRequest(document, this.currentPage)
+      : null;
+    const nextUrl = nextRequest?.url || this.adapter.getNextPageUrl?.(document, this.currentPage);
+
     if (!nextUrl) {
       this.hasMorePages = false;
       this.destroy();
@@ -141,6 +145,7 @@ export class InfiniteScrollManager {
       let response: Response;
       try {
         response = await this.fetchFn(nextUrl, {
+          ...nextRequest?.options,
           signal: controller?.signal,
         });
       } finally {
