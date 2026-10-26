@@ -65,8 +65,11 @@ export function parseClosingDateToTimestamp(
     const year = parseInt(ymdMatch[1], 10);
     const month = parseInt(ymdMatch[2], 10) - 1;
     const day = parseInt(ymdMatch[3], 10);
-    const target = new Date(year, month, day, 23, 59, 59, 999);
-    return target.getTime();
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const target = new Date(year, month, day, 23, 59, 59, 999);
+      const time = target.getTime();
+      if (!Number.isNaN(time)) return time;
+    }
   }
 
   // 6. ~ MM/DD 또는 ~ MM.DD (예: "~ 11/07(토)", "~ 11/15", "11/20(금)")
@@ -74,15 +77,18 @@ export function parseClosingDateToTimestamp(
   if (mdMatch) {
     const month = parseInt(mdMatch[1], 10) - 1;
     const day = parseInt(mdMatch[2], 10);
-    let year = baseDate.getFullYear();
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      let year = baseDate.getFullYear();
 
-    // 만약 현재 월보다 파싱된 월이 현저히 앞선 경우(예: 현재 12월인데 마감월이 1월), 다음 연도로 처리
-    if (baseDate.getMonth() >= 10 && month <= 1) {
-      year += 1;
+      // 만약 현재 월보다 파싱된 월이 현저히 앞선 경우(예: 현재 12월인데 마감월이 1월), 다음 연도로 처리
+      if (baseDate.getMonth() >= 10 && month <= 1) {
+        year += 1;
+      }
+
+      const target = new Date(year, month, day, 23, 59, 59, 999);
+      const time = target.getTime();
+      if (!Number.isNaN(time)) return time;
     }
-
-    const target = new Date(year, month, day, 23, 59, 59, 999);
-    return target.getTime();
   }
 
   return null;
@@ -95,21 +101,21 @@ export function calculateJobExpiration(
   closingStr?: string | null,
   baseTime: number = Date.now()
 ): number {
+  const fallback =
+    baseTime + EXPIRATION_CONFIG.DEFAULT_EXPIRATION_DAYS * EXPIRATION_CONFIG.MS_PER_DAY;
+
   const closingTimestamp = parseClosingDateToTimestamp(closingStr, new Date(baseTime));
 
-  if (closingTimestamp !== null) {
-    // 1. 마감시각이 특정된 경우: [공고 마감시각 + 30일]
-    return (
+  if (closingTimestamp !== null && !Number.isNaN(closingTimestamp)) {
+    const expiresAt =
       closingTimestamp +
-      EXPIRATION_CONFIG.ADDITIONAL_DAYS_AFTER_CLOSING * EXPIRATION_CONFIG.MS_PER_DAY
-    );
+      EXPIRATION_CONFIG.ADDITIONAL_DAYS_AFTER_CLOSING * EXPIRATION_CONFIG.MS_PER_DAY;
+    if (!Number.isNaN(expiresAt) && Number.isFinite(expiresAt)) {
+      return expiresAt;
+    }
   }
 
-  // 2. 상시채용 / 채용시 마감 / 마감일 미표기인 경우: [등록 시점 + 30일]
-  return (
-    baseTime +
-    EXPIRATION_CONFIG.DEFAULT_EXPIRATION_DAYS * EXPIRATION_CONFIG.MS_PER_DAY
-  );
+  return fallback;
 }
 
 /**

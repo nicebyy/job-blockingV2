@@ -125,15 +125,18 @@ export class StorageManager {
    * 차단 목록 저장
    */
   public static async saveBlockList(list: BlockItem[]): Promise<void> {
+    // undefined 속성을 안전하게 정제하여 chrome.storage 직렬화 에러 원천 차단
+    const sanitized: BlockItem[] = JSON.parse(JSON.stringify(list));
+
     if (!this.isChromeStorageAvailable()) {
-      this.memoryFallback[STORAGE_KEYS.BLOCK_LIST] = list;
+      this.memoryFallback[STORAGE_KEYS.BLOCK_LIST] = sanitized;
       return;
     }
 
     try {
-      await chrome.storage.sync.set({ [STORAGE_KEYS.BLOCK_LIST]: list });
+      await chrome.storage.sync.set({ [STORAGE_KEYS.BLOCK_LIST]: sanitized });
     } catch {
-      await chrome.storage.local.set({ [STORAGE_KEYS.BLOCK_LIST]: list });
+      await chrome.storage.local.set({ [STORAGE_KEYS.BLOCK_LIST]: sanitized });
     }
   }
 
@@ -174,12 +177,23 @@ export class StorageManager {
       pattern: cleanPattern,
       type,
       createdAt: Date.now(),
-      expiresAt: metadata?.expiresAt,
-      closingDate: metadata?.closingDate,
-      memo: metadata?.memo,
-      title: metadata?.title,
-      companyName: metadata?.companyName,
     };
+
+    if (metadata?.expiresAt !== undefined && !Number.isNaN(metadata.expiresAt)) {
+      newItem.expiresAt = metadata.expiresAt;
+    }
+    if (metadata?.closingDate) {
+      newItem.closingDate = metadata.closingDate;
+    }
+    if (metadata?.memo) {
+      newItem.memo = metadata.memo;
+    }
+    if (metadata?.title) {
+      newItem.title = metadata.title;
+    }
+    if (metadata?.companyName) {
+      newItem.companyName = metadata.companyName;
+    }
 
     list.push(newItem);
     await this.saveBlockList(list);

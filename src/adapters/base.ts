@@ -81,10 +81,24 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
         </svg>
         <span class="${INLINE_BUTTON_CONFIG.CLASSES.TEXT}">${INLINE_BUTTON_CONFIG.LABELS.HIDE_JOB}</span>
       `;
-      hideJobBtn.addEventListener('click', (e) => {
+      hideJobBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        onBlockJob(cardInfo);
+
+        // 즉각적인 시각 피드백 (낙관적 UI: 클릭 순간 바로 카드를 페이드아웃하여 반응성 극대화)
+        cardInfo.cardElement.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+        cardInfo.cardElement.style.opacity = '0';
+        cardInfo.cardElement.style.transform = 'scale(0.97)';
+        cardInfo.cardElement.style.pointerEvents = 'none';
+
+        try {
+          await onBlockJob(cardInfo);
+        } catch (err) {
+          cardInfo.cardElement.style.opacity = '1';
+          cardInfo.cardElement.style.transform = '';
+          cardInfo.cardElement.style.pointerEvents = '';
+          console.error('[JobFilter] Failed to block job:', err);
+        }
       });
       group.appendChild(hideJobBtn);
 
@@ -106,10 +120,23 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
       </svg>
       <span class="${INLINE_BUTTON_CONFIG.CLASSES.TEXT}">${INLINE_BUTTON_CONFIG.LABELS.BLOCK_COMPANY}</span>
     `;
-    blockCompanyBtn.addEventListener('click', (e) => {
+    blockCompanyBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      onBlockCompany(cardInfo.companyName);
+
+      cardInfo.cardElement.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+      cardInfo.cardElement.style.opacity = '0';
+      cardInfo.cardElement.style.transform = 'scale(0.97)';
+      cardInfo.cardElement.style.pointerEvents = 'none';
+
+      try {
+        await onBlockCompany(cardInfo.companyName);
+      } catch (err) {
+        cardInfo.cardElement.style.opacity = '1';
+        cardInfo.cardElement.style.transform = '';
+        cardInfo.cardElement.style.pointerEvents = '';
+        console.error('[JobFilter] Failed to block company:', err);
+      }
     });
     group.appendChild(blockCompanyBtn);
 
