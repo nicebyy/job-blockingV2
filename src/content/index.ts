@@ -5,6 +5,7 @@ import { StorageManager } from '../core/storage';
 import { BlindRatingInfo, ExtensionMessage, FilterSettings, FilterStats, JobCardInfo, JobplanetRatingInfo, JobPlatform } from '../types';
 import { FILTER_CONFIG, RATING_BADGE_CONFIG } from '../constants';
 import { calculateJobExpiration } from '../utils/date';
+import { normalizeCompanyName } from '../utils/text';
 
 
 export class ContentController {
@@ -240,10 +241,13 @@ export class ContentController {
           blockedJobs++;
         } else if (evalResult.matchedItem?.type === 'company' || evalResult.matchedItem?.type === 'keyword') {
           cardInfo.cardElement.setAttribute('data-blocked-type', 'company');
-          blockedCompanySet.add(cardInfo.companyName || evalResult.matchedItem.pattern);
+          const rawName = cardInfo.companyName || evalResult.matchedItem.pattern;
+          const compKey = normalizeCompanyName(rawName) || rawName;
+          if (compKey) blockedCompanySet.add(compKey);
         } else {
           cardInfo.cardElement.setAttribute('data-blocked-type', 'company');
-          blockedCompanySet.add(cardInfo.companyName);
+          const compKey = normalizeCompanyName(cardInfo.companyName) || cardInfo.companyName;
+          if (compKey) blockedCompanySet.add(compKey);
         }
       } else {
         // 이미 사용자가 명시적으로 숨김 처리한 카드는 부활시키지 않고 숨김 상태 유지
@@ -254,7 +258,8 @@ export class ContentController {
           totalBlocked++;
           const blockedType = cardInfo.cardElement.getAttribute('data-blocked-type');
           if (blockedType === 'company') {
-            blockedCompanySet.add(cardInfo.companyName);
+            const compKey = normalizeCompanyName(cardInfo.companyName) || cardInfo.companyName;
+            if (compKey) blockedCompanySet.add(compKey);
           } else if (blockedType === 'ad') {
             blockedAds++;
           } else {

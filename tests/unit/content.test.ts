@@ -164,6 +164,49 @@ describe('ContentController 원티드 필터링 및 카운팅 단위 테스트',
     // 프로모션 광고 1개 + 회사 차단 공고들이 합산되어 totalBlocked에 반영됨
     expect(pageStats.totalBlocked).toBeGreaterThan(1);
   });
+
+  it('동일 회사의 여러 공고에 (주) 유무 등 표기 차이가 있더라도 blockedCompanies는 중복 없이 1로 정확히 집계되어야 한다', async () => {
+    // 임의의 DOM 공고 2개 추가: 하나는 '(주)테스트컴퍼니', 하나는 '테스트컴퍼니'
+    const ul = document.querySelector('ul[class*="List_List"]') || document.createElement('ul');
+    ul.className = 'List_List__test';
+    ul.innerHTML = `
+      <li class="Card_Card__item1">
+        <div data-cy="job-card" class="JobCard_JobCard__test">
+          <a href="/wd/999111">
+            <span class="CompanyNameWithLocationPeriod_CompanyNameWithLocationPeriod__company__test">(주)테스트컴퍼니</span>
+            <span class="JobCard_JobCard__body__position__test">개발자 1</span>
+          </a>
+        </div>
+      </li>
+      <li class="Card_Card__item2">
+        <div data-cy="job-card" class="JobCard_JobCard__test">
+          <a href="/wd/999222">
+            <span class="CompanyNameWithLocationPeriod_CompanyNameWithLocationPeriod__company__test">테스트컴퍼니</span>
+            <span class="JobCard_JobCard__body__position__test">개발자 2</span>
+          </a>
+        </div>
+      </li>
+    `;
+    document.body.appendChild(ul);
+
+    // '테스트컴퍼니' 차단 등록
+    await StorageManager.addBlockItem('테스트컴퍼니', 'company', { platform: 'wanted' });
+
+    const controller = new ContentController();
+    await controller.init();
+
+    let pageStats: any = null;
+    const addListenerMock = (global as any).chrome.runtime.onMessage.addListener;
+    const messageHandler = addListenerMock.mock.calls[0][0];
+
+    messageHandler({ type: 'GET_PAGE_STATS' }, {}, (response: any) => {
+      pageStats = response?.stats;
+    });
+
+    expect(pageStats).toBeDefined();
+    // 두 카드가 모두 차단되었지만 동일 회사이므로 blockedCompanies는 1이어야 함
+    expect(pageStats.blockedCompanies).toBe(1);
+  });
 });
 
 describe('ContentController 점핏 필터링 및 카운팅 단위 테스트', () => {
