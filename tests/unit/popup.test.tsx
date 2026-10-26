@@ -180,4 +180,78 @@ describe('Popup 팝업 페이지 단위 테스트', () => {
     const banner = container.querySelector('.not-job-site-banner');
     expect(banner?.textContent?.trim()).toBe(POPUP_STATS_CONFIG.NOT_JOB_SITE_TOOLTIP);
   });
+
+  it('원티드 페이지(wanted.co.kr)에서 팝업으로 빠른 회사 차단 시 platform이 wanted로 저장되어야 한다', async () => {
+    (global as any).chrome.tabs.query = vi.fn((_queryInfo, callback) => {
+      callback([{ id: 202, url: 'https://www.wanted.co.kr/wdlist/518/872' }]);
+    });
+
+    await act(async () => {
+      root.render(<Popup />);
+    });
+
+    const input = container.querySelector<HTMLInputElement>('.add-input');
+    const form = container.querySelector<HTMLFormElement>('.add-form');
+    expect(input).not.toBeNull();
+    expect(form).not.toBeNull();
+
+    await act(async () => {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set;
+      nativeInputValueSetter?.call(input, '원티드등록기업');
+      input?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await act(async () => {
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    const list = await StorageManager.getBlockList(false);
+    const addedItem = list.find((item) => item.pattern === '원티드등록기업');
+    expect(addedItem).toBeDefined();
+    expect(addedItem?.platform).toBe('wanted');
+  });
+
+  it('notifyContentScript는 currentWindow 쿼리 실패 시 lastFocusedWindow로 폴백하여 메시지를 전송해야 한다', async () => {
+    (global as any).chrome.tabs.query = vi.fn((queryInfo, callback) => {
+      if (queryInfo.currentWindow) {
+        callback([]); // currentWindow에 탭 없음
+      } else if (queryInfo.lastFocusedWindow) {
+        callback([{ id: 303, url: 'https://www.wanted.co.kr/wdlist' }]);
+      }
+    });
+
+    const sendMessageMock = vi.fn();
+    (global as any).chrome.tabs.sendMessage = sendMessageMock;
+
+    await act(async () => {
+      root.render(<Popup />);
+    });
+
+    const input = container.querySelector<HTMLInputElement>('.add-input');
+    const form = container.querySelector<HTMLFormElement>('.add-form');
+    expect(input).not.toBeNull();
+    expect(form).not.toBeNull();
+
+    await act(async () => {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set;
+      nativeInputValueSetter?.call(input, '폴백테스트기업');
+      input?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await act(async () => {
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      303,
+      expect.objectContaining({ type: 'BLOCKLIST_CHANGED' }),
+      expect.any(Function)
+    );
+  });
 });

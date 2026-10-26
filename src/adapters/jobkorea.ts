@@ -37,13 +37,22 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
   /**
    * 상단 퍼포먼스 추천공고 및 광고 배너 숨김 처리
    */
-  public override hidePromotionBanners(container: Document | HTMLElement = document): void {
-    const banners = container.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.PROMOTION_BANNERS);
-    banners.forEach((el) => {
+  public override hidePromotionBanners(container: Document | HTMLElement = document): number {
+    const rawBanners = Array.from(
+      container.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.PROMOTION_BANNERS)
+    );
+    const topLevelBanners = rawBanners.filter(
+      (el) => !rawBanners.some((parent) => parent !== el && parent.contains(el))
+    );
+    let count = 0;
+    topLevelBanners.forEach((el) => {
       el.style.display = 'none';
       el.setAttribute('data-job-filtered', 'true');
       el.setAttribute('data-filter-mode', 'hide');
+      el.setAttribute('data-blocked-type', 'ad');
+      count++;
     });
+    return count;
   }
 
   public override getCardListContainer(doc: Document = document): HTMLElement | null {

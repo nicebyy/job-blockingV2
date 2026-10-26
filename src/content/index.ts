@@ -7,7 +7,7 @@ import { FILTER_CONFIG, RATING_BADGE_CONFIG } from '../constants';
 import { calculateJobExpiration } from '../utils/date';
 
 
-class ContentController {
+export class ContentController {
   private adapter = AdapterRegistry.getAdapterForUrl(window.location.href);
   private filterEngine: FilterEngine | null = null;
   private infiniteScroll: InfiniteScrollManager | null = null;
@@ -188,15 +188,24 @@ class ContentController {
     if (!this.adapter || !this.filterEngine) return;
 
     // AI 검색 배너, 개인 맞춤 추천 공고, 스토어 배너 등 프로모션 섹션 숨김 처리
-    this.adapter.hidePromotionBanners?.();
+    let promoAdsCount = 0;
+    if (this.settings?.hideAds !== false) {
+      promoAdsCount = this.adapter.hidePromotionBanners?.() || 0;
+    }
 
     const elements = this.adapter.getJobCardElements();
-    let totalBlocked = 0;
+    let totalBlocked = promoAdsCount;
     let blockedJobs = 0;
-    let blockedAds = 0;
+    let blockedAds = promoAdsCount;
     const blockedCompanySet = new Set<string>();
 
     for (const el of elements) {
+      // 숨겨진 프로모션 배너 내부에 중첩된 요소인 경우 중복 처리 방지
+      const parentFiltered = el.closest('[data-job-filtered="true"]');
+      if (parentFiltered && parentFiltered !== el) {
+        continue;
+      }
+
       const cardInfo = this.adapter.parseCard(el);
       if (!cardInfo) continue;
 
@@ -211,12 +220,16 @@ class ContentController {
         totalBlocked++;
 
         if (evalResult.isAdFilter) {
+          cardInfo.cardElement.setAttribute('data-blocked-type', 'ad');
           blockedAds++;
         } else if (evalResult.matchedItem?.type === 'job') {
+          cardInfo.cardElement.setAttribute('data-blocked-type', 'job');
           blockedJobs++;
         } else if (evalResult.matchedItem?.type === 'company' || evalResult.matchedItem?.type === 'keyword') {
+          cardInfo.cardElement.setAttribute('data-blocked-type', 'company');
           blockedCompanySet.add(cardInfo.companyName || evalResult.matchedItem.pattern);
         } else {
+          cardInfo.cardElement.setAttribute('data-blocked-type', 'company');
           blockedCompanySet.add(cardInfo.companyName);
         }
       } else {
@@ -226,7 +239,14 @@ class ContentController {
           cardInfo.cardElement.getAttribute('data-filter-mode') === 'hide'
         ) {
           totalBlocked++;
-          blockedJobs++;
+          const blockedType = cardInfo.cardElement.getAttribute('data-blocked-type');
+          if (blockedType === 'company') {
+            blockedCompanySet.add(cardInfo.companyName);
+          } else if (blockedType === 'ad') {
+            blockedAds++;
+          } else {
+            blockedJobs++;
+          }
           continue;
         }
 
@@ -433,15 +453,22 @@ class ContentController {
   private notifyBadgeUpdate(count: number): void {
     if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return;
 
-    chrome.runtime.sendMessage({
-      type: 'UPDATE_BADGE',
-      count,
-    } as ExtensionMessage).catch(() => {
+    try {
+      const p = chrome.runtime.sendMessage({
+        type: 'UPDATE_BADGE',
+        count,
+      } as ExtensionMessage);
+      if (p && typeof (p as any).catch === 'function') {
+        (p as any).catch(() => {});
+      }
+    } catch {
       // 팝업이나 백그라운드가 비활성화되어 있을 때 에러 무시
-    });
+    }
   }
 }
 
-// 스크립트 실행
-const controller = new ContentController();
-controller.init();
+// 스크립트 실행 (단위 테스트 환경에서는 자동 실행 방지)
+if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+  const controller = new ContentController();
+  controller.init();
+}

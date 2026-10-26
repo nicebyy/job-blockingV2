@@ -236,9 +236,11 @@ export class StorageManager {
         existing.companyName = metadata.companyName;
         needsSave = true;
       }
-      if (metadata?.platform && !existing.platform) {
-        existing.platform = metadata.platform;
-        needsSave = true;
+      if (metadata?.platform && (!existing.platform || existing.platform === 'custom')) {
+        if (existing.platform !== metadata.platform) {
+          existing.platform = metadata.platform;
+          needsSave = true;
+        }
       }
       if (needsSave) {
         await this.saveBlockList(list);

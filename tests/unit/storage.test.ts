@@ -154,5 +154,18 @@ describe('StorageManager 단위 테스트', () => {
     expect(list.length).toBe(1); // 2개로 중복 생성되지 않고 1개 유지
     expect(list[0].pattern).toBe('55176414'); // 더 정밀한 고유 jobId로 패턴 업그레이드
   });
+
+  it('기존 custom(직접등록) 플랫폼으로 등록된 회사를 원티드에서 다시 차단 시 wanted 플랫폼으로 업그레이드되어야 한다', async () => {
+    // 1. 직접 등록 (platform: 'custom')
+    await StorageManager.addBlockItem('원티드테스트기업', 'company', { platform: 'custom' });
+    let list = await StorageManager.getBlockList(false);
+    expect(list[0].platform).toBe('custom');
+
+    // 2. 원티드 페이지에서 동일 회사 차단 시도
+    await StorageManager.addBlockItem('원티드테스트기업', 'company', { platform: 'wanted' });
+    list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1);
+    expect(list[0].platform).toBe('wanted');
+  });
 });
 
