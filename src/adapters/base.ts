@@ -67,26 +67,39 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
 
   /**
    * 공고 카드에 [이 공고 숨기기] 및 [회사 차단] 듀얼 버튼 삽입
+   * @param targetContainer - 상세 페이지 등 카드의 특정 하위 영역(예: title_inner)에 툴바를 배치할 경우 지정 (생략 시 cardElement에 삽입)
    */
   public injectInlineButton(
     cardInfo: JobCardInfo,
-    actions: BlockActions | ((companyName: string) => void)
+    actions: BlockActions | ((companyName: string) => void),
+    targetContainer?: HTMLElement
   ): void {
     if (!cardInfo.cardElement || !cardInfo.companyName) return;
 
-    // 호버 시 노출 및 정확한 카드 내 배치를 위한 호스트 클래스 및 relative 포지셔닝 보장
-    cardInfo.cardElement.classList.add(INLINE_BUTTON_CONFIG.CLASSES.CARD_HOST);
-    cardInfo.cardElement.style.position = 'relative';
+    const host = targetContainer || cardInfo.cardElement;
 
-    if (cardInfo.cardElement.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)) {
+    // 이미 주입되어 있는지 확인 (전체 카드 또는 타깃 컨테이너)
+    if (
+      cardInfo.cardElement.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`) ||
+      host.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)
+    ) {
       return;
+    }
+
+    // 카드 호스트 클래스 지정
+    cardInfo.cardElement.classList.add(INLINE_BUTTON_CONFIG.CLASSES.CARD_HOST);
+    if (!targetContainer && (!cardInfo.cardElement.style.position || cardInfo.cardElement.style.position === 'static')) {
+      cardInfo.cardElement.style.position = 'relative';
     }
 
     const onBlockCompany = typeof actions === 'function' ? actions : actions.onBlockCompany;
     const onBlockJob = typeof actions === 'object' ? actions.onBlockJob : undefined;
 
+    const isDetail = Boolean(targetContainer && targetContainer !== cardInfo.cardElement);
     const group = document.createElement('div');
-    group.className = INLINE_BUTTON_CONFIG.CLASSES.CONTAINER;
+    group.className = isDetail
+      ? `${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER} ${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER_DETAIL}`
+      : INLINE_BUTTON_CONFIG.CLASSES.CONTAINER;
 
     // 1. [이 공고만 숨기기] 버튼 (jobId 또는 공고 제목 단위)
     if (onBlockJob) {
@@ -105,7 +118,7 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
         e.preventDefault();
         e.stopPropagation();
 
-        // 즉시 DOM 완전 숨김 처리 (0ms 즉각 반응 보장)
+        // 즉시 DOM 완전 숨김 처리 (전체 카드 단위 숨김, 0ms 즉각 반응 보장)
         cardInfo.cardElement.style.setProperty('display', 'none', 'important');
         cardInfo.cardElement.setAttribute('data-job-filtered', 'true');
         cardInfo.cardElement.setAttribute('data-filter-mode', 'hide');
@@ -140,7 +153,7 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
       e.preventDefault();
       e.stopPropagation();
 
-      // 즉시 DOM 완전 숨김 처리 (0ms 즉각 반응 보장)
+      // 즉시 DOM 완전 숨김 처리 (전체 카드 단위 숨김, 0ms 즉각 반응 보장)
       cardInfo.cardElement.style.setProperty('display', 'none', 'important');
       cardInfo.cardElement.setAttribute('data-job-filtered', 'true');
       cardInfo.cardElement.setAttribute('data-filter-mode', 'hide');
@@ -153,10 +166,7 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
     });
     group.appendChild(blockCompanyBtn);
 
-    if (!cardInfo.cardElement.style.position || cardInfo.cardElement.style.position === 'static') {
-      cardInfo.cardElement.style.position = 'relative';
-    }
-    cardInfo.cardElement.appendChild(group);
+    host.appendChild(group);
   }
 
   /**

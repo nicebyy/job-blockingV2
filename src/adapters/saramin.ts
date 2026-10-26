@@ -1,6 +1,6 @@
 import { JobCardInfo } from '../types';
 import { BaseSiteAdapter } from './base';
-import { SITE_DOMAINS, SARAMIN_SELECTORS, INLINE_BUTTON_CONFIG } from '../constants';
+import { SITE_DOMAINS, SARAMIN_SELECTORS } from '../constants';
 
 
 export class SaraminAdapter extends BaseSiteAdapter {
@@ -17,7 +17,17 @@ export class SaraminAdapter extends BaseSiteAdapter {
     );
     const detailRelayViews = Array.from(
       container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.DETAIL_RELAY_CONTAINERS)
-    ).filter((el) => !el.classList.contains('wrap_jview')); // 부모 래퍼 컨테이너 제외 가드
+    ).filter((el) => {
+      if (el.classList.contains('wrap_jview')) return false;
+      // 상위 부모 중에 이미 다른 detailRelayViews 후보(.jview 등)가 있다면 자식 컨테이너(.wrap_jv_cont 등)는 제외
+      const parentRelay = el.parentElement?.closest<HTMLElement>(
+        SARAMIN_SELECTORS.DETAIL_RELAY_CONTAINERS
+      );
+      if (parentRelay && !parentRelay.classList.contains('wrap_jview')) {
+        return false;
+      }
+      return true;
+    });
     const recommendCards = Array.from(
       container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.DETAIL_RECOMMEND_CARDS)
     );
@@ -25,6 +35,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
     const all = new Set([...listCards, ...detailRelayViews, ...recommendCards]);
     return Array.from(all);
   }
+
 
   /**
    * AI 검색 배너, 개인 맞춤 추천 공고 섹션, 스토어 프로모션 배너 등 불필요한 마케팅/추천 요소 숨김
@@ -177,14 +188,19 @@ export class SaraminAdapter extends BaseSiteAdapter {
     cardInfo: JobCardInfo,
     actions: import('./base').BlockActions | ((companyName: string) => void)
   ): void {
-    const header = cardInfo.cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_HEADER);
-    if (header && !cardInfo.cardElement.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)) {
-      header.style.position = 'relative';
-      super.injectInlineButton({ ...cardInfo, cardElement: header }, actions);
+    const header =
+      (cardInfo.cardElement.matches?.(SARAMIN_SELECTORS.DETAIL_HEADER)
+        ? cardInfo.cardElement
+        : cardInfo.cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_HEADER)) || null;
+
+    if (header) {
+      const titleInner = header.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_TITLE_INNER) || header;
+      super.injectInlineButton(cardInfo, actions, titleInner);
       return;
     }
     super.injectInlineButton(cardInfo, actions);
   }
+
 
   public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
     return (

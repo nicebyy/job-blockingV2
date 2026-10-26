@@ -107,7 +107,23 @@ td.tplTit:hover .job-filter-btn-group,
   box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.12), 0 2px 4px -1px rgba(15, 23, 42, 0.06) !important;
 }
 
+/* 상세 페이지 인라인 [공고숨김 / 회사차단] 듀얼 버튼 그룹 전용 스타일 (입사지원 버튼 겹침 방지 및 상시 노출) */
+.job-filter-btn-group-detail,
+.jv_header .job-filter-btn-group,
+.title_inner .job-filter-btn-group,
+.wrap_jv_header .job-filter-btn-group {
+  position: static !important;
+  display: inline-flex !important;
+  vertical-align: middle !important;
+  margin-left: 10px !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+}
+
 /* 캡슐 내부 개별 세그먼트 버튼 */
+
 .job-filter-hide-btn {
   display: inline-flex !important;
   align-items: center !important;

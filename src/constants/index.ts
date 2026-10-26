@@ -98,9 +98,12 @@ export const SARAMIN_SELECTORS = {
   // 상세 페이지 및 하단 무한 스크롤(릴레이 뷰/추천 공고) 셀렉터 (.wrap_jview는 부모 래퍼이므로 제외하고 개별 공고 단위로 지정)
   DETAIL_RELAY_CONTAINERS: '.wrap_jview > .jview, .wrap_jview > section[class*="jview"], .wrap_jview > div[class*="jview"], .wrap_jv_cont, div[id^="jview_"], .jview_box, section.jview',
   DETAIL_RECOMMEND_CARDS: '.item_recommend, .recommend_sec .list_item, .box_recommend li, .relate_job li, [class*="recommend_job"] li, .jview_wing .offer.list li',
-  DETAIL_COMPANY_NAME: '.jv_header .company_name, .jv_header a.company, .wrap_jv_header .corp_name, .company_info .name, .company_name, .corp_name',
+  DETAIL_COMPANY_NAME:
+    '.title_inner .company, .title_inner a, .jv_header .company, .jv_header .company_name, .jv_header a.company, .wrap_jv_header .corp_name, .company_info .name, a[class*="company"], .company_name, .corp_name',
   DETAIL_POSITION_TITLE: '.jv_header .tit_job, .jv_header h1, h1.tit_job, .wrap_jv_header .tit_job, .job_tit, .tit',
   DETAIL_HEADER: '.jv_header, .wrap_jv_header, .header_jv, .view_header',
+  DETAIL_TITLE_INNER: '.title_inner, .wrap_corp_info, .area_corp',
+
   // 프로모션 및 광고 배너(AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너)
   PROMOTION_BANNERS: '.area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, #section_contents, section[aria-label="추천공고"], .list_curation_wrap',
 } as const;
@@ -173,6 +176,7 @@ export const INLINE_BUTTON_CONFIG = {
   CLASSES: {
     CARD_HOST: 'job-filter-card-host',
     CONTAINER: 'job-filter-btn-group',
+    CONTAINER_DETAIL: 'job-filter-btn-group-detail',
     BUTTON: 'job-filter-hide-btn',
     JOB_BUTTON: 'job-filter-btn-job',
     COMPANY_BUTTON: 'job-filter-btn-company',

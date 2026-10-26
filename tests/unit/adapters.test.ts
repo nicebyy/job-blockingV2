@@ -251,6 +251,148 @@ describe('Site Adapters 단위 테스트', () => {
       expect(info?.jobId).toBe('88888');
     });
 
+    it('사람인 상세 페이지 실구조(title_inner, a.company, wrap_jv_cont)에서 중복 없이 단일 공고 카드로 수집되어야 한다', () => {
+      const pageWrapper = document.createElement('div');
+      pageWrapper.innerHTML = `
+        <div class="wrap_jview">
+          <section class="jview jview-0-55311548">
+            <div class="wrap_jv_cont">
+              <div class="wrap_jv_header">
+                <div class="jv_header" data-rec_idx="55311548" data-rec_seq="0">
+                  <div class="title_inner">
+                    <a href="/zf_user/company-info/view" class="company">대림바스(주)</a>
+                    <button class="btn_interest">관심기업</button>
+                  </div>
+                  <h1 class="tit_job">[국내1위 대림바스] IT / 디자인팀 담당자 채용</h1>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(pageWrapper);
+      // 부모 .wrap_jview 및 자식 .wrap_jv_cont는 제외되고 오직 단일 section.jview만 수집되어야 함
+      expect(cards.length).toBe(1);
+      expect(cards[0].tagName).toBe('SECTION');
+      expect(cards[0].classList.contains('jview')).toBe(true);
+
+      const parsed = adapter.parseCard(cards[0]);
+      expect(parsed?.companyName).toBe('대림바스(주)');
+      expect(parsed?.title).toBe('[국내1위 대림바스] IT / 디자인팀 담당자 채용');
+      expect(parsed?.jobId).toBe('55311548');
+    });
+
+    it('사람인 상세 페이지에서 인라인 버튼이 .title_inner에 상시 노출(detail 클래스)로 주입되고, 클릭 시 루트 카드가 완전히 숨겨져야 한다', async () => {
+      const pageWrapper = document.createElement('div');
+      pageWrapper.innerHTML = `
+        <div class="wrap_jview">
+          <section class="jview jview-0-55311548">
+            <div class="wrap_jv_cont">
+              <div class="wrap_jv_header">
+                <div class="jv_header" data-rec_idx="55311548" data-rec_seq="0">
+                  <div class="title_inner">
+                    <a href="#" class="company">대림바스(주)</a>
+                    <button class="btn_interest">관심기업</button>
+                  </div>
+                  <h1 class="tit_job">[국내1위 대림바스] IT / 디자인팀 담당자 채용</h1>
+                  <div class="btn_apply"><button class="sri_btn_lg">입사지원</button></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      `;
+
+      const section = pageWrapper.querySelector<HTMLElement>('section.jview')!;
+      const cardInfo = adapter.parseCard(section)!;
+      expect(cardInfo).not.toBeNull();
+
+      const onBlockCompany = vi.fn().mockResolvedValue(undefined);
+      const onBlockJob = vi.fn().mockResolvedValue(undefined);
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      const titleInner = section.querySelector('.title_inner')!;
+      const btnGroup = titleInner.querySelector<HTMLElement>('.job-filter-btn-group');
+
+      // 1. 상세 페이지 헤더 내 .title_inner에 툴바가 주입되었는지 검증
+      expect(btnGroup).not.toBeNull();
+      expect(btnGroup?.classList.contains('job-filter-btn-group-detail')).toBe(true);
+
+      // 2. [공고숨김] 버튼 클릭 시 header만 짤리지 않고 루트 카드(section) 전체가 즉시 숨김 처리되는지 검증
+      const hideJobBtn = btnGroup?.querySelector<HTMLButtonElement>('.job-filter-btn-job')!;
+      expect(hideJobBtn).not.toBeNull();
+      hideJobBtn.click();
+
+      expect(section.style.display).toBe('none');
+      expect(section.getAttribute('data-job-filtered')).toBe('true');
+      expect(section.getAttribute('data-filter-mode')).toBe('hide');
+      expect(onBlockJob).toHaveBeenCalledWith(cardInfo);
+    });
+
+    it('사람인 상세 페이지에서 회사 평점 뱃지가 .title_inner 내 회사명 바로 옆에 정상 주입되어야 한다', () => {
+      const pageWrapper = document.createElement('div');
+      pageWrapper.innerHTML = `
+        <div class="wrap_jview">
+          <section class="jview jview-0-55311548">
+            <div class="wrap_jv_cont">
+              <div class="wrap_jv_header">
+                <div class="jv_header" data-rec_idx="55311548" data-rec_seq="0">
+                  <div class="title_inner">
+                    <a href="#" class="company">대림바스(주)</a>
+                    <button class="btn_interest">관심기업</button>
+                  </div>
+                  <h1 class="tit_job">[국내1위 대림바스] IT / 디자인팀 담당자 채용</h1>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      `;
+
+      const section = pageWrapper.querySelector<HTMLElement>('section.jview')!;
+      const cardInfo = adapter.parseCard(section)!;
+
+      const companyEl = adapter.getCompanyElement(section);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent?.trim()).toBe('대림바스(주)');
+
+      // 잡플래닛 평점 주입
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        companyName: '대림바스(주)',
+        rating: 3.4,
+        status: 'found',
+        companyId: '12345',
+        cachedAt: Date.now(),
+      });
+
+      // 블라인드 평점 주입
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        companyName: '대림바스(주)',
+        rating: 3.7,
+        status: 'found',
+        cachedAt: Date.now(),
+      });
+
+      const titleInner = section.querySelector('.title_inner')!;
+      const ratingsWrap = titleInner.querySelector('.job-filter-ratings-wrap')!;
+      expect(ratingsWrap).not.toBeNull();
+
+      // 회사명 바로 다음 형제 요소로 뱃지 래퍼가 위치해야 함
+      expect(companyEl?.nextElementSibling).toBe(ratingsWrap);
+
+      const jpBadge = ratingsWrap.querySelector('.job-filter-rating-jobplanet');
+      const blindBadge = ratingsWrap.querySelector('.job-filter-rating-blind');
+      expect(jpBadge).not.toBeNull();
+      expect(blindBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('3.4');
+      expect(blindBadge?.textContent).toContain('3.7');
+    });
+
+
     it('1번 공고를 차단(applyFilter)해도 부모 .wrap_jview는 유지되고 2번 공고는 정상 노출되어야 한다 (빈 페이지 방지)', () => {
       const pageWrapper = document.createElement('div');
       pageWrapper.innerHTML = `
