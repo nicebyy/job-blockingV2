@@ -1,6 +1,7 @@
-import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings } from '../types';
+import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings, JobPlatform } from '../types';
 import { STORAGE_KEYS } from '../constants';
 import { isJobExpired } from '../utils/date';
+
 
 export class StorageManager {
   private static memoryFallback: Record<string, any> = {
@@ -185,6 +186,7 @@ export class StorageManager {
       companyName?: string;
       closingDate?: string;
       expiresAt?: number;
+      platform?: JobPlatform;
     }
   ): Promise<BlockItem> {
     const list = await this.getBlockList(false);
@@ -234,18 +236,22 @@ export class StorageManager {
         existing.companyName = metadata.companyName;
         needsSave = true;
       }
+      if (metadata?.platform && !existing.platform) {
+        existing.platform = metadata.platform;
+        needsSave = true;
+      }
       if (needsSave) {
         await this.saveBlockList(list);
       }
       return existing;
     }
 
-
     const newItem: BlockItem = {
       id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       pattern: cleanPattern,
       type,
       createdAt: Date.now(),
+      platform: metadata?.platform || 'custom',
     };
 
     if (metadata?.expiresAt !== undefined && !Number.isNaN(metadata.expiresAt)) {
@@ -268,6 +274,7 @@ export class StorageManager {
     await this.saveBlockList(list);
     return newItem;
   }
+
 
   /**
    * 단일 차단 항목 삭제

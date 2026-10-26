@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { BlockItem, BlockType } from '../types';
 import { StorageManager } from '../core/storage';
-import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType } from '../constants';
+import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType, PLATFORM_CONFIG, PlatformFilterType } from '../constants';
 import { formatDate } from '../utils/date';
 
 export const Options: React.FC = () => {
@@ -10,6 +10,7 @@ export const Options: React.FC = () => {
   const [type, setType] = useState<BlockType>('company');
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<OptionsFilterType>(OPTIONS_FILTER_CONFIG.ALL);
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformFilterType>(PLATFORM_CONFIG.ALL);
 
   useEffect(() => {
     loadBlockList();
@@ -24,7 +25,7 @@ export const Options: React.FC = () => {
     e.preventDefault();
     if (!pattern.trim()) return;
 
-    await StorageManager.addBlockItem(pattern.trim(), type);
+    await StorageManager.addBlockItem(pattern.trim(), type, { platform: 'custom' });
     setPattern('');
     loadBlockList();
   };
@@ -74,8 +75,8 @@ export const Options: React.FC = () => {
     reader.readAsText(file);
   };
 
-  // 카테고리별 차단 개수 계산
-  const counts = useMemo(() => {
+  // 카테고리(유형)별 차단 개수 계산
+  const typeCounts = useMemo(() => {
     return {
       [OPTIONS_FILTER_CONFIG.ALL]: blockList.length,
       [OPTIONS_FILTER_CONFIG.COMPANY]: blockList.filter((item) => item.type === 'company').length,
@@ -84,28 +85,59 @@ export const Options: React.FC = () => {
     };
   }, [blockList]);
 
-  // 카테고리 탭 및 검색어 복합 필터링
+  // 플랫폼별 차단 개수 계산 (현재 선택된 유형 조건과 연동)
+  const platformCounts = useMemo(() => {
+    const baseList =
+      selectedFilter === OPTIONS_FILTER_CONFIG.ALL
+        ? blockList
+        : blockList.filter((item) => item.type === selectedFilter);
+
+    return {
+      [PLATFORM_CONFIG.ALL]: baseList.length,
+      [PLATFORM_CONFIG.SARAMIN]: baseList.filter((item) => item.platform === PLATFORM_CONFIG.SARAMIN).length,
+      [PLATFORM_CONFIG.JOBKOREA]: baseList.filter((item) => item.platform === PLATFORM_CONFIG.JOBKOREA).length,
+      [PLATFORM_CONFIG.WANTED]: baseList.filter((item) => item.platform === PLATFORM_CONFIG.WANTED).length,
+      [PLATFORM_CONFIG.CUSTOM]: baseList.filter(
+        (item) => !item.platform || item.platform === PLATFORM_CONFIG.CUSTOM
+      ).length,
+    };
+  }, [blockList, selectedFilter]);
+
+  // 카테고리 탭 + 플랫폼 탭 + 검색어 복합 필터링
   const filteredList = useMemo(() => {
     return blockList.filter((item) => {
-      // 1. 카테고리 필터 검사
+      // 1. 카테고리(유형) 필터 검사
       if (selectedFilter !== OPTIONS_FILTER_CONFIG.ALL && item.type !== selectedFilter) {
         return false;
       }
-      // 2. 검색어 검사 (패턴, 회사명, 공고제목 통합 검색)
+      // 2. 플랫폼 필터 검사
+      if (selectedPlatform !== PLATFORM_CONFIG.ALL) {
+        const itemPlatform = item.platform || PLATFORM_CONFIG.CUSTOM;
+        if (itemPlatform !== selectedPlatform) {
+          return false;
+        }
+      }
+      // 3. 검색어 검사 (패턴, 회사명, 공고제목, 플랫폼명 통합 검색)
       if (search.trim()) {
         const q = search.toLowerCase().trim();
         const matchPattern = item.pattern.toLowerCase().includes(q);
         const matchCompany = item.companyName?.toLowerCase().includes(q) ?? false;
         const matchTitle = item.title?.toLowerCase().includes(q) ?? false;
-        return matchPattern || matchCompany || matchTitle;
+        const itemPlatform = item.platform || PLATFORM_CONFIG.CUSTOM;
+        const matchPlatform = PLATFORM_CONFIG.LABELS[itemPlatform]?.toLowerCase().includes(q) ?? false;
+        return matchPattern || matchCompany || matchTitle || matchPlatform;
       }
       return true;
     });
-  }, [blockList, selectedFilter, search]);
+  }, [blockList, selectedFilter, selectedPlatform, search]);
 
   const getEmptyMessage = () => {
     if (search.trim()) {
       return UI_MESSAGES.EMPTY_SEARCH_RESULT;
+    }
+    if (selectedPlatform !== PLATFORM_CONFIG.ALL) {
+      const platformLabel = PLATFORM_CONFIG.LABELS[selectedPlatform];
+      return `${platformLabel}에서 등록된 차단 항목이 없습니다.`;
     }
     switch (selectedFilter) {
       case OPTIONS_FILTER_CONFIG.COMPANY:
@@ -157,47 +189,87 @@ export const Options: React.FC = () => {
             type="text"
             className="input-text"
             style={{ width: '100%' }}
-            placeholder="등록된 목록 검색 (회사명, 공고명, 패턴)..."
+            placeholder="등록된 목록 검색 (회사명, 공고명, 패턴, 플랫폼)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        {/* 차단 유형 카테고리 필터 탭 */}
-        <div className="filter-tabs" role="tablist" aria-label="차단 항목 필터">
-          {(
-            [
-              OPTIONS_FILTER_CONFIG.ALL,
-              OPTIONS_FILTER_CONFIG.COMPANY,
-              OPTIONS_FILTER_CONFIG.JOB,
-              OPTIONS_FILTER_CONFIG.KEYWORD,
-            ] as const
-          ).map((tabKey) => {
-            const label =
-              tabKey === OPTIONS_FILTER_CONFIG.ALL
-                ? OPTIONS_FILTER_CONFIG.LABELS.ALL
-                : tabKey === OPTIONS_FILTER_CONFIG.COMPANY
-                ? OPTIONS_FILTER_CONFIG.LABELS.COMPANY
-                : tabKey === OPTIONS_FILTER_CONFIG.JOB
-                ? OPTIONS_FILTER_CONFIG.LABELS.JOB
-                : OPTIONS_FILTER_CONFIG.LABELS.KEYWORD;
-            const count = counts[tabKey];
-            const isActive = selectedFilter === tabKey;
+        {/* 2단 다층 필터링 컨테이너 */}
+        <div className="filter-container">
+          {/* 1단: 차단 유형 카테고리 필터 탭 */}
+          <div className="filter-row">
+            <span className="filter-label">유형</span>
+            <div className="filter-tabs" role="tablist" aria-label="차단 유형 필터">
+              {(
+                [
+                  OPTIONS_FILTER_CONFIG.ALL,
+                  OPTIONS_FILTER_CONFIG.COMPANY,
+                  OPTIONS_FILTER_CONFIG.JOB,
+                  OPTIONS_FILTER_CONFIG.KEYWORD,
+                ] as const
+              ).map((tabKey) => {
+                const label =
+                  tabKey === OPTIONS_FILTER_CONFIG.ALL
+                    ? OPTIONS_FILTER_CONFIG.LABELS.ALL
+                    : tabKey === OPTIONS_FILTER_CONFIG.COMPANY
+                    ? OPTIONS_FILTER_CONFIG.LABELS.COMPANY
+                    : tabKey === OPTIONS_FILTER_CONFIG.JOB
+                    ? OPTIONS_FILTER_CONFIG.LABELS.JOB
+                    : OPTIONS_FILTER_CONFIG.LABELS.KEYWORD;
+                const count = typeCounts[tabKey];
+                const isActive = selectedFilter === tabKey;
 
-            return (
-              <button
-                key={tabKey}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`filter-tab-btn ${isActive ? 'active' : ''}`}
-                onClick={() => setSelectedFilter(tabKey)}
-              >
-                <span>{label}</span>
-                <span className="filter-tab-count">{count}</span>
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    key={tabKey}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`filter-tab-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => setSelectedFilter(tabKey)}
+                  >
+                    <span>{label}</span>
+                    <span className="filter-tab-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2단: 채용 플랫폼 필터 탭 */}
+          <div className="filter-row">
+            <span className="filter-label">플랫폼</span>
+            <div className="platform-filter-tabs" role="tablist" aria-label="채용 플랫폼 필터">
+              {(
+                [
+                  PLATFORM_CONFIG.ALL,
+                  PLATFORM_CONFIG.SARAMIN,
+                  PLATFORM_CONFIG.JOBKOREA,
+                  PLATFORM_CONFIG.WANTED,
+                  PLATFORM_CONFIG.CUSTOM,
+                ] as const
+              ).map((platKey) => {
+                const label = PLATFORM_CONFIG.LABELS[platKey];
+                const count = platformCounts[platKey];
+                const isActive = selectedPlatform === platKey;
+
+                return (
+                  <button
+                    key={platKey}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`platform-tab-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => setSelectedPlatform(platKey)}
+                  >
+                    <span>{label}</span>
+                    <span className="platform-tab-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {filteredList.length === 0 ? (
@@ -206,46 +278,59 @@ export const Options: React.FC = () => {
           </div>
         ) : (
           <ul className="block-list">
+            {filteredList.map((item) => {
+              const itemPlatform = item.platform || PLATFORM_CONFIG.CUSTOM;
+              const platformLabel = PLATFORM_CONFIG.LABELS[itemPlatform];
+              const platformClass = PLATFORM_CONFIG.BADGE_CLASSES[itemPlatform];
 
-            {filteredList.map((item) => (
-              <li key={item.id} className="block-item">
-                <div>
-                  <span
-                    className={`block-badge ${
-                      item.type === 'company'
-                        ? 'badge-company'
-                        : item.type === 'job'
-                        ? 'badge-job'
-                        : 'badge-keyword'
-                    }`}
-                  >
-                    {item.type === 'company' ? '회사' : item.type === 'job' ? '공고' : '키워드'}
-                  </span>
-                  <strong>
-                    {item.type === 'job'
-                      ? `${item.companyName ? `[${item.companyName}] ` : ''}${item.title || item.pattern}`
-                      : item.pattern}
-                  </strong>
-                  {item.type === 'job' && item.expiresAt && (
+              return (
+                <li key={item.id} className="block-item">
+                  <div className="block-item-content">
+                    {/* 차단 유형 뱃지 */}
                     <span
-                      className="expire-tag"
-                      title={`공고 마감 정보: ${item.closingDate || '상시채용/미정'} (마감 후 30일 보관)`}
+                      className={`block-badge ${
+                        item.type === 'company'
+                          ? 'badge-company'
+                          : item.type === 'job'
+                          ? 'badge-job'
+                          : 'badge-keyword'
+                      }`}
                     >
-                      만료: {formatDate(item.expiresAt)}
+                      {item.type === 'company' ? '회사' : item.type === 'job' ? '공고' : '키워드'}
                     </span>
-                  )}
-                </div>
-                <button
-                  className="btn-delete"
-                  onClick={() => handleDelete(item.id)}
-                  title="삭제"
-                >
-                  삭제
-                </button>
-              </li>
-            ))}
+
+                    {/* 차단 플랫폼 뱃지 */}
+                    <span className={`platform-badge ${platformClass}`}>
+                      {platformLabel}
+                    </span>
+
+                    <strong>
+                      {item.type === 'job'
+                        ? `${item.companyName ? `[${item.companyName}] ` : ''}${item.title || item.pattern}`
+                        : item.pattern}
+                    </strong>
+                    {item.type === 'job' && item.expiresAt && (
+                      <span
+                        className="expire-tag"
+                        title={`공고 마감 정보: ${item.closingDate || '상시채용/미정'} (마감 후 30일 보관)`}
+                      >
+                        만료: {formatDate(item.expiresAt)}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    className="btn-delete"
+                    onClick={() => handleDelete(item.id)}
+                    title="삭제"
+                  >
+                    삭제
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
+
 
         <div className="action-bar">
           <button className="btn-secondary" onClick={handlePurgeExpired} title="보관 기한이 지난 마감 공고 일괄 정리">

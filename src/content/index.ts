@@ -2,9 +2,10 @@ import { AdapterRegistry } from '../adapters';
 import { FilterEngine } from '../core/filter-engine';
 import { InfiniteScrollManager } from '../core/infinite-scroll';
 import { StorageManager } from '../core/storage';
-import { BlindRatingInfo, ExtensionMessage, FilterSettings, FilterStats, JobCardInfo, JobplanetRatingInfo } from '../types';
+import { BlindRatingInfo, ExtensionMessage, FilterSettings, FilterStats, JobCardInfo, JobplanetRatingInfo, JobPlatform } from '../types';
 import { FILTER_CONFIG, RATING_BADGE_CONFIG } from '../constants';
 import { calculateJobExpiration } from '../utils/date';
+
 
 class ContentController {
   private adapter = AdapterRegistry.getAdapterForUrl(window.location.href);
@@ -267,17 +268,29 @@ class ContentController {
     }
   }
 
+  private getPlatformKey(): JobPlatform {
+    if (!this.adapter) return 'custom';
+    const name = this.adapter.name.toLowerCase();
+    if (name.includes('saramin')) return 'saramin';
+    if (name.includes('jobkorea')) return 'jobkorea';
+    if (name.includes('wanted')) return 'wanted';
+    return 'custom';
+  }
+
   private async handleBlockCompany(companyName: string): Promise<void> {
     try {
+      const platform = this.getPlatformKey();
+
       // 1. 필터 엔진에 즉시 반영 (0ms 지연 방지)
       this.filterEngine?.addBlockItem({
         id: `temp_${Date.now()}`,
         pattern: companyName,
         type: 'company',
         createdAt: Date.now(),
+        platform,
       });
 
-      await StorageManager.addBlockItem(companyName, 'company');
+      await StorageManager.addBlockItem(companyName, 'company', { platform });
       const updatedList = await StorageManager.getBlockList();
       this.filterEngine?.updateBlockList(updatedList);
       this.scanAndFilter();
@@ -290,6 +303,7 @@ class ContentController {
     try {
       const pattern = cardInfo.jobId || `${cardInfo.companyName}:::${cardInfo.title}`;
       const expiresAt = calculateJobExpiration(cardInfo.closingDate);
+      const platform = this.getPlatformKey();
 
       // 1. 필터 엔진에 즉시 반영 (0ms 지연 방지)
       this.filterEngine?.addBlockItem({
@@ -301,6 +315,7 @@ class ContentController {
         companyName: cardInfo.companyName,
         closingDate: cardInfo.closingDate,
         expiresAt,
+        platform,
       });
 
       await StorageManager.addBlockItem(pattern, 'job', {
@@ -308,6 +323,7 @@ class ContentController {
         companyName: cardInfo.companyName,
         closingDate: cardInfo.closingDate,
         expiresAt,
+        platform,
       });
       const updatedList = await StorageManager.getBlockList();
       this.filterEngine?.updateBlockList(updatedList);
@@ -316,6 +332,7 @@ class ContentController {
       console.error('[JobFilter] handleBlockJob error:', err);
     }
   }
+
 
   private async attachJobplanetRating(cardInfo: JobCardInfo): Promise<void> {
     if (!this.adapter || !cardInfo.cardElement || !cardInfo.companyName) return;

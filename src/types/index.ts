@@ -9,6 +9,11 @@ export type FilterMode = 'blur' | 'hide';
 export type BlockType = 'company' | 'keyword' | 'job';
 
 /**
+ * 차단이 발생한 채용 플랫폼 식별자
+ */
+export type JobPlatform = 'wanted' | 'saramin' | 'jobkorea' | 'custom';
+
+/**
  * 차단 항목 인터페이스
  */
 export interface BlockItem {
@@ -16,12 +21,14 @@ export interface BlockItem {
   pattern: string; // 회사명, 키워드 또는 jobId
   type: BlockType;
   createdAt: number;
+  platform?: JobPlatform; // 차단이 수행된 채용 플랫폼 ('wanted' | 'saramin' | 'jobkorea' | 'custom')
   expiresAt?: number; // 공고 마감시각 + 30일 만료 타임스탬프 (자동 삭제 기준)
   closingDate?: string; // 원본 마감 정보 문자열 (예: '~ 11/07(토)', '상시채용' 등)
   memo?: string;
   title?: string; // 공고 단위 차단 시 제목
   companyName?: string; // 공고 단위 차단 시 회사명
 }
+
 
 /**
  * 사용자 환경 설정 인터페이스
