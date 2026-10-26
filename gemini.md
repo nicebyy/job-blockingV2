@@ -148,5 +148,26 @@ Windows PowerShell 5.1의 `Invoke-WebRequest`는 기본적으로 구형 Internet
      ```
    - 또는 프로젝트 루트의 `scripts/fetch-sample.ps1`을 호출합니다.
 
+---
+
+## 8. 대화형 REPL 진입 방지 및 CLI 인라인 스크립트 실행 규칙 (Interactive REPL & CLI Safety Policy)
+
+Windows PowerShell 환경에서 `npx`(`.cmd` 배치 파일)를 통해 줄바꿈(Multiline)이 포함된 인라인 스크립트(`-e "..."`)를 실행하면, `cmd.exe`가 첫 번째 줄바꿈에서 명령 인수를 잘라버려 도구(`tsx`, `node` 등)가 대화형 REPL 프롬프트(`> `)로 진입합니다. 헤드리스 에이전트 환경에서는 `stdin` 입력이 제공되지 않으므로 프로세스가 무한 대기(Hang / Lock) 상태에 빠집니다.
+
+### 필수 준수 사항
+1. **PowerShell 내 `npx <tool> -e "..."` 줄바꿈 인라인 실행 엄격 금지**:
+   - `npx tsx -e "줄바꿈..."`, `npx node -e "줄바꿈..."` 형태의 호출을 금지합니다.
+2. **TypeScript / 로직 코드 조각 검증 시 표준 절차**:
+   - **원칙 1 (가장 권장)**: 단위 테스트를 작성하여 `npm test` 또는 `npx vitest run tests/...` 로 검증합니다.
+   - **원칙 2 (인라인 평가 필요 시)**: 프로젝트 표준 안전 평가 스크립트를 사용합니다:
+     ```bash
+     npm run eval:ts -- "<단일행_TS_코드>"
+     # 또는
+     node scripts/eval-ts.mjs <스크립트_파일경로.ts>
+     ```
+     - `scripts/eval-ts.mjs`는 `stdin`을 닫고(`stdio: ['ignore', ...]`), 직접 `node.exe`를 구동하며, **10초 타임아웃**을 강제하므로 REPL 대기 락이 원천적으로 발생하지 않습니다.
+   - **원칙 3**: 여러 줄의 스크래치 코드가 필요한 경우 임시 파일(`.ts`)을 생성하여 실행 후 완료 시 정리합니다.
+
+
 
 

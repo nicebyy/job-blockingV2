@@ -113,6 +113,12 @@ npm run fetch:sample -- "<URL>" [저장파일명] [타임아웃(초)]
 ```
 - PowerShell 5.1의 `mshtml` 엔진 무한 행잉(Hang) 및 봇 차단을 우회하여 10초 타임아웃 보장 하에 대상 사이트의 HTML을 안전하게 수집합니다.
 
+### 5. TypeScript 코드 조각 안전 평가 (Safe Eval)
+```bash
+npm run eval:ts -- "<단일행_TS_코드>"
+```
+- REPL 대화형 프롬프트 대기 락을 방지하고 `stdin` 차단 및 10초 타임아웃 보장 하에 TypeScript 코드를 안전하게 실행합니다.
+
 ---
 
 ## 🧪 테스트 실행 가이드
