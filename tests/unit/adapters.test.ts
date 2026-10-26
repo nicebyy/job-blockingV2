@@ -368,6 +368,135 @@ describe('Site Adapters 단위 테스트', () => {
       expect(li.getAttribute('data-job-filtered')).toBe('true');
       expect(li.getAttribute('data-filter-mode')).toBe('hide');
     });
+
+    it('원티드 테마/큐레이션 포지션 캐러셀 카드(PositionGroupJobCard)를 파싱하고 회사명 옆에 평점 뱃지를 주입해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <ul class="CarouselContainer_CarouselContainer__slider__E10go" style="gap: 15px">
+          <li class="css-item-li">
+            <a href="/wd/290004?groupId=devops-sre" class="css-link-card" data-attribute-id="position__click" data-company-id="25482" data-company-name="토스뱅크" data-position-id="290004" data-position-name="Site Reliability Engineer">
+              <div class="css-thumb">
+                <img src="https://static.wanted.co.kr/images/test4.jpg" alt="Site Reliability Engineer" />
+              </div>
+              <div class="css-content">
+                <span class="montage-g4lz5p css-title">Site Reliability Engineer</span>
+                <div class="css-company-wrap">
+                  <span class="montage-1jwduw8">토스뱅크</span>
+                  <span class="montage-1jwduw8">서울 강남구 · 경력 3년 이상</span>
+                </div>
+              </div>
+            </a>
+          </li>
+        </ul>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(1);
+      expect(cards[0].tagName).toBe('LI');
+
+      const cardInfo = adapter.parseCard(cards[0]);
+      expect(cardInfo).not.toBeNull();
+      expect(cardInfo?.companyName).toBe('토스뱅크');
+      expect(cardInfo?.title).toBe('Site Reliability Engineer');
+      expect(cardInfo?.jobId).toBe('290004');
+
+      const companyEl = adapter.getCompanyElement(cards[0]);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent?.trim()).toBe('토스뱅크');
+
+      // 잡플래닛 평점 주입
+      adapter.injectRatingBadge(cardInfo!, {
+        platform: 'jobplanet',
+        companyName: '토스뱅크',
+        rating: 3.8,
+        status: 'found',
+        companyId: '388392',
+        cachedAt: Date.now(),
+      });
+
+      // 블라인드 평점 주입
+      adapter.injectRatingBadge(cardInfo!, {
+        platform: 'blind',
+        companyName: '토스뱅크',
+        rating: 4.1,
+        status: 'found',
+        companyUrl: 'https://www.teamblind.com/kr/company/토스뱅크',
+        cachedAt: Date.now(),
+      });
+
+      const ratingWrap = cards[0].querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(ratingWrap).not.toBeNull();
+      expect(companyEl?.nextElementSibling).toBe(ratingWrap);
+
+      const jpBadge = ratingWrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`);
+      expect(jpBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('3.8');
+
+      const blindBadge = ratingWrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`);
+      expect(blindBadge).not.toBeNull();
+      expect(blindBadge?.textContent).toContain('4.1');
+
+      // 캐러셀 공고 숨기기 동작 검증: 인라인 버튼 주입 후 숨김 시 상위 li가 숨겨져야 함
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+      adapter.injectInlineButton(cardInfo!, { onBlockCompany, onBlockJob });
+
+      const hideJobBtn = cards[0].querySelector<HTMLButtonElement>('.job-filter-btn-job')!;
+      expect(hideJobBtn).not.toBeNull();
+      hideJobBtn.click();
+
+      expect(cards[0].style.display).toBe('none');
+      expect(cards[0].getAttribute('data-job-filtered')).toBe('true');
+      expect(onBlockJob).toHaveBeenCalled();
+    });
+
+    it('원티드 홈/잡스피드 미니 공고 카드(MiniJobCard)를 파싱하고 회사명 옆에 평점 뱃지를 주입해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <ul class="CarouselContainer_CarouselContainer__slider__E10go">
+          <li class="css-mini-item">
+            <a href="/wd/394698" class="MiniJobCard_MiniJobCard__aVx71" data-company-name="당근마켓" data-position-name="프론트엔드 엔지니어" data-position-id="394698">
+              <div class="MiniJobCard_MiniJobCard__image__iOtFn">
+                <img src="https://static.wanted.co.kr/images/test.jpg" alt="프론트엔드 엔지니어" />
+              </div>
+              <header>
+                <span class="MiniJobCard_MiniJobCard__positionTitle__NLhOu montage-g4lz5p">프론트엔드 엔지니어</span>
+                <span class="montage-1jwduw8">당근마켓</span>
+                <span class="montage-1jwduw8">서울 서초구 · 경력 5년 이상</span>
+              </header>
+            </a>
+          </li>
+        </ul>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(1);
+      expect(cards[0].tagName).toBe('LI');
+
+      const cardInfo = adapter.parseCard(cards[0]);
+      expect(cardInfo).not.toBeNull();
+      expect(cardInfo?.companyName).toBe('당근마켓');
+      expect(cardInfo?.title).toBe('프론트엔드 엔지니어');
+      expect(cardInfo?.jobId).toBe('394698');
+
+      const companyEl = adapter.getCompanyElement(cards[0]);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent?.trim()).toBe('당근마켓');
+
+      adapter.injectRatingBadge(cardInfo!, {
+        platform: 'jobplanet',
+        companyName: '당근마켓',
+        rating: 4.3,
+        status: 'found',
+        companyId: '12345',
+        cachedAt: Date.now(),
+      });
+
+      const ratingWrap = cards[0].querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(ratingWrap).not.toBeNull();
+      expect(companyEl?.nextElementSibling).toBe(ratingWrap);
+      expect(ratingWrap?.textContent).toContain('4.3');
+    });
   });
 
   describe('SaraminAdapter DOM 파싱', () => {

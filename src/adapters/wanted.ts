@@ -60,16 +60,18 @@ export class WantedAdapter extends BaseSiteAdapter {
   }
 
   public parseCard(element: HTMLElement): JobCardInfo | null {
-    // 1. 북마크 버튼 내 data-* 속성 우선 확인 (원티드 리스트 카드 최신 스펙)
-    const bookmarkBtn = element.querySelector<HTMLElement>(WANTED_SELECTORS.BOOKMARK_BUTTON);
-    const btnCompany = bookmarkBtn?.getAttribute('data-company-name');
-    const btnTitle = bookmarkBtn?.getAttribute('data-position-name');
-    const btnJobId = bookmarkBtn?.getAttribute('data-position-id');
+    // 1. data-* 속성 우선 확인 (북마크 버튼, 링크 태그 자체, 또는 내부 data-* 속성 요소)
+    const dataHolder =
+      (element.hasAttribute('data-company-name') ? element : null) ||
+      element.querySelector<HTMLElement>('[data-company-name]') ||
+      element.querySelector<HTMLElement>(WANTED_SELECTORS.BOOKMARK_BUTTON);
+
+    const btnCompany = dataHolder?.getAttribute('data-company-name');
+    const btnTitle = dataHolder?.getAttribute('data-position-name');
+    const btnJobId = dataHolder?.getAttribute('data-position-id');
 
     // 2. 회사명 추출
-    const companyEl =
-      element.querySelector<HTMLElement>(WANTED_SELECTORS.COMPANY_NAME) ||
-      element.querySelector<HTMLElement>(WANTED_SELECTORS.DETAIL_COMPANY_NAME);
+    const companyEl = this.getCompanyElement(element);
     const companyName = btnCompany || companyEl?.textContent?.trim() || '';
 
     // 3. 공고 제목 추출
@@ -94,7 +96,7 @@ export class WantedAdapter extends BaseSiteAdapter {
     if (!jobId) {
       const link =
         element.querySelector<HTMLAnchorElement>(WANTED_SELECTORS.JOB_LINK) ||
-        (element instanceof HTMLAnchorElement ? element : null);
+        (element.tagName.toUpperCase() === 'A' ? (element as HTMLAnchorElement) : null);
       const href = link?.getAttribute('href') || link?.href || '';
       const match = href.match(/\/wd\/(\d+)/);
       if (match) jobId = match[1];
@@ -119,10 +121,61 @@ export class WantedAdapter extends BaseSiteAdapter {
   }
 
   public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
-    return (
-      cardElement.querySelector<HTMLElement>(WANTED_SELECTORS.COMPANY_NAME) ||
-      cardElement.querySelector<HTMLElement>(WANTED_SELECTORS.DETAIL_COMPANY_NAME)
-    );
+    // 1. 표준 셀렉터 확인 (단, cardElement 자체 또는 링크 태그가 오매칭되는 것 방지)
+    const standardEl =
+      cardElement.querySelector<HTMLElement>(
+        'span[class*="CompanyNameWithLocationPeriod__company"], span[class*="__company__"], span[class*="companyName"], span[class*="Company_name"], .company-name'
+      ) ||
+      cardElement.querySelector<HTMLElement>(WANTED_SELECTORS.DETAIL_COMPANY_NAME);
+    if (
+      standardEl &&
+      standardEl !== cardElement &&
+      standardEl.tagName.toUpperCase() !== 'A'
+    ) {
+      return standardEl;
+    }
+
+    // 2. data-company-name 속성을 가진 카드(캐러셀 / 테마 포지션 카드 등)의 실제 텍스트 표시 요소 탐색
+    const companyName =
+      cardElement.getAttribute('data-company-name') ||
+      cardElement.querySelector('[data-company-name]')?.getAttribute('data-company-name');
+
+    if (companyName) {
+      const candidates = Array.from(cardElement.querySelectorAll<HTMLElement>('span, p, div, strong'));
+      const textMatch = candidates.find(
+        (el) => el.children.length === 0 && el.textContent?.trim() === companyName
+      );
+      if (textMatch) return textMatch;
+    }
+
+    // 3. MiniJobCard / Carousel 헤더 구조 fallback (제목 다음의 두 번째 텍스트 요소)
+    const miniTitle = cardElement.querySelector<HTMLElement>('[class*="MiniJobCard__positionTitle"]');
+    if (miniTitle?.nextElementSibling instanceof HTMLElement) {
+      return miniTitle.nextElementSibling;
+    }
+
+    const header = cardElement.querySelector('header');
+    if (header && header.children.length >= 2) {
+      return header.children[1] as HTMLElement;
+    }
+
+    // 4. PositionGroupJobCard fallback: title 요소 다음 컨테이너의 첫 번째 span
+    const titleEl = cardElement.querySelector<HTMLElement>(WANTED_SELECTORS.POSITION_TITLE);
+    if (titleEl) {
+      const nextSibling = titleEl.nextElementSibling;
+      if (nextSibling) {
+        const firstSpan =
+          nextSibling.querySelector<HTMLElement>('span') ||
+          (nextSibling instanceof HTMLElement ? nextSibling : null);
+        if (firstSpan) return firstSpan;
+      }
+    }
+
+    return null;
+  }
+
+  public override getRatingBadgeAnchorElement(cardElement: HTMLElement): HTMLElement | null {
+    return this.getCompanyElement(cardElement);
   }
 
   public override injectInlineButton(
