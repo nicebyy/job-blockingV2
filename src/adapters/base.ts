@@ -1,5 +1,5 @@
-import { JobCardInfo } from '../types';
-import { INLINE_BUTTON_CONFIG } from '../constants';
+import { JobCardInfo, JobplanetRatingInfo } from '../types';
+import { INLINE_BUTTON_CONFIG, JOBPLANET_CONFIG, RATING_BADGE_CONFIG } from '../constants';
 
 export interface SiteAdapter {
   readonly name: string;
@@ -7,10 +7,12 @@ export interface SiteAdapter {
   matches(url: string): boolean;
   getJobCardElements(container?: Document | HTMLElement): HTMLElement[];
   parseCard(element: HTMLElement): JobCardInfo | null;
+  getCompanyElement(cardElement: HTMLElement): HTMLElement | null;
   injectInlineButton(
     cardInfo: JobCardInfo,
     actions: BlockActions | ((companyName: string) => void)
   ): void;
+  injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: import('../types').JobplanetRatingInfo): void;
   getNextPageUrl?(currentDoc: Document, currentPage: number): string | null;
   getCardListContainer?(currentDoc: Document): HTMLElement | null;
   getPaginationElement?(currentDoc: Document): HTMLElement | null;
@@ -29,6 +31,7 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   abstract matches(url: string): boolean;
   abstract getJobCardElements(container?: Document | HTMLElement): HTMLElement[];
   abstract parseCard(element: HTMLElement): JobCardInfo | null;
+  abstract getCompanyElement(cardElement: HTMLElement): HTMLElement | null;
 
   public hidePromotionBanners?(_container?: Document | HTMLElement): void {
     // 기본 구현은 no-op (하위 어댑터에서 필요 시 재정의)
@@ -139,5 +142,64 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
     }
     cardInfo.cardElement.appendChild(group);
   }
+
+  /**
+   * 잡플래닛 평점 뱃지 주입
+   * - 평점이 유효하게 존재하는 단일 기업일 때만 기업명 옆에 배치
+   * - 미존재, 에러, 동명 기업(ambiguous)일 경우 배치하지 않음 (배치x)
+   */
+  public injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: JobplanetRatingInfo): void {
+    if (
+      ratingInfo.status !== 'found' ||
+      typeof ratingInfo.rating !== 'number' ||
+      ratingInfo.rating <= 0
+    ) {
+      return;
+    }
+
+    if (!cardInfo.cardElement) return;
+
+    // 이미 평점 뱃지가 주입된 경우 중복 주입 방지
+    if (cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.CONTAINER}`)) {
+      return;
+    }
+
+    const companyEl = this.getCompanyElement(cardInfo.cardElement);
+    if (!companyEl) return;
+
+    const badge = document.createElement('a');
+    const colorClass = this.getRatingColorClass(ratingInfo.rating);
+    badge.className = `${RATING_BADGE_CONFIG.CLASSES.CONTAINER} ${colorClass}`;
+    badge.href =
+      ratingInfo.companyUrl ||
+      `${JOBPLANET_CONFIG.COMPANY_BASE_URL}/${ratingInfo.companyId}`;
+    badge.target = '_blank';
+    badge.rel = 'noopener noreferrer';
+    badge.title = RATING_BADGE_CONFIG.TOOLTIP(ratingInfo.rating, cardInfo.companyName);
+
+    badge.innerHTML = `
+      <span class="${RATING_BADGE_CONFIG.CLASSES.STAR}">★</span>
+      <span class="${RATING_BADGE_CONFIG.CLASSES.SCORE}">${ratingInfo.rating.toFixed(1)}</span>
+    `;
+
+    // 뱃지 클릭 시 공고 카드 이동 방지
+    badge.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // 기업명 요소 바로 옆에 배치
+    companyEl.insertAdjacentElement('afterend', badge);
+  }
+
+  protected getRatingColorClass(rating: number): string {
+    if (rating >= RATING_BADGE_CONFIG.THRESHOLDS.HIGH) {
+      return RATING_BADGE_CONFIG.CLASSES.HIGH;
+    }
+    if (rating >= RATING_BADGE_CONFIG.THRESHOLDS.MEDIUM) {
+      return RATING_BADGE_CONFIG.CLASSES.MEDIUM;
+    }
+    return RATING_BADGE_CONFIG.CLASSES.LOW;
+  }
 }
+
 

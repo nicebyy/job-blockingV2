@@ -61,4 +61,9 @@ export class WantedAdapter extends BaseSiteAdapter {
       closingDate,
     };
   }
+
+  public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
+    return cardElement.querySelector<HTMLElement>(WANTED_SELECTORS.COMPANY_NAME);
+  }
 }
+

@@ -2,8 +2,8 @@ import { AdapterRegistry } from '../adapters';
 import { FilterEngine } from '../core/filter-engine';
 import { InfiniteScrollManager } from '../core/infinite-scroll';
 import { StorageManager } from '../core/storage';
-import { ExtensionMessage, FilterSettings, FilterStats, JobCardInfo } from '../types';
-import { FILTER_CONFIG } from '../constants';
+import { ExtensionMessage, FilterSettings, FilterStats, JobCardInfo, JobplanetRatingInfo } from '../types';
+import { FILTER_CONFIG, RATING_BADGE_CONFIG } from '../constants';
 import { calculateJobExpiration } from '../utils/date';
 
 class ContentController {
@@ -141,6 +141,16 @@ class ContentController {
           this.infiniteScroll.destroy();
           this.infiniteScroll = null;
         }
+
+        if (!message.settings.showJobplanetRating) {
+          document
+            .querySelectorAll(`.${RATING_BADGE_CONFIG.CLASSES.CONTAINER}`)
+            .forEach((el) => el.remove());
+          document
+            .querySelectorAll('[data-jp-rating-requested]')
+            .forEach((el) => el.removeAttribute('data-jp-rating-requested'));
+        }
+
         this.scanAndFilter();
         sendResponse({ success: true });
         return true;
@@ -212,6 +222,11 @@ class ContentController {
             await this.handleBlockJob(info);
           },
         });
+
+        // 잡플래닛 평점 뱃지 연동 (설정이 켜져 있고 회사명이 존재하는 경우)
+        if (this.settings?.showJobplanetRating && cardInfo.companyName) {
+          this.attachJobplanetRating(cardInfo);
+        }
       }
     }
 
@@ -279,6 +294,51 @@ class ContentController {
     } catch (err) {
       console.error('[JobFilter] handleBlockJob error:', err);
     }
+  }
+
+  private async attachJobplanetRating(cardInfo: JobCardInfo): Promise<void> {
+    if (!this.adapter || !cardInfo.cardElement || !cardInfo.companyName) return;
+
+    // 이미 주입되었거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
+    if (
+      cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.CONTAINER}`) ||
+      cardInfo.cardElement.getAttribute('data-jp-rating-requested') === 'true'
+    ) {
+      return;
+    }
+
+    cardInfo.cardElement.setAttribute('data-jp-rating-requested', 'true');
+
+    try {
+      const response = await this.requestJobplanetRating(cardInfo.companyName);
+      if (response && response.status === 'found') {
+        this.adapter.injectRatingBadge(cardInfo, response);
+      }
+    } catch {
+      // 에러 시 무시
+    }
+  }
+
+  private requestJobplanetRating(companyName: string): Promise<JobplanetRatingInfo | null> {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        {
+          type: 'FETCH_JOBPLANET_RATING',
+          companyName,
+        } as ExtensionMessage,
+        (response: JobplanetRatingInfo) => {
+          if (chrome.runtime?.lastError) {
+            resolve(null);
+          } else {
+            resolve(response || null);
+          }
+        }
+      );
+    });
   }
 
   private notifyBadgeUpdate(count: number): void {

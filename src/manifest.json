@@ -17,7 +17,8 @@
   "host_permissions": [
     "https://*.wanted.co.kr/*",
     "https://*.saramin.co.kr/*",
-    "https://*.jobkorea.co.kr/*"
+    "https://*.jobkorea.co.kr/*",
+    "https://*.jobplanet.co.kr/*"
   ],
   "action": {
     "default_popup": "src/popup/index.html",

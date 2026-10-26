@@ -1,5 +1,6 @@
 import { ExtensionMessage } from '../types';
 import { BADGE_CONFIG } from '../constants';
+import { JobplanetService } from '../core/jobplanet';
 
 /**
  * Background Service Worker
@@ -29,7 +30,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
   });
 }
 
-// 메시지 수신 및 뱃지 업데이트
+// 메시지 수신 (뱃지 업데이트 및 잡플래닛 평점 조회)
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
     if (message.type === 'UPDATE_BADGE') {
@@ -40,6 +41,23 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
       sendResponse({ success: true });
       return true;
     }
+
+    if (message.type === 'FETCH_JOBPLANET_RATING') {
+      JobplanetService.getInstance()
+        .getRating(message.companyName)
+        .then((info) => {
+          sendResponse(info);
+        })
+        .catch(() => {
+          sendResponse({
+            status: 'error',
+            companyName: message.companyName,
+            cachedAt: Date.now(),
+          });
+        });
+      return true; // 비동기 응답 유지
+    }
   });
 }
+
 
