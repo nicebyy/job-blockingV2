@@ -49,6 +49,7 @@ export const Popup: React.FC = () => {
     if (url.includes(SITE_DOMAINS.WANTED)) return 'wanted';
     if (url.includes(SITE_DOMAINS.SARAMIN)) return 'saramin';
     if (url.includes(SITE_DOMAINS.JOBKOREA)) return 'jobkorea';
+    if (url.includes(SITE_DOMAINS.REMEMBER)) return 'remember';
     return 'custom';
   };
 

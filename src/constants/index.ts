@@ -4,7 +4,7 @@
 export const APP_INFO = {
   NAME: 'Job Blocking V2',
   FULL_NAME: 'Job Blocking V2 - 채용 사이트 공고 필터링',
-  DESCRIPTION: '원티드, 사람인, 잡코리아 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
+  DESCRIPTION: '원티드, 사람인, 잡코리아, 리멤버 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
   VERSION: '0.1.0',
 } as const;
 
@@ -45,6 +45,7 @@ export const SITE_DOMAINS = {
   WANTED: 'wanted.co.kr',
   SARAMIN: 'saramin.co.kr',
   JOBKOREA: 'jobkorea.co.kr',
+  REMEMBER: 'rememberapp.co.kr',
   JOBPLANET: 'jobplanet.co.kr',
   BLIND: 'teamblind.com',
 } as const;
@@ -135,19 +136,19 @@ export const SARAMIN_SELECTORS = {
  */
 export const JOBKOREA_SELECTORS = {
   JOB_CARDS:
-    '.tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, ol.rankList > li, li.dmpItem, .rankList > li, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
+    'li.listItem, li[class*="listItem"], .tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, ol.rankList > li, li.dmpItem, .rankList > li, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
   LIST_CONTAINER:
-    'ol.rankList, .rankListArea, .tplList.tplJobList table tbody, #dev-gi-list .tplJobList table tbody, .tplList table tbody, .lists-cnt, .lists-wrap, .list-default',
+    'ul:has(> li.listItem), ol.rankList, .rankListArea, .tplList.tplJobList table tbody, #dev-gi-list .tplJobList table tbody, .tplList table tbody, .lists-cnt, .lists-wrap, .list-default',
   PAGINATION: '#dvGIPaging .tplPagination, .tplPagination, .page-box, .pagination',
   COMPANY_NAME:
-    '.coTit a.coLink, .coTit a, .coLink, td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
+    '.recruit-company .headers .name a, .recruit-company .headers .name, .recruit-company .name a, .recruit-company .name, .coTit a.coLink, .coTit a, .coLink, td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
   POSITION_TITLE:
-    '.info .tit a.link, .info .tit a, .tit a.dev-recruit-link, td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
+    '.recruit-content .headers .title, .recruit-content .title, a.title.giread, a.giread, .info .tit a.link, .info .tit a, .tit a.dev-recruit-link, td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
   BUTTON_HOST_CELL: '.titBx, td.tplTit .titBx, td.tplTit',
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',
   AD_CLASS: 'special-post, job-recommendation-item',
   CLOSING_DATE: '.side .day, td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
-  FAVORITE_BUTTON: '.devFavor, .tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
+  FAVORITE_BUTTON: '.dev-btn-favor, .devFavor, .tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
   PROMOTION_BANNERS:
     '#dev-TopHeadlineAGI, #TopHeadlineAGI, #dev-HeadlineAGI, #HeadlineAGI, .listTopHeadline, .listHeadline, .listBannerWrap, .job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
 
@@ -173,6 +174,8 @@ export const JOBKOREA_SELECTORS = {
 export const JOBKOREA_CONFIG = {
   PAGING_ENDPOINT: '/Recruit/Home/_GI_List/',
   JOBLIST_PATH: '/recruit/joblist',
+  AI_PATH: '/User/AI',
+  AI_PATH_LOWER: '/user/ai',
   DETAIL_PATH: '/Recruit/GI_Read/',
   DETAIL_PATH_LOWER: '/recruit/gi_read/',
   DEFAULT_PAGE_SIZE: '40',
@@ -184,6 +187,41 @@ export const JOBKOREA_CONFIG = {
     ORDER: 'order',
     TAB_INDEX: 'tabindex',
   },
+} as const;
+
+/**
+ * 리멤버(Remember) DOM 셀렉터 상수
+ */
+export const REMEMBER_SELECTORS = {
+  JOB_CARDS:
+    'li[class*="sc-364cfa5d-0"], div[class*="sc-18344c98-0"], li[class*="sc-d2fb7cfc-0"], a[href*="/job/posting/"]',
+  CARD_CONTAINER:
+    'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], li:has(a[href*="/job/posting/"])',
+  GRID_ITEM: 'li[class*="sc-364cfa5d-0"], li[class*="sc-d2fb7cfc-0"], ul > li',
+  COMPANY_NAME:
+    'p[class*="sc-18344c98-6"], div[class*="sc-d2fb7cfc-7"], a[href*="/job/company/"] div, a[href*="/company/"]',
+  POSITION_TITLE:
+    'h4[class*="sc-18344c98-9"], div[class*="sc-d2fb7cfc-6"], h4',
+  BOOKMARK_BUTTON: 'div[class*="sc-18344c98-8"] button, button[class*="bookmark"]',
+  AD_BADGE: '[class*="ad_badge"], [class*="badge_ad"]',
+  JOB_LINK: 'a[href*="/job/posting/"]',
+  CLOSING_DATE: '[class*="chip"], span',
+
+  // 상세 페이지(/job/posting/\d+) 셀렉터
+  DETAIL_CONTAINER:
+    'div[class*="sc-884c2c6c-2"], div:has(> #posting-detail-title), div:has(> a[href*="/job/company/"])',
+  DETAIL_HEADER: 'div[class*="sc-884c2c6c-2"], div:has(> #posting-detail-title)',
+  DETAIL_TITLE_INNER:
+    'div[class*="sc-a34accef-0"]:has(#posting-detail-title), div:has(#posting-detail-title)',
+  DETAIL_COMPANY_NAME:
+    'a[href*="/job/company/"] div[class*="sc-db17a579-0"], a[href*="/job/company/"]',
+  DETAIL_POSITION_TITLE: '#posting-detail-title, h1[class*="sc-db17a579-0"], h1',
+
+  // 프로모션 및 광고 배너
+  // 1. 프리미엄 대표기업 (#companyJobBoard 또는 a[href*="/job/board/premium-top-companies"])
+  // 2. 상단 캐러셀 배너 광고 (sc-79e4e802-0, img[alt*="광고 배너"], a[href*="job_board_top_banner"])
+  PROMOTION_BANNERS:
+    '#companyJobBoard, section[class*="sc-79e4e802-0"], section:has(img[src*="ad-cdn.rememberapp.co.kr"]), section:has(img[alt*="광고 배너"]), section:has(a[href*="/job/board/premium-top-companies"]), section:has(a[href*="job_board_top_banner"])',
 } as const;
 
 /**
@@ -245,18 +283,21 @@ export const PLATFORM_CONFIG = {
   WANTED: 'wanted',
   SARAMIN: 'saramin',
   JOBKOREA: 'jobkorea',
+  REMEMBER: 'remember',
   CUSTOM: 'custom',
   LABELS: {
     all: '전체 플랫폼',
     wanted: '원티드',
     saramin: '사람인',
     jobkorea: '잡코리아',
+    remember: '리멤버',
     custom: '직접등록',
   },
   BADGE_CLASSES: {
     wanted: 'platform-badge-wanted',
     saramin: 'platform-badge-saramin',
     jobkorea: 'platform-badge-jobkorea',
+    remember: 'platform-badge-remember',
     custom: 'platform-badge-custom',
   },
 } as const;
@@ -264,7 +305,7 @@ export const PLATFORM_CONFIG = {
 export type PlatformFilterType =
   (typeof PLATFORM_CONFIG)[keyof Pick<
     typeof PLATFORM_CONFIG,
-    'ALL' | 'WANTED' | 'SARAMIN' | 'JOBKOREA' | 'CUSTOM'
+    'ALL' | 'WANTED' | 'SARAMIN' | 'JOBKOREA' | 'REMEMBER' | 'CUSTOM'
   >];
 
 /**

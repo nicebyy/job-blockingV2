@@ -3,7 +3,7 @@
   "name": "Job Blocking V2 - 채용 사이트 공고 필터링",
   "short_name": "Job Blocking V2",
   "version": "0.1.0",
-  "description": "원티드, 사람인, 잡코리아 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.",
+  "description": "원티드, 사람인, 잡코리아, 리멤버 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -19,6 +19,7 @@
     "https://*.wanted.co.kr/*",
     "https://*.saramin.co.kr/*",
     "https://*.jobkorea.co.kr/*",
+    "https://*.rememberapp.co.kr/*",
     "https://*.jobplanet.co.kr/*",
     "https://*.teamblind.com/*"
   ],
@@ -40,7 +41,8 @@
       "matches": [
         "https://*.wanted.co.kr/*",
         "https://*.saramin.co.kr/*",
-        "https://*.jobkorea.co.kr/*"
+        "https://*.jobkorea.co.kr/*",
+        "https://*.rememberapp.co.kr/*"
       ],
       "js": ["src/content/index.ts"],
       "css": ["src/content/style.css"],

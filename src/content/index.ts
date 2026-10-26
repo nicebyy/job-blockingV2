@@ -315,6 +315,7 @@ export class ContentController {
     if (name.includes('saramin')) return 'saramin';
     if (name.includes('jobkorea')) return 'jobkorea';
     if (name.includes('wanted')) return 'wanted';
+    if (name.includes('remember')) return 'remember';
     return 'custom';
   }
 

@@ -12,7 +12,8 @@ td.tplTit,
 td.tplTit .titBx,
 .job-recommendation-item,
 ol.rankList > li,
-li.dmpItem {
+li.dmpItem,
+li.listItem {
   position: relative !important;
 }
 
@@ -44,14 +45,17 @@ tr[data-job-filtered="true"][data-filter-mode="blur"]:hover td {
   display: none !important;
 }
 
-/* 원티드 공고 숨김 시 상위 li 그리드 아이템도 완전 숨김 처리하여 빈 공간(빈칸) 없이 다음 공고가 즉각 당겨오도록 보장 */
+/* 원티드, 리멤버 등 공고 숨김 시 상위 li 그리드 아이템도 완전 숨김 처리하여 빈 공간(빈칸) 없이 다음 공고가 즉각 당겨오도록 보장 */
 li:has(> [data-job-filtered="true"][data-filter-mode="hide"]),
 li:has([data-cy="job-card"][data-job-filtered="true"][data-filter-mode="hide"]),
-li[class*="Card_"][data-job-filtered="true"][data-filter-mode="hide"] {
+li[class*="Card_"][data-job-filtered="true"][data-filter-mode="hide"],
+li:has([class*="sc-364cfa5d"][data-job-filtered="true"][data-filter-mode="hide"]),
+li:has([class*="sc-18344c98"][data-job-filtered="true"][data-filter-mode="hide"]),
+li:has([class*="sc-d2fb7cfc"][data-job-filtered="true"][data-filter-mode="hide"]) {
   display: none !important;
 }
 
-/* 사람인, 잡코리아, 원티드 AI 검색/프로모션/적극채용회사 광고 배너 자동 숨김 */
+/* 사람인, 잡코리아, 원티드, 리멤버 AI 검색/프로모션/적극채용회사/프리미엄대표기업/상단광고 배너 자동 숨김 */
 .area_ai_search,
 section.type_searchup,
 section.keyword_up_logo_area,
@@ -76,7 +80,13 @@ div.job-recommendation,
 .listBannerWrap,
 section[class*="AdTargetList_"],
 div[class*="AdTargetList_"],
-[class*="AdTargetList_AdTargetList"] {
+[class*="AdTargetList_AdTargetList"],
+#companyJobBoard,
+section[class*="sc-79e4e802-0"],
+section:has(img[src*="ad-cdn.rememberapp.co.kr"]),
+section:has(img[alt*="광고 배너"]),
+section:has(a[href*="/job/board/premium-top-companies"]),
+section:has(a[href*="job_board_top_banner"]) {
   display: none !important;
 }
 
@@ -126,6 +136,7 @@ td.tplTit:hover .job-filter-btn-group,
 .job-recommendation-item:hover .job-filter-btn-group,
 .rankList li:hover .job-filter-btn-group,
 li.dmpItem:hover .job-filter-btn-group,
+li.listItem:hover .job-filter-btn-group,
 .job-filter-btn-group:hover,
 .job-filter-btn-group:focus-within {
   opacity: 1 !important;
@@ -421,5 +432,28 @@ li.dmpItem .devFavor {
   display: inline-block !important;
   vertical-align: middle !important;
 }
+
+/* 잡코리아 AI 추천 목록(.listItem) 회사명 및 평점 뱃지 정렬 */
+li.listItem {
+  position: relative !important;
+}
+
+li.listItem .recruit-company .headers {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+
+li.listItem .recruit-company .headers .job-filter-ratings-wrap {
+  margin-left: 2px !important;
+}
+
+li.listItem .dev-btn-favor {
+  position: static !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
 
 

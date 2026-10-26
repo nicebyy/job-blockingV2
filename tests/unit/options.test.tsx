@@ -223,6 +223,7 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
     });
     await StorageManager.addBlockItem('잡코리아회사', 'company', { platform: 'jobkorea' });
     await StorageManager.addBlockItem('원티드회사', 'company', { platform: 'wanted' });
+    await StorageManager.addBlockItem('리멤버회사', 'company', { platform: 'remember' });
     await StorageManager.addBlockItem('직접추가회사', 'company'); // platform 미지정 -> custom
 
     await act(async () => {
@@ -230,7 +231,7 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
     });
 
     const items = container.querySelectorAll('.block-item');
-    expect(items.length).toBe(5);
+    expect(items.length).toBe(6);
 
     // 사람인 뱃지 검증
     const saraminBadge = items[0].querySelector('.platform-badge');
@@ -247,8 +248,13 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
     expect(wantedBadge?.textContent?.trim()).toBe('원티드');
     expect(wantedBadge?.classList.contains('platform-badge-wanted')).toBe(true);
 
+    // 리멤버 뱃지 검증
+    const rememberBadge = items[4].querySelector('.platform-badge');
+    expect(rememberBadge?.textContent?.trim()).toBe('리멤버');
+    expect(rememberBadge?.classList.contains('platform-badge-remember')).toBe(true);
+
     // 직접등록(미지정) 뱃지 검증
-    const customBadge = items[4].querySelector('.platform-badge');
+    const customBadge = items[5].querySelector('.platform-badge');
     expect(customBadge?.textContent?.trim()).toBe('직접등록');
     expect(customBadge?.classList.contains('platform-badge-custom')).toBe(true);
   });
@@ -257,29 +263,30 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
     await StorageManager.addBlockItem('사람인기업', 'company', { platform: 'saramin' });
     await StorageManager.addBlockItem('잡코리아기업', 'company', { platform: 'jobkorea' });
     await StorageManager.addBlockItem('원티드기업', 'company', { platform: 'wanted' });
+    await StorageManager.addBlockItem('리멤버기업', 'company', { platform: 'remember' });
 
     await act(async () => {
       root.render(<Options />);
     });
 
     const platformTabs = container.querySelectorAll<HTMLButtonElement>('.platform-tab-btn');
-    expect(platformTabs.length).toBe(5); // 전체, 사람인, 잡코리아, 원티드, 직접등록
+    expect(platformTabs.length).toBe(6); // 전체, 사람인, 잡코리아, 원티드, 리멤버, 직접등록
 
-    // '원티드' 탭 찾기
-    const wantedTab = Array.from(platformTabs).find((btn) => btn.textContent?.includes('원티드'));
-    expect(wantedTab).toBeDefined();
+    // '리멤버' 탭 찾기
+    const rememberTab = Array.from(platformTabs).find((btn) => btn.textContent?.includes('리멤버'));
+    expect(rememberTab).toBeDefined();
 
     await act(async () => {
-      wantedTab?.click();
+      rememberTab?.click();
     });
 
-    expect(wantedTab?.classList.contains('active')).toBe(true);
+    expect(rememberTab?.classList.contains('active')).toBe(true);
 
     const items = container.querySelectorAll('.block-item');
     expect(items.length).toBe(1);
-    expect(items[0].textContent).toContain('원티드기업');
+    expect(items[0].textContent).toContain('리멤버기업');
     expect(items[0].textContent).not.toContain('사람인기업');
-    expect(items[0].textContent).not.toContain('잡코리아기업');
+    expect(items[0].textContent).not.toContain('원티드기업');
   });
 
   it('유형 필터와 플랫폼 필터를 함께 선택했을 때 복합 필터링이 올바르게 동작해야 한다', async () => {

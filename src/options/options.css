@@ -315,6 +315,12 @@ body {
   border: 1px solid #bfdbfe;
 }
 
+.platform-badge-remember {
+  background-color: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
 .platform-badge-custom {
   background-color: #f1f5f9;
   color: #475569;
