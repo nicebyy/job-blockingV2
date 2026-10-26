@@ -185,5 +185,13 @@ export class SaraminAdapter extends BaseSiteAdapter {
     }
     super.injectInlineButton(cardInfo, actions);
   }
+
+  public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
+    return (
+      cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME) ||
+      cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME)
+    );
+  }
 }
+
 

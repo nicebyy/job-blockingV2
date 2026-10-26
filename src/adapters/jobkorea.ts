@@ -82,4 +82,9 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
       closingDate,
     };
   }
+
+  public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
+    return cardElement.querySelector<HTMLElement>(JOBKOREA_SELECTORS.COMPANY_NAME);
+  }
 }
+
