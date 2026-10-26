@@ -167,5 +167,44 @@ describe('StorageManager 단위 테스트', () => {
     expect(list.length).toBe(1);
     expect(list[0].platform).toBe('wanted');
   });
+
+  it('회사명에 (주), 주식회사 등 표기 변형이 있어도 중복 생성되지 않고 간결한 명칭으로 최적화되어야 한다', async () => {
+    // 1. '(주)카카오'로 먼저 등록
+    await StorageManager.addBlockItem('(주)카카오', 'company');
+    let list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1);
+    expect(list[0].pattern).toBe('(주)카카오');
+
+    // 2. 다른 페이지에서 '카카오'로 다시 차단 시도 -> 중복 없이 1개 유지 & 간결한 '카카오'로 패턴 갱신
+    await StorageManager.addBlockItem('카카오', 'company');
+    list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1);
+    expect(list[0].pattern).toBe('카카오');
+
+    // 3. '주식회사 카카오'로 다시 차단 시도 -> 중복 없이 1개 유지
+    await StorageManager.addBlockItem('주식회사 카카오', 'company');
+    list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1);
+    expect(list[0].pattern).toBe('카카오');
+  });
+
+  it('공고 등록 시 회사명 표기에 (주) 유무 차이가 있어도 동일 공고로 감지되어 중복 생성되지 않아야 한다', async () => {
+    // 1. '(주)토스'의 프론트엔드 공고 차단
+    await StorageManager.addBlockItem('job_toss_1', 'job', {
+      title: 'Frontend Engineer',
+      companyName: '(주)토스',
+    });
+    let list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1);
+
+    // 2. 다른 페이지에서 '토스'의 'Frontend Engineer'로 차단 시도 (jobId가 다른 형식이더라도)
+    await StorageManager.addBlockItem('toss:::Frontend Engineer', 'job', {
+      title: 'Frontend Engineer',
+      companyName: '토스',
+    });
+    list = await StorageManager.getBlockList(false);
+    expect(list.length).toBe(1);
+  });
 });
+
 

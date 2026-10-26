@@ -1,6 +1,7 @@
 import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings, JobPlatform } from '../types';
 import { STORAGE_KEYS } from '../constants';
 import { isJobExpired } from '../utils/date';
+import { normalizeCompanyName } from '../utils/text';
 
 
 export class StorageManager {
@@ -192,21 +193,30 @@ export class StorageManager {
     const list = await this.getBlockList(false);
     const cleanPattern = pattern.trim();
 
-    // 중복 검사 (패턴 일치 또는 공고의 경우 회사명+공고제목 일치 여부 다층 검증)
+    // 중복 검사 (패턴 일치, 회사명 정규화 일치, 또는 공고의 경우 회사명+공고제목 일치 여부 다층 검증)
     const existingIndex = list.findIndex((item) => {
       if (item.type !== type) return false;
-      // 1. pattern 동일 여부 (jobId 또는 회사명/키워드)
+      // 1. 단순 pattern 동일 여부 (jobId 또는 회사명/키워드, 대소문자 무시)
       if (item.pattern.toLowerCase() === cleanPattern.toLowerCase()) return true;
 
-      // 2. 공고(job) 타입의 경우: pattern 형태가 다르더라도(예: 하나는 jobId, 하나는 company:::title)
-      // 회사명과 공고 제목이 동일하면 동일한 공고로 판별하여 중복 방지
+      // 2. 회사(company) 타입의 경우: 회사명 정규화(주식회사, (주), 공백 제거) 일치 여부 검증
+      if (type === 'company') {
+        const normClean = normalizeCompanyName(cleanPattern);
+        const normExisting = normalizeCompanyName(item.pattern);
+        if (normClean.length > 0 && normClean === normExisting) {
+          return true;
+        }
+      }
+
+      // 3. 공고(job) 타입의 경우: pattern 형태가 다르더라도(예: 하나는 jobId, 하나는 company:::title)
+      // 회사명(정규화)과 공고 제목이 동일하면 동일한 공고로 판별하여 중복 방지
       if (
         type === 'job' &&
         metadata?.companyName &&
         metadata?.title &&
         item.companyName &&
         item.title &&
-        item.companyName.trim().toLowerCase() === metadata.companyName.trim().toLowerCase() &&
+        normalizeCompanyName(item.companyName) === normalizeCompanyName(metadata.companyName) &&
         item.title.trim().toLowerCase() === metadata.title.trim().toLowerCase()
       ) {
         return true;
@@ -217,6 +227,20 @@ export class StorageManager {
     if (existingIndex !== -1) {
       const existing = list[existingIndex];
       let needsSave = false;
+
+      // 회사(company) 타입인 경우: 기존 패턴에 (주)/주식회사 등이 있고 새 패턴이 더 간결한 경우 간결한 패턴으로 개선
+      if (type === 'company') {
+        const normClean = normalizeCompanyName(cleanPattern);
+        const normExisting = normalizeCompanyName(existing.pattern);
+        if (normClean === normExisting) {
+          const existingHasAffix = /[㈜(주)주식회사]/.test(existing.pattern);
+          const cleanHasAffix = /[㈜(주)주식회사]/.test(cleanPattern);
+          if (existingHasAffix && !cleanHasAffix) {
+            existing.pattern = cleanPattern;
+            needsSave = true;
+          }
+        }
+      }
 
       // 기존 항목이 복합 키(company:::title)였고 새 항목이 고유 jobId인 경우 더 정확한 jobId로 pattern 업그레이드
       if (cleanPattern && !cleanPattern.includes(':::') && existing.pattern.includes(':::')) {
