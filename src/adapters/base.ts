@@ -69,12 +69,6 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
     const group = document.createElement('div');
     group.className = INLINE_BUTTON_CONFIG.CLASSES.CONTAINER;
 
-    // 외부 플랫폼(사람인 등)의 네이티브 마우스/클릭 이벤트 전파 차단 (기업정보 팝업 오작동 원천 방지)
-    group.addEventListener('mouseenter', (e) => e.stopPropagation());
-    group.addEventListener('mouseover', (e) => e.stopPropagation());
-    group.addEventListener('mousedown', (e) => e.stopPropagation());
-    group.addEventListener('click', (e) => e.stopPropagation());
-
     // 1. [이 공고만 숨기기] 버튼 (jobId 또는 공고 제목 단위)
     if (onBlockJob) {
       const hideJobBtn = document.createElement('button');
@@ -92,18 +86,14 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
         e.preventDefault();
         e.stopPropagation();
 
-        // 즉각적인 시각 피드백 (낙관적 UI: 클릭 순간 바로 카드를 페이드아웃하여 반응성 극대화)
-        cardInfo.cardElement.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
-        cardInfo.cardElement.style.opacity = '0';
-        cardInfo.cardElement.style.transform = 'scale(0.97)';
-        cardInfo.cardElement.style.pointerEvents = 'none';
+        // 즉시 DOM 완전 숨김 처리 (0ms 즉각 반응 보장)
+        cardInfo.cardElement.style.setProperty('display', 'none', 'important');
+        cardInfo.cardElement.setAttribute('data-job-filtered', 'true');
+        cardInfo.cardElement.setAttribute('data-filter-mode', 'hide');
 
         try {
           await onBlockJob(cardInfo);
         } catch (err) {
-          cardInfo.cardElement.style.opacity = '1';
-          cardInfo.cardElement.style.transform = '';
-          cardInfo.cardElement.style.pointerEvents = '';
           console.error('[JobFilter] Failed to block job:', err);
         }
       });
@@ -131,17 +121,14 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
       e.preventDefault();
       e.stopPropagation();
 
-      cardInfo.cardElement.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
-      cardInfo.cardElement.style.opacity = '0';
-      cardInfo.cardElement.style.transform = 'scale(0.97)';
-      cardInfo.cardElement.style.pointerEvents = 'none';
+      // 즉시 DOM 완전 숨김 처리 (0ms 즉각 반응 보장)
+      cardInfo.cardElement.style.setProperty('display', 'none', 'important');
+      cardInfo.cardElement.setAttribute('data-job-filtered', 'true');
+      cardInfo.cardElement.setAttribute('data-filter-mode', 'hide');
 
       try {
         await onBlockCompany(cardInfo.companyName);
       } catch (err) {
-        cardInfo.cardElement.style.opacity = '1';
-        cardInfo.cardElement.style.transform = '';
-        cardInfo.cardElement.style.pointerEvents = '';
         console.error('[JobFilter] Failed to block company:', err);
       }
     });
