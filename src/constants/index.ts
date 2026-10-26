@@ -45,6 +45,7 @@ export const SITE_DOMAINS = {
   WANTED: 'wanted.co.kr',
   SARAMIN: 'saramin.co.kr',
   JOBKOREA: 'jobkorea.co.kr',
+  JOBPLANET: 'jobplanet.co.kr',
 } as const;
 
 /**
@@ -160,4 +161,45 @@ export const INLINE_BUTTON_CONFIG = {
     VIEW_BOX: '0 0 24 24',
   },
 } as const;
+
+/**
+ * 잡플래닛 연동 및 봇 차단 우회 요청 설정 상수
+ */
+export const JOBPLANET_CONFIG = {
+  BASE_URL: 'https://www.jobplanet.co.kr',
+  SEARCH_API_ENDPOINT: 'https://www.jobplanet.co.kr/search/companies',
+  COMPANY_BASE_URL: 'https://www.jobplanet.co.kr/companies',
+  HEADERS: {
+    RSC: '1',
+    ACCEPT: '*/*',
+    ACCEPT_LANGUAGE: 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+  },
+  CACHE_KEY_PREFIX: 'jobplanet_score_',
+  CACHE_TTL_MS: 7 * 24 * 60 * 60 * 1000, // 정상 평점 캐시 7일
+  NEGATIVE_CACHE_TTL_MS: 24 * 60 * 60 * 1000, // 미존재/동명기업/에러 캐시 1일
+  REQUEST_DELAY_MS: 300, // 봇 차단 방지 순차 호출 지연(ms)
+  REQUEST_TIMEOUT_MS: 8000, // 타임아웃 8초
+} as const;
+
+/**
+ * 잡플래닛 평점 뱃지 UI 설정 상수
+ */
+export const RATING_BADGE_CONFIG = {
+  CLASSES: {
+    CONTAINER: 'job-filter-rating-badge',
+    STAR: 'job-filter-rating-star',
+    SCORE: 'job-filter-rating-score',
+    HIGH: 'job-filter-rating-high',
+    MEDIUM: 'job-filter-rating-medium',
+    LOW: 'job-filter-rating-low',
+    DEFAULT: 'job-filter-rating-default',
+  },
+  THRESHOLDS: {
+    HIGH: 3.5,
+    MEDIUM: 2.8,
+  },
+  TOOLTIP: (rating: number, companyName: string) =>
+    `'${companyName}' 잡플래닛 평점 ${rating.toFixed(1)} / 5.0 (클릭 시 잡플래닛으로 이동)`,
+} as const;
+
 
