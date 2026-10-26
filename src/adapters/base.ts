@@ -55,8 +55,9 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   ): void {
     if (!cardInfo.cardElement || !cardInfo.companyName) return;
 
-    // 호버 시 노출을 위한 호스트 클래스 부여
+    // 호버 시 노출 및 정확한 카드 내 배치를 위한 호스트 클래스 및 relative 포지셔닝 보장
     cardInfo.cardElement.classList.add(INLINE_BUTTON_CONFIG.CLASSES.CARD_HOST);
+    cardInfo.cardElement.style.position = 'relative';
 
     if (cardInfo.cardElement.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`)) {
       return;
@@ -67,6 +68,12 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
 
     const group = document.createElement('div');
     group.className = INLINE_BUTTON_CONFIG.CLASSES.CONTAINER;
+
+    // 외부 플랫폼(사람인 등)의 네이티브 마우스/클릭 이벤트 전파 차단 (기업정보 팝업 오작동 원천 방지)
+    group.addEventListener('mouseenter', (e) => e.stopPropagation());
+    group.addEventListener('mouseover', (e) => e.stopPropagation());
+    group.addEventListener('mousedown', (e) => e.stopPropagation());
+    group.addEventListener('click', (e) => e.stopPropagation());
 
     // 1. [이 공고만 숨기기] 버튼 (jobId 또는 공고 제목 단위)
     if (onBlockJob) {
