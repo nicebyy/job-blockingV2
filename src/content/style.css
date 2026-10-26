@@ -10,7 +10,9 @@ tr[data-gno],
 td.tplTit,
 .titBx,
 td.tplTit .titBx,
-.job-recommendation-item {
+.job-recommendation-item,
+ol.rankList > li,
+li.dmpItem {
   position: relative !important;
 }
 
@@ -65,6 +67,13 @@ div.job-recommendation,
 .area-recommend-job,
 .dev-banner,
 #dev-BNewsAGI,
+#dev-TopHeadlineAGI,
+#TopHeadlineAGI,
+#dev-HeadlineAGI,
+#HeadlineAGI,
+.listTopHeadline,
+.listHeadline,
+.listBannerWrap,
 section[class*="AdTargetList_"],
 div[class*="AdTargetList_"],
 [class*="AdTargetList_AdTargetList"] {
@@ -115,6 +124,8 @@ tr:hover .job-filter-btn-group,
 td.tplTit:hover .job-filter-btn-group,
 .titBx:hover .job-filter-btn-group,
 .job-recommendation-item:hover .job-filter-btn-group,
+.rankList li:hover .job-filter-btn-group,
+li.dmpItem:hover .job-filter-btn-group,
 .job-filter-btn-group:hover,
 .job-filter-btn-group:focus-within {
   opacity: 1 !important;
@@ -389,4 +400,26 @@ td.tplCo .tplBtnFavOn,
   pointer-events: auto !important;
   z-index: 100 !important;
 }
+
+/* 잡코리아 TOP 100(인기 순위) 공고 카드 및 평점 뱃지 정렬 */
+ol.rankList > li .coTit,
+li.dmpItem .coTit {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+
+ol.rankList > li .coTit .job-filter-ratings-wrap,
+li.dmpItem .coTit .job-filter-ratings-wrap {
+  margin-left: 2px !important;
+}
+
+ol.rankList > li .devFavor,
+li.dmpItem .devFavor {
+  position: static !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
 
