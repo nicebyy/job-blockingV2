@@ -238,6 +238,130 @@ describe('Site Adapters 단위 테스트', () => {
       expect(blindBadge?.textContent).toContain('블라인드');
       expect(blindBadge?.textContent).toContain('4.0');
     });
+
+    it('원티드 리스트 카드 수집 시 상위 li 그리드 아이템(LI)을 카드로 수집하여 공고 숨김 시 CSS 그리드 빈칸 없이 카드가 당겨와야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <ul class="List_List__test">
+          <li class="Card_Card__item1">
+            <div data-cy="job-card" class="JobCard_JobCard__test">
+              <a href="/wd/111">
+                <span class="companyName">회사1</span>
+                <strong class="JobCard_title">프론트1</strong>
+              </a>
+            </div>
+          </li>
+          <li class="Card_Card__item2">
+            <div data-cy="job-card" class="JobCard_JobCard__test">
+              <a href="/wd/222">
+                <span class="companyName">회사2</span>
+                <strong class="JobCard_title">백엔드2</strong>
+              </a>
+            </div>
+          </li>
+        </ul>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(2);
+      expect(cards[0].tagName).toBe('LI');
+      expect(cards[1].tagName).toBe('LI');
+      expect(cards[0].classList.contains('Card_Card__item1')).toBe(true);
+      expect(cards[1].classList.contains('Card_Card__item2')).toBe(true);
+
+      const info1 = adapter.parseCard(cards[0]);
+      expect(info1?.companyName).toBe('회사1');
+      expect(info1?.jobId).toBe('111');
+
+      // FilterEngine hide 적용 시 li 요소 자체가 display: none이 되는지 확인
+      const engine = new FilterEngine({
+        mode: 'hide',
+        blurIntensity: 5,
+        hideAds: false,
+        showInlineButton: true,
+        enableInfiniteScroll: true,
+        showJobplanetRating: true,
+        showBlindRating: true,
+      });
+
+      engine.applyFilter(cards[0], 'hide');
+      expect(cards[0].style.display).toBe('none');
+      expect(cards[0].getAttribute('data-job-filtered')).toBe('true');
+      expect(cards[0].getAttribute('data-filter-mode')).toBe('hide');
+    });
+
+    it('원티드 리스트 카드에서 [공고숨김] 클릭 시 상위 li 그리드 아이템이 즉시 display: none으로 은닉되어야 한다', async () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <ul class="List_List__test">
+          <li class="Card_Card__item1">
+            <div data-cy="job-card" class="JobCard_JobCard__test">
+              <a href="/wd/333">
+                <span class="companyName">당겨오기회사</span>
+                <strong class="JobCard_title">테스트엔지니어</strong>
+              </a>
+            </div>
+          </li>
+        </ul>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards[0].tagName).toBe('LI');
+      const cardInfo = adapter.parseCard(cards[0])!;
+
+      const onBlockJob = vi.fn().mockResolvedValue(undefined);
+      const onBlockCompany = vi.fn().mockResolvedValue(undefined);
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      const hideJobBtn = cards[0].querySelector<HTMLButtonElement>('.job-filter-btn-job')!;
+      expect(hideJobBtn).not.toBeNull();
+
+      hideJobBtn.click();
+
+      // 상위 li가 완전히 display: none 처리되어 CSS Grid가 셀을 수축(Reflow)시키고 다음 카드를 당겨옴
+      expect(cards[0].style.display).toBe('none');
+      expect(cards[0].getAttribute('data-job-filtered')).toBe('true');
+      expect(cards[0].getAttribute('data-filter-mode')).toBe('hide');
+      expect(onBlockJob).toHaveBeenCalled();
+    });
+
+    it('cardElement가 자식 div로 전달된 경우에도 injectInlineButton이 상위 li를 찾아 즉시 display: none 처리해야 한다', () => {
+      const li = document.createElement('li');
+      li.className = 'Card_Card__wrapper';
+      const childCard = document.createElement('div');
+      childCard.setAttribute('data-cy', 'job-card');
+      childCard.innerHTML = `
+        <a href="/wd/444">
+          <span class="companyName">서브카드회사</span>
+          <strong class="JobCard_title">데브옵스</strong>
+        </a>
+      `;
+      li.appendChild(childCard);
+
+      const cardInfo = {
+        cardElement: childCard,
+        companyName: '서브카드회사',
+        title: '데브옵스',
+        jobId: '444',
+        isAd: false,
+      };
+
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      const hideJobBtn = childCard.querySelector<HTMLButtonElement>('.job-filter-btn-job')!;
+      expect(hideJobBtn).not.toBeNull();
+
+      hideJobBtn.click();
+
+      // childCard뿐만 아니라 상위 li도 즉시 display: none 처리됨
+      expect(li.style.display).toBe('none');
+      expect(li.getAttribute('data-job-filtered')).toBe('true');
+      expect(li.getAttribute('data-filter-mode')).toBe('hide');
+    });
   });
 
   describe('SaraminAdapter DOM 파싱', () => {
