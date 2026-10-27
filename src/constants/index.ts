@@ -17,6 +17,22 @@ export const STORAGE_KEYS = {
 } as const;
 
 /**
+ * chrome.storage.sync 용량 한도 및 분할 저장 설정 상수
+ *
+ * sync 는 항목(per-item) 8KB 제한이 있어, 차단 목록 전체를 단일 키로 저장하면
+ * 공고 30건 내외에서 초과하여 조용히 실패한다. 안전 마진을 두고 분할 저장한다.
+ * @see https://developer.chrome.com/docs/extensions/reference/api/storage#property-sync-QUOTA_BYTES_PER_ITEM
+ */
+export const SYNC_STORAGE_CONFIG = {
+  QUOTA_BYTES: 102_400, // sync 전체 용량 한도
+  QUOTA_BYTES_PER_ITEM: 8_192, // sync 항목 1개당 용량 한도
+  MAX_ITEMS: 512, // sync 최대 항목 수
+  SAFETY_MARGIN_RATIO: 0.85, // 청크 크기 계산 시 여유분
+  CHUNK_KEY_PREFIX: 'job_filter_block_list_chunk_',
+  CHUNK_COUNT_KEY: 'job_filter_block_list_chunk_count',
+} as const;
+
+/**
  * 브라우저 툴바 뱃지 설정 상수
  */
 export const BADGE_CONFIG = {
@@ -36,6 +52,14 @@ export const FILTER_CONFIG = {
   STATUS_MESSAGE_TIMEOUT_MS: 2000,
   ATTR_JOB_FILTERED: 'data-job-filtered',
   ATTR_FILTER_MODE: 'data-filter-mode',
+  ATTR_BLOCKED_TYPE: 'data-blocked-type',
+  /**
+   * 필터가 적용된 원인. 'manual' 은 사용자가 카드의 [공고숨김] 버튼을 직접 누른 경우로,
+   * 차단 목록/설정과 무관하게 숨김 상태를 유지해야 한다.
+   * 반면 목록 기반 필터(회사/키워드/광고)는 해제 시 반드시 복원되어야 한다.
+   */
+  ATTR_FILTER_ORIGIN: 'data-filter-origin',
+  FILTER_ORIGIN_MANUAL: 'manual',
 } as const;
 
 /**
@@ -59,6 +83,12 @@ export const EXPIRATION_CONFIG = {
   ADDITIONAL_DAYS_AFTER_CLOSING: 30, // 마감시각 이후 보관 유지 일수 (+30일)
   DEFAULT_EXPIRATION_DAYS: 30, // 마감일 특정 불가 시 기본 보관 일수 (+30일)
   MS_PER_DAY: 86_400_000, // 24 * 60 * 60 * 1000
+  /**
+   * 연도 미표기(MM/DD) 마감일이 기준일보다 이 일수보다 더 과거로 계산되면
+   * "다음 해 마감"으로 간주하여 1년 롤오버한다.
+   * (연말에 등록된 "~03/15" 공고가 과거로 계산되어 즉시 만료 삭제되는 것을 방지)
+   */
+  PAST_DATE_ROLLOVER_THRESHOLD_DAYS: 60,
 } as const;
 
 /**
@@ -135,8 +165,10 @@ export const SARAMIN_SELECTORS = {
 
 
   // 프로모션 및 광고 배너(스폰서 상품 공고 배너, AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너, 네이버 파워링크, Nest 배너 등)
+  // 참고: 사람인은 파워링크 요소가 id="powerLink" / id="powerLink1" / id="powerLink2" 또는
+  // class="powerlink" 로 혼재하고, 예전 #section_contents 는 실제로 class="wrap_section_contents" 이다.
   PROMOTION_BANNERS:
-    '#powerLink, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, #section_contents, section[aria-label="추천공고"], .list_curation_wrap, .wrap_list_banner, .banner_list, .list_product, .wrap_nest, .nest-standby-banner, .recruit_line_banner, .wrap_banner_line, .powerlink',
+    '.powerlink, #powerLink, #powerLink1, #powerLink2, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, .wrap_section_contents, section[aria-label="추천공고"], .list_curation_wrap, .wrap_list_banner, .banner_list, .list_product, .wrap_nest, .nest-standby-banner, .recruit_line_banner, .wrap_banner_line',
 } as const;
 
 /**
@@ -290,6 +322,12 @@ export const UI_MESSAGES = {
     INFINITE_SCROLL: '무한 스크롤 & 자동 채우기',
     JOBPLANET_RATING: '잡플래닛 평점 표시',
     BLIND_RATING: '블라인드 평점 표시',
+    COMPANY_MATCH_EXACT: '회사명 정확 일치',
+    COMPANY_MATCH_CONTAINS: '회사명 부분 일치 (계열사 포함)',
+  },
+  COMPANY_MATCH_TOOLTIPS: {
+    EXACT: '입력한 회사명과 정확히 일치하는 기업만 차단합니다. (예: "카카오" 차단 시 카카오뱅크는 유지)',
+    CONTAINS: '입력한 회사명이 포함된 모든 기업을 차단합니다. (예: "카카오" 차단 시 카카오뱅크·카카오페이도 차단)',
   },
 } as const;
 
