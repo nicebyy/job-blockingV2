@@ -1,11 +1,58 @@
 # 플랫폼별 통합 테스트 결과 보고
 
-- **작성일**: 2026-10-27
-- **브랜치**: `test/platform-integration` (base: `origin/develop` @ `1db9c61`)
+- **작성일**: 2026-10-27 (정정 반영)
 - **테스트 파일**:
-  - `tests/unit/platform-integration.test.ts` — 73개 (5개 플랫폼 × 공통 시나리오)
-  - `tests/unit/platform-integration-bugs.test.ts` — 5개 (발견 결함 문서화)
+  - `tests/unit/platform-integration.test.ts` — 74개 (5개 플랫폼 × 공통 시나리오)
+  - `tests/unit/platform-integration-bugs.test.ts` — 5개 (회귀 + 미해결 결함)
   - `tests/unit/helpers/platform-fixtures.ts`, `mock-chrome.ts` — 공용 헬퍼
+
+---
+
+## 0. 정정 이력 (중요)
+
+초기 보고서에서 **리멤버(Remember) 목록 셀렉터 불일치**를 `[High] BUG-1` 로 기재했으나,
+**이것은 오진이었습니다.** 철회합니다.
+
+### 오진의 원인
+
+기존 `tests/fixtures/remember_postings.html` 은 리멤버 목록 페이지의 **정상 렌더링 상태가 아니라
+Next.js 하이드레이션 직후의 스켈레톤 로딩 상태**를 캡처한 것이었습니다.
+
+| 확인 항목 | 스켈레톤 픽스처(기존) | 렌더링 완료 픽스처(신규) |
+| :--- | :---: | :---: |
+| `h3`/`h4` 실제 공고 제목 | **0개** | 다수 |
+| `sc-3c9cd5df` (코드 기대 클래스) | **0개** | **50개** |
+| `sc-364cfa5d` (코드 기대 클래스) | **0개** | **30개** |
+| `sc-289d3ccd` (코드 기대 클래스) | **0개** | **10개** |
+| `skeleton`/`loading` 키워드 | 16회 | - |
+| `__NEXT_DATA__` 내 공고 배열 | 없음 (`postingId` 0개) | - |
+| `getJobCardElements()` | 1 | **91** |
+| `parseCard()` 성공 | **0** | **90** |
+
+스켈레톤 상태의 `<li>` 는 아래처럼 **빈 placeholder div 만** 담고 있었습니다.
+
+```
+<li class="sc-a34accef-0 iVrFvG">
+  <div class="sc-3510865a-0 coSflS">
+    <div class="sc-3510865a-1 sc-ae9ca0f6-0 jqmzNB fIhlUp"></div>   <!-- 빈 div -->
+  </div>
+  ...
+</li>
+```
+
+`/job/posting/` 링크 2개도 실제 공고가 아니라 **광고 배너**(`ad-cdn`, `alt="광고"`, `rel="sponsored"`)였습니다.
+
+### 결론
+
+**리멤버는 정상 동작합니다.** 실제 브라우저에서 렌더링이 끝난 DOM 에서는
+91개 카드 중 90개가 회사명·제목·jobId 까지 완벽히 파싱됩니다.
+코드가 기대하는 styled-components 해시도 실제로 존재합니다.
+
+### 재발 방지
+
+React/Next.js 같은 SPA 사이트는 정적 HTML 만으로 검증할 수 없습니다. 이번에
+`scripts/collect-rendered-fixture.mjs` (Playwright 로 JS 실행 후 DOM 덤프)를 추가하여
+**렌더링 완료 DOM 을 픽스처로 사용**하도록 변경했습니다.
 
 ---
 
@@ -27,16 +74,18 @@
 
 ### 픽스처
 
-| 플랫폼 | 파일 | 크기 | 카드 수 |
-| :--- | :--- | ---: | ---: |
-| 원티드 | `wanted_wdlist.html` (기존) | 312KB | 20 |
-| 사람인 | `saramin_search.html` (**신규 생성**) | 46KB | 8 |
-| 잡코리아 | `jobkorea_joblist.html` (기존) | 1,094KB | 63 |
-| 리멤버 | `remember_postings.html` (기존) | 135KB | 1 (파싱 0) |
-| 점핏 | `jumpit_positions.html` (기존) | 64KB | 16 |
+| 플랫폼 | 파일 | 크기 | 카드 수 | 수집 방식 |
+| :--- | :--- | ---: | ---: | :--- |
+| 원티드 | `wanted_wdlist_rendered.html` | 291KB | 60 | **실브라우저 렌더링** |
+| 사람인 | `saramin_search.html` | 46KB | 8 | 원본 샘플에서 구조 보존 추출 |
+| 잡코리아 | `jobkorea_joblist.html` | 1,094KB | 63 | 정적 HTML (SSR) |
+| 리멤버 | `remember_postings_rendered.html` | 243KB | 91 | **실브라우저 렌더링** |
+| 점핏 | `jumpit_positions.html` | 64KB | 16 | 정적 HTML (SSR) |
 
-> 사람인 픽스처는 2.4MB 원본 샘플에서 실제 DOM 구조를 그대로 보존하며 8개 카드만
-> 잘라내 생성했다 (`scripts/make-saramin-fixture.mjs`). 셀렉터/구조를 임의로 바꾸지 않았다.
+> 원티드/리멤버는 SPA 이므로 `scripts/collect-rendered-fixture.mjs` 로
+> Playwright(Chromium)에서 JS 실행 + 스크롤 + 렌더 안정화 후 DOM 을 덤프했다.
+> `scripts/clean-rendered-fixture.mjs` 로 script/iframe/preload 만 제거하고
+> **DOM 구조와 클래스는 원본 그대로 유지**했다.
 
 ---
 
@@ -44,35 +93,17 @@
 
 | 플랫폼 | 카드 추출 | 파싱 | 회사 차단 | 공고 숨김 | 광고 숨김 | 상태 |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **원티드** | 20 | 20/20 | ✅ | ✅ | ✅ | 정상 (단, 마감일 버그 ↓) |
+| **원티드** | 60 | 60/60 | ✅ | ✅ | ✅ | 정상 (BUG-2 참고) |
 | **사람인** | 8 | 8/8 | ✅ | ✅ | ✅ | 정상 |
-| **잡코리아** | 63 | 63/63 | ✅ | ✅ | ✅ (3건) | 정상 |
-| **리멤버** | 1 | **0/1** | ❌ | ❌ | ✅ | **셀렉터 불일치 (BUG-1)** |
+| **잡코리아** | 63 | 63/63 | ✅ | ✅ | ✅ | 정상 |
+| **리멤버** | 91 | **90/91** | ✅ | ✅ | ✅ | **정상** |
 | **점핏** | 16 | 16/16 | ✅ | ✅ | ✅ | 정상 |
 
-**결과: 5개 중 4개 플랫폼 정상, 리멤버 1개 목록 기능 전면 불능**
+**결과: 5개 플랫폼 전부 정상 동작 확인**
 
 ---
 
 ## 3. 발견 결함
-
-### [BUG-1 / High] 리멤버(Remember) 목록 셀렉터가 실제 DOM과 불일치
-
-- **위치**: `src/constants/index.ts` `REMEMBER_SELECTORS.JOB_CARDS` / `CARD_CONTAINER` / `GRID_ITEM`
-- **원인**: 리멤버가 styled-components 해시를 변경했다. 코드는 `sc-364cfa5d-0`, `sc-18344c98-0`,
-  `sc-d2fb7cfc-0`, `sc-3c9cd5df-0`, `sc-289d3ccd-0` 를 기대하지만, 실제 픽스처에는
-  이 중 **하나도 존재하지 않는다**. 실제로는 `sc-802949b9-0`, `sc-3510865a`, `sc-ae9ca0f6`,
-  `sc-a34accef` 등이 쓰인다.
-- **실측 영향**:
-  - `getJobCardElements()` → 카드 1개만 반환 (href 폴백 `a[href*="/job/posting/"]` 에 걸린 요소)
-  - `parseCard()` → **null 반환** (회사명/제목 모두 추출 실패)
-  - 결과: 목록에서 **회사 차단·공고 숨김·평점 뱃지 전부 동작하지 않음**
-- **완화 요인**: 상세페이지(`/job/posting/\d+`)는 `isDetailPage` 가 별도 URL 패턴으로 동작하므로
-  상세페이지 차단은 정상. 그러나 그 진입 경로인 목록 화면이 무력하다.
-- **권장 수정**: 해시 클래스 의존을 줄이고 **의미 있는 속성/구조 기반 셀렉터**로 전환할 것.
-  예) `li:has(a[href*="/job/posting/"])`, `[data-testid]`, 또는 `a[href*="/job/posting/"]` 의
-  가장 가까운 `li` 조상. 해시는 배포마다 바뀌므로 회귀가 반복된다.
-- **테스트**: `platform-integration-bugs.test.ts` 의 `[BUG-1]` (현재 `it.fails` — 수정되면 실패하여 갱신 신호)
 
 ### [BUG-2 / Medium] 원티드(Wanted) 마감일 추출이 지역·경력 텍스트를 반환
 
@@ -80,22 +111,23 @@
   `span[class*="CompanyNameWithLocationPeriod__location"]`
 - **원인**: 이 클래스는 실제로 **"서울 서초구 · 경력 4-8년"** 같은 지역/경력 정보를 담는다.
   마감일이 아니다. 코드 주석상 마감일로 의도한 것으로 보이나 실제 DOM과 의미가 다르다.
-- **실측**: 원티드 픽스처 20개 카드 전부에서
+- **실측(렌더링 완료 DOM)**: 원티드 카드 60개 **전부**에서
   `closingDate = "서울 서초구 · 경력 4-8년"` 형태로 추출됨.
+  같은 셀렉터의 다른 후보(`.due-date`, `[class*="dueDate"]`, `[class*="due_date"]`)는
+  **매칭 0개** — 즉 원티드 목록 카드에는 마감일 자체가 없다(상세페이지에서만 노출).
 - **영향**: `calculateJobExpiration()` 이 이 문자열을 파싱하지 못해 `null` → **"등록 시점 + 30일"**
-  기본 만료로 처리된다. 즉 **마감일 기반 TTL 자동 정리가 원티드에서 사실상 동작하지 않는다.**
-  기능이 조용히 성능 저하(graceful degradation)되는 유형이라 사용자가 인지하기 어렵다.
-- **권장 수정**: 마감일 전용 셀렉터(`.due-date`, `[class*="dueDate"]` 등)만 남기고
-  지역/경력 클래스는 제거. 또는 마감일 텍스트 패턴(`D-\d+`, `~ MM/DD`, `상시`)으로 검증 후 채택.
-- **테스트**: `platform-integration-bugs.test.ts` 의 `[BUG-2]` (현재 `it.fails`)
+  기본 만료로 처리된다. 즉 **마감일 기반 TTL 자동 정리가 원티드에서 동작하지 않는다.**
+  다만 이는 "숨긴 공고가 마감 후 30일 뒤 자동 정리되는" **부가 기능**이며,
+  **핵심 필터링(숨김/차단) 동작에는 영향이 없다.**
+- **권장 수정**: 원티드 목록에는 마감일이 없으므로 `CLOSING_DATE` 에서 지역/경력 클래스 셀렉터를
+  제거하고, 마감일이 없는 사이트로 취급(기본 30일 TTL)하는 것이 정확하다.
+  또는 상세페이지에서 마감일을 읽어오는 별도 경로를 둔다.
+- **테스트**: `platform-integration-bugs.test.ts` 의 `[BUG-2]` (현재 `it.fails` — 수정되면 갱신 신호)
 
-### [BUG-3 / Info] 통합 테스트 과정에서 확인된 사항
+### [Info] 잡코리아 회사명 표기 변형
 
-- 잡코리아는 `isAd=true` 카드가 3건 존재하며, `hideAds` 기본값이 `true` 이므로
-  "회사 차단만 검증"하는 테스트에서는 광고 필터를 명시적으로 꺼야 오탐이 나지 않는다.
-  (테스트 헬퍼 `testSettings()` 에서 `hideAds: false` 기본 적용)
-- 잡코리아 회사명은 `케이에이치컨설팅㈜`, `(유)타라스페이스(TARA SPACE)` 처럼 표기 변형이 많다.
-  `normalizeCompanyName` 이 `㈜`/`(유)` 제거 후 비교하므로 **중복 차단 방지 및 매칭은 정상 동작**한다.
+`케이에이치컨설팅㈜`, `(유)타라스페이스(TARA SPACE)` 등 표기 변형이 많으나
+`normalizeCompanyName` 이 `㈜`/`(유)` 제거 후 비교하므로 **중복 차단 방지 및 매칭은 정상**이다.
 
 ---
 
@@ -103,25 +135,24 @@
 
 ```
 tsc --noEmit        : exit 0
-단위 테스트          : 331 passed | 8 skipped (19 files)
-  ├ platform-integration.test.ts      : 73 (65 passed, 8 skipped)
-  └ platform-integration-bugs.test.ts : 5 (4 passed, 1 skipped)
+단위 테스트          : 340 passed (19 files) — skip 0
+  ├ platform-integration.test.ts      : 74
+  └ platform-integration-bugs.test.ts : 5
 E2E 테스트           : 6 passed
 빌드                 : 성공
 ```
 
-- **8 skipped**: 리멤버 관련 테스트 (BUG-1 미해결로 인한 의도적 제외).
-  셀렉터가 수정되면 `KNOWN_BROKEN_SELECTOR_PLATFORMS` 에서 `remember` 를 제거하면
-  자동으로 활성화되어 회귀 검증이 가능하다.
-- **`it.fails`**: BUG-1/BUG-2 는 현재 실패하는 것이 정상이며, 수정되는 순간
+- **skip 0**: 과거 리멤버 오진으로 제외했던 테스트를 모두 활성화했다.
+- **`it.fails`**: BUG-2 는 현재 실패하는 것이 정상이며, 수정되는 순간
   테스트가 깨져 "이 항목을 갱신하라"는 신호를 준다.
 
 ---
 
 ## 5. 권고
 
-1. **BUG-1 (리멤버) 즉시 수정 권장** — 목록 화면의 모든 기능이 죽어 있다.
-   해시 클래스 대신 구조 기반 셀렉터로 전환해 재발을 방지할 것.
-2. **BUG-2 (원티드 마감일)** — TTL 기능이 조용히 무력화되어 있다.
-   잘못된 셀렉터를 제거하고 마감일 패턴 검증을 추가할 것.
-3. 수정 후 `KNOWN_BROKEN_SELECTOR_PLATFORMS` 에서 `remember` 를 제거하고 전체 재검증.
+1. **BUG-2 (원티드 마감일)** — TTL 부가 기능이 무력화되어 있다. 잘못된 셀렉터를 제거할 것.
+   핵심 필터링에는 영향 없으므로 우선순위는 Medium.
+2. **SPA 픽스처 수집 자동화** — `scripts/collect-rendered-fixture.mjs` 를 유지보수 도구로
+   편입하여, 사이트 구조 변경 시 렌더링 픽스처를 재수집할 수 있게 할 것.
+3. **정적 HTML 픽스처의 한계 인지** — React/Vue/Svelte SPA 는 반드시 렌더링 후 DOM 으로 검증.
+   이번 오진의 교훈이다.

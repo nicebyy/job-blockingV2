@@ -24,7 +24,9 @@ export const PLATFORM_FIXTURES: PlatformFixture[] = [
   {
     platform: '원티드 (Wanted)',
     platformKey: 'wanted',
-    file: 'wanted_wdlist.html',
+    // 실제 브라우저(Playwright)로 렌더링 완료 후 덤프한 DOM.
+    // 정적 HTML 만으로는 SPA 카드가 존재하지 않으므로 렌더링본을 사용한다.
+    file: 'wanted_wdlist_rendered.html',
     url: 'https://www.wanted.co.kr/wdlist/518/872',
   },
   {
@@ -42,8 +44,11 @@ export const PLATFORM_FIXTURES: PlatformFixture[] = [
   {
     platform: '리멤버 (Remember)',
     platformKey: 'remember',
-    file: 'remember_postings.html',
-    url: 'https://career.rememberapp.co.kr/job/list',
+    // 기존 remember_postings.html 은 Next.js 하이드레이션 직후의 "스켈레톤 로딩 상태"라
+    // 실제 공고 카드가 없다(렌더링 전이라 빈 placeholder div 만 존재).
+    // 실제 브라우저로 렌더링 완료 후 덤프한 DOM 을 사용한다.
+    file: 'remember_postings_rendered.html',
+    url: 'https://career.rememberapp.co.kr/job/postings',
   },
   {
     platform: '점핏 (Jumpit)',

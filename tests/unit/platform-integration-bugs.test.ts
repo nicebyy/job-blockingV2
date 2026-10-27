@@ -1,98 +1,117 @@
 /**
- * 통합 테스트에서 발견된 실제 버그 (재현 테스트)
- *
- * 이 파일은 "현재 코드가 틀렸음"을 고정하는 회귀 테스트가 아니라,
- * 리뷰/통합 테스트 과정에서 발견한 **미해결 결함을 문서화**하는 목적이다.
+ * 통합 테스트에서 발견된 결함 (재현 테스트)
  *
  * 정책:
- *  - 이미 알려진 결함은 `it.fails` 로 표시하여, 수정되는 순간 테스트가 깨져
+ *  - 미해결 결함은 `it.fails` 로 표시한다. 수정되는 순간 테스트가 실패하며
  *    "이제 고쳐졌으니 이 항목을 갱신하라"는 신호를 준다.
  *  - 절대 통과를 위해 기대값을 낮추지 않는다. 실제 사용자 영향도를 기준으로 단언한다.
+ *
+ * [정정 이력]
+ *  2026-10-27: 초기 작성 시 "리멤버 목록 셀렉터 불일치(BUG-1)" 를 High 로 보고했으나,
+ *              원인은 코드가 아니라 **테스트 픽스처**였다. 기존
+ *              tests/fixtures/remember_postings.html 은 Next.js 하이드레이션 직후의
+ *              스켈레톤 로딩 상태를 캡처한 것이라 실제 공고 카드가 없었다.
+ *              실제 브라우저로 렌더링 완료 후 덤프한 DOM 에서는
+ *              91개 카드 중 90개가 정상 파싱되며, 코드가 기대하는 styled-components
+ *              해시(sc-3c9cd5df, sc-364cfa5d, sc-289d3ccd)도 정상 존재한다.
+ *              => BUG-1 은 오진이었으므로 철회한다.
  */
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { AdapterRegistry } from '../../src/adapters';
 import { RememberAdapter } from '../../src/adapters/remember';
 import { WantedAdapter } from '../../src/adapters/wanted';
 import { WANTED_SELECTORS } from '../../src/constants';
 
-describe('[BUG-1] 리멤버(Remember) 목록 셀렉터가 실제 DOM 과 불일치', () => {
-  /**
-   * 발견 경위:
-   *  tests/fixtures/remember_postings.html 에는 공고 목록 카드가 존재하지만,
-   *  REMEMBER_SELECTORS.JOB_CARDS 가 기대하는 styled-components 클래스
-   *  (sc-364cfa5d-0 등)가 실제 HTML 에 하나도 없다. 리멤버가 배포하면서
-   *  styled-components 해시가 변경되었기 때문이다.
-   *
-   * 영향:
-   *  - 목록에서 회사 차단/공고 숨김/평점 뱃지가 전혀 동작하지 않는다.
-   *  - href 기반 폴백(`a[href*="/job/posting/"]`)이 일부 커버하지만,
-   *    픽스처 기준 매칭되는 링크가 2개뿐이고 그마저 카드 컨테이너로 승격되지 않아
-   *    parseCard() 가 null 을 반환한다.
-   */
-  const fixture = path.resolve(__dirname, '../fixtures/remember_postings.html');
+describe('[회귀] 리멤버 렌더링 DOM 이 정상 파싱되어야 한다 (과거 오진 정정)', () => {
+  const fixture = path.resolve(__dirname, '../fixtures/remember_postings_rendered.html');
 
-  const loadRemember = () => {
+  const load = () => {
     const html = fs
       .readFileSync(fixture, 'utf-8')
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
     document.body.innerHTML = html;
   };
 
-  it('선택자 기대 클래스가 실제 HTML 에 존재하지 않음을 확인한다 (회귀 감지용)', () => {
-    loadRemember();
-    const expectedHashes = ['sc-364cfa5d-0', 'sc-18344c98-0', 'sc-d2fb7cfc-0', 'sc-3c9cd5df-0', 'sc-289d3ccd-0'];
-
-    const present = expectedHashes.filter((cls) => document.querySelector(`[class*="${cls}"]`) !== null);
-    // 현재는 0개 — 리멤버 DOM 구조가 바뀌었다는 증거
-    expect(present.length).toBeLessThan(expectedHashes.length);
-
-    // 어떤 해시가 실제로 쓰이는지 기록 (수정 시 참고)
-    const actualHashes = new Set<string>();
-    document.querySelectorAll('li[class*="sc-"]').forEach((el) => {
-      const m = /sc-[0-9a-f]{8}/.exec(el.className);
-      if (m) actualHashes.add(m[0]);
-    });
-    expect(actualHashes.size).toBeGreaterThan(0);
+  it('실제 렌더링 DOM 에서 공고 카드가 다수 추출되어야 한다', () => {
+    load();
+    const adapter = new RememberAdapter();
+    const cards = adapter.getJobCardElements(document);
+    expect(cards.length).toBeGreaterThan(10);
   });
 
-  it.fails('리멤버 목록에서 공고 카드가 파싱되어야 한다 (현재 실패 = 미해결 결함)', () => {
-    loadRemember();
+  it('파싱 성공률이 높아야 한다 (회사명/제목/jobId)', () => {
+    load();
     const adapter = new RememberAdapter();
-
     const cards = adapter.getJobCardElements(document);
     const parsed = cards
       .map((c) => adapter.parseCard(c))
       .filter((p): p is NonNullable<typeof p> => p !== null);
 
-    // 기대: 목록 페이지이므로 복수 개의 카드가 파싱되어야 한다
-    expect(parsed.length).toBeGreaterThan(1);
+    expect(parsed.length).toBeGreaterThan(10);
 
-    // 기대: 회사명이 채워져야 한다
     const withCompany = parsed.filter((p) => p.companyName && p.companyName.trim().length > 0);
-    expect(withCompany.length).toBeGreaterThan(0);
+    const withTitle = parsed.filter((p) => p.title && p.title.trim().length > 0);
+    const withJobId = parsed.filter((p) => p.jobId && String(p.jobId).trim().length > 0);
+
+    expect(withCompany.length).toBeGreaterThan(10);
+    expect(withTitle.length).toBeGreaterThan(10);
+    expect(withJobId.length).toBeGreaterThan(10);
+  });
+
+  it('코드가 기대하는 styled-components 해시 클래스가 실제로 존재해야 한다', () => {
+    load();
+    // 과거 "해시가 바뀌어 셀렉터가 죽었다"는 오진을 반증하는 검증
+    const expectedHashes = ['sc-3c9cd5df', 'sc-364cfa5d', 'sc-289d3ccd'];
+    const present = expectedHashes.filter(
+      (cls) => document.querySelector(`[class*="${cls}"]`) !== null
+    );
+    expect(present.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('스켈레톤 상태 픽스처와 렌더링 완료 픽스처를 구분할 수 있어야 한다', () => {
+    // 기존 픽스처(스켈레톤)에는 실제 카드가 없다는 사실을 문서화
+    const skeleton = fs.readFileSync(
+      path.resolve(__dirname, '../fixtures/remember_postings.html'),
+      'utf-8'
+    );
+    document.body.innerHTML = skeleton.replace(
+      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+      ''
+    );
+
+    const skeletonAdapter = new RememberAdapter();
+    const skeletonCards = skeletonAdapter.getJobCardElements(document);
+    const skeletonParsed = skeletonCards
+      .map((c) => skeletonAdapter.parseCard(c))
+      .filter(Boolean);
+
+    // 스켈레톤은 카드가 거의 없고 파싱도 실패한다 (이것이 과거 오진의 원인)
+    expect(skeletonParsed.length).toBeLessThanOrEqual(1);
   });
 });
 
-describe('[BUG-2] 원티드(Wanted) 마감일 추출이 지역·경력 텍스트를 반환', () => {
+describe('[BUG-2] 원티드 마감일 추출이 지역·경력 텍스트를 반환 (미해결)', () => {
   /**
    * 발견 경위:
    *  WANTED_SELECTORS.CLOSING_DATE 의 첫 번째 셀렉터가
    *  `span[class*="CompanyNameWithLocationPeriod__location"]` 인데,
-   *  실제 원티드에서 이 클래스는 "서울 서초구 · 경력 4-8년" 같은
+   *  실제 렌더링된 원티드 DOM 에서 이 클래스는 "서울 서초구 · 경력 4-8년" 같은
    *  **지역/경력 정보**를 담는다. 마감일이 아니다.
    *
+   *  실측(렌더링 완료 DOM): 카드 60개 전부 closingDate 가 지역/경력 텍스트.
+   *  원티드는 목록 카드에 마감일을 표시하지 않고 상세페이지에서만 노출한다.
+   *  즉 이 셀렉터는 애초에 마감일 소스가 될 수 없다.
+   *
    * 영향:
-   *  parseCard() 의 closingDate 에 잘못된 값이 들어가고,
-   *  calculateJobExpiration() 이 이를 파싱하지 못해(→ null)
-   *  "등록 시점 + 30일" 기본 만료로 처리된다.
-   *  즉 마감일 기반 TTL 자동 정리가 사실상 동작하지 않는다.
-   *  (기능이 조용히 degrade 되는 유형이라 사용자가 인지하기 어렵다)
+   *  calculateJobExpiration() 이 이 문자열을 파싱하지 못해 null -> "등록 시점 + 30일"
+   *  기본 만료가 적용된다. 원티드에서 마감일 기반 TTL 자동 정리가 동작하지 않는다.
+   *  다만 이는 "숨긴 공고가 마감 후 30일 뒤 자동 정리되는" 부가 기능이며,
+   *  핵심 필터링(숨김/차단) 동작에는 영향이 없다.
    */
-  const fixture = path.resolve(__dirname, '../fixtures/wanted_wdlist.html');
+  const fixture = path.resolve(__dirname, '../fixtures/wanted_wdlist_rendered.html');
 
-  const loadWanted = () => {
+  const load = () => {
     const html = fs
       .readFileSync(fixture, 'utf-8')
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
@@ -100,25 +119,18 @@ describe('[BUG-2] 원티드(Wanted) 마감일 추출이 지역·경력 텍스트
   };
 
   it('CLOSING_DATE 셀렉터가 지역/경력 텍스트를 매칭함을 확인한다 (회귀 감지용)', () => {
-    loadWanted();
+    load();
     const matched = Array.from(document.querySelectorAll(WANTED_SELECTORS.CLOSING_DATE));
-
     expect(matched.length).toBeGreaterThan(0);
 
-    // 매칭된 텍스트가 실제 "마감일" 형태인지 검사
-    // 정상적인 마감일: "~ 11/07(토)", "D-3", "2026-11-20", "상시채용" 등
-    const looksLikeDeadline = (text: string) =>
-      /(D-\d+|상시|채용시|~\s*\d{1,2}[./]\d{1,2}|\d{4}[-./]\d{1,2}[-./]\d{1,2}|\d{1,2}[./]\d{1,2})/.test(text);
-
-    const deadlineLike = matched.filter((el) => looksLikeDeadline(el.textContent?.trim() ?? ''));
-    // 현재는 대부분 지역/경력 텍스트라 마감일 형태가 아니다
-    expect(deadlineLike.length).toBeLessThan(matched.length);
+    const locationLike = matched.filter((el) => /경력|신입/.test(el.textContent?.trim() ?? ''));
+    expect(locationLike.length).toBeGreaterThan(0);
   });
 
   it.fails(
     'parseCard 의 closingDate 는 지역·경력 텍스트가 아닌 실제 마감일이어야 한다 (현재 실패 = 미해결)',
     () => {
-      loadWanted();
+      load();
       const adapter = new WantedAdapter();
       const cards = adapter.getJobCardElements(document);
       const parsed = cards
@@ -128,48 +140,11 @@ describe('[BUG-2] 원티드(Wanted) 마감일 추출이 지역·경력 텍스트
       const withDate = parsed.filter((p) => p.closingDate && p.closingDate.trim().length > 0);
       expect(withDate.length).toBeGreaterThan(0);
 
-      // 기대: closingDate 가 "서울 서초구 · 경력 4-8년" 같은 지역/경력 텍스트면 안 된다
       for (const p of withDate) {
-        expect(p.closingDate).not.toMatch(/경력|서울|경기|부산|대구|인천|광주|대전|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주/);
+        expect(p.closingDate).not.toMatch(
+          /경력|신입|서울|경기|부산|대구|인천|광주|대전|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주/
+        );
       }
     }
   );
-});
-
-describe('[BUG-3] 통합 테스트에서 확인된 플랫폼별 실제 동작 요약', () => {
-  it('플랫폼별 카드 추출/파싱 현황을 기록한다', () => {
-    const fixtures = [
-      { name: 'Wanted', file: 'wanted_wdlist.html', url: 'https://www.wanted.co.kr/wdlist/518/872' },
-      { name: 'Saramin', file: 'saramin_search.html', url: 'https://www.saramin.co.kr/zf_user/search/recruit?searchword=x' },
-      { name: 'JobKorea', file: 'jobkorea_joblist.html', url: 'https://www.jobkorea.co.kr/recruit/joblist' },
-      { name: 'Remember', file: 'remember_postings.html', url: 'https://career.rememberapp.co.kr/job/list' },
-      { name: 'Jumpit', file: 'jumpit_positions.html', url: 'https://jumpit.saramin.co.kr/positions' },
-    ];
-
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const report: Record<string, { cards: number; parsed: number }> = {};
-
-    for (const f of fixtures) {
-      const p = path.resolve(__dirname, '../fixtures', f.file);
-      if (!fs.existsSync(p)) continue;
-      document.body.innerHTML = fs.readFileSync(p, 'utf-8').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-      const adapter = AdapterRegistry.getAdapterForUrl(f.url);
-      if (!adapter) continue;
-      const cards = adapter.getJobCardElements(document);
-      const parsed = cards.map((c: HTMLElement) => adapter.parseCard(c)).filter(Boolean);
-      report[f.name] = { cards: cards.length, parsed: parsed.length };
-      document.body.innerHTML = '';
-    }
-
-    // 모든 플랫폼이 최소한 카드 추출은 성공해야 한다 (Remember 는 현재 1개)
-    for (const [name, r] of Object.entries(report)) {
-      expect(r.cards, `${name}: 카드 추출 실패`).toBeGreaterThan(0);
-    }
-
-    // Wanted/Saramin/JobKorea/Jumpit 은 파싱도 성공해야 한다
-    for (const name of ['Wanted', 'Saramin', 'JobKorea', 'Jumpit']) {
-      if (!report[name]) continue;
-      expect(report[name].parsed, `${name}: 파싱 실패`).toBeGreaterThan(0);
-    }
-  });
 });
