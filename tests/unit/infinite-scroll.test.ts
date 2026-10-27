@@ -330,4 +330,104 @@ describe('InfiniteScrollManager 단위 테스트', () => {
       (window as any).location = origLocation;
     }
   });
+
+  it('IntersectionObserver에 ROOT_MARGIN (1200px) 옵션이 올바르게 전달되어야 한다', () => {
+    let capturedOptions: any = null;
+    const OriginalObserver = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = vi.fn().mockImplementation((_cb, options) => {
+      capturedOptions = options;
+      return {
+        observe: vi.fn(),
+        unobserve: vi.fn(),
+        disconnect: vi.fn(),
+      };
+    });
+
+    try {
+      document.body.innerHTML = `
+        <div id="recruit_info_list">
+          <div class="content_wrap">
+            <div class="item_recruit">공고 1</div>
+          </div>
+        </div>
+        <div class="pagination">1 2</div>
+      `;
+
+      const manager = new InfiniteScrollManager({
+        adapter: new SaraminAdapter(),
+        onCardsAppended: vi.fn(),
+      });
+
+      manager.init();
+      expect(capturedOptions).not.toBeNull();
+      expect(capturedOptions.rootMargin).toBe(INFINITE_SCROLL_CONFIG.ROOT_MARGIN);
+      expect(capturedOptions.rootMargin).toBe('1200px');
+    } finally {
+      (window as any).IntersectionObserver = OriginalObserver;
+    }
+  });
+
+  it('복수 공고가 반환될 때 DocumentFragment를 통해 한 번에 일괄 추가되어야 한다', async () => {
+    document.body.innerHTML = `
+      <div id="recruit_info_list">
+        <div class="content_wrap">
+          <div class="item_recruit">기존 공고</div>
+        </div>
+      </div>
+      <div class="pagination">
+        <a href="https://www.saramin.co.kr/zf_user/search?page=2" page="2">2</a>
+      </div>
+    `;
+
+    const mockMultipleCardsHtml = `
+      <html>
+        <body>
+          <div id="recruit_info_list">
+            <div class="content_wrap">
+              <div class="item_recruit">
+                <div class="area_corp"><span class="corp_name"><a href="#">기업 A</a></span></div>
+                <div class="area_job"><h2 class="job_tit"><a href="#">직무 A</a></h2></div>
+              </div>
+              <div class="item_recruit">
+                <div class="area_corp"><span class="corp_name"><a href="#">기업 B</a></span></div>
+                <div class="area_job"><h2 class="job_tit"><a href="#">직무 B</a></h2></div>
+              </div>
+              <div class="item_recruit">
+                <div class="area_corp"><span class="corp_name"><a href="#">기업 C</a></span></div>
+                <div class="area_job"><h2 class="job_tit"><a href="#">직무 C</a></h2></div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(mockMultipleCardsHtml),
+    });
+
+    const onAppended = vi.fn();
+    const manager = new InfiniteScrollManager({
+      adapter: new SaraminAdapter(),
+      onCardsAppended: onAppended,
+      fetchFn: mockFetch as any,
+    });
+
+    manager.init();
+
+    const success = await manager.loadNextPage();
+    expect(success).toBe(true);
+    expect(onAppended).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.any(HTMLElement),
+        expect.any(HTMLElement),
+        expect.any(HTMLElement),
+      ])
+    );
+
+    const allCards = document.querySelectorAll('.item_recruit');
+    expect(allCards.length).toBe(4); // 기존 1개 + 신규 3개
+  });
 });

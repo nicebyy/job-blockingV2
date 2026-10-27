@@ -131,10 +131,12 @@ export const WANTED_SELECTORS = {
 export const INFINITE_SCROLL_CONFIG = {
   MIN_VISIBLE_CARDS: 5,
   MAX_CONSECUTIVE_FETCHES: 5,
-  FETCH_DELAY_MS: 300,
+  FETCH_DELAY_MS: 0, // 사용자 스크롤 시 지연 없이 즉시 프리페치 (기존 300ms 제거)
+  AUTO_REFILL_DELAY_MS: 150, // 연속 자동 채우기(Auto-Refill) 시 서버 보호용 안전 딜레이
   FETCH_TIMEOUT_MS: 10000,
   SENTINEL_ID: 'job-filter-scroll-sentinel',
   LOADING_INDICATOR_ID: 'job-filter-loading-indicator',
+  ROOT_MARGIN: '1200px', // 바닥 도달 전 약 1.5~2 화면 전 선제적 백그라운드 프리페치
 } as const;
 
 /**
