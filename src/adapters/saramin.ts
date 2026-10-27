@@ -98,19 +98,33 @@ export class SaraminAdapter extends BaseSiteAdapter {
   ): string | null {
     const nextPage = currentPage + 1;
 
-    // 1. DOM 내부의 페이지네이션 a 또는 button 태그 우선 탐색
+    // 1. DOM 내부의 페이지네이션 a 또는 button 태그 우선 탐색 (page 속성, onclick, href, .BtnNext 등)
     const pageLink =
       doc.querySelector<HTMLAnchorElement | HTMLButtonElement>(
-        `a[page="${nextPage}"], a[href*="page=${nextPage}"], a[href*="recruitPage=${nextPage}"], button[page="${nextPage}"]`
+        `a[page="${nextPage}"], a[href*="page=${nextPage}"], a[href*="recruitPage=${nextPage}"], button[page="${nextPage}"], button[onclick*="page=${nextPage}"], a[onclick*="page=${nextPage}"]`
       ) ||
       doc.querySelector<HTMLAnchorElement | HTMLButtonElement>(
-        '.pagination .next, .page_box .btn_next, .PageBox .BtnType.next, .PageBox button.next'
+        '.pagination .next, .page_box .btn_next, .PageBox .BtnType.next, .PageBox button.next, .PageBox .BtnNext, .PageBox button.BtnNext, .BtnNext'
       );
+
+    const baseUrl =
+      typeof window !== 'undefined' && window.location?.href
+        ? window.location.href
+        : 'https://www.saramin.co.kr';
 
     const rawOnClick = pageLink?.getAttribute('onclick');
     if (rawOnClick) {
       const match = rawOnClick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
-      if (match) return match[1];
+      if (match) {
+        let cleanUrl = match[1].replace(/&amp;/g, '&');
+        const hashIdx = cleanUrl.indexOf('#');
+        if (hashIdx !== -1) cleanUrl = cleanUrl.slice(0, hashIdx);
+        try {
+          return new URL(cleanUrl, baseUrl).toString();
+        } catch {
+          return cleanUrl;
+        }
+      }
     }
 
     // a 태그가 실제 이동 URL(page/recruitPage 쿼리가 포함되고 # 해시 전용이 아닌 URL)을 갖고 있는 경우 반환
@@ -121,7 +135,12 @@ export class SaraminAdapter extends BaseSiteAdapter {
       !rawHref.includes('javascript:') &&
       (rawHref.includes('page=') || rawHref.includes('recruitPage='))
     ) {
-      return (pageLink as HTMLAnchorElement).href;
+      const cleanHref = rawHref.replace(/&amp;/g, '&').split('#')[0];
+      try {
+        return new URL(cleanHref, baseUrl).toString();
+      } catch {
+        return (pageLink as HTMLAnchorElement).href || cleanHref;
+      }
     }
 
     // 페이지네이션 요소가 없는 페이지에서는 URL fallback을 수행하지 않음 (정적/단일 페이지 보호)
@@ -134,7 +153,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
       const currentUrl = new URL(
         typeof window !== 'undefined' ? window.location.href : 'https://www.saramin.co.kr/zf_user/search/recruit'
       );
-      // 해시(#recruit_info 등) 제거
+      // 해시(#recruit_info, #searchTitle 등) 제거
       currentUrl.hash = '';
 
       const isSearchPage =

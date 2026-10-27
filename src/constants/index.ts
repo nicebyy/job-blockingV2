@@ -145,7 +145,7 @@ export const SARAMIN_SELECTORS = {
     '.item_recruit, .list_item, .list_product .item, div[class*="BoxAd_wrap"], .recruit_list .row',
   LIST_CONTAINER:
     '#default_list_wrap .list_body, #default_list_wrap, .list_recruiting .list_body, .recruit_list_renew .list_body, .common_recruilt_list, #recruit_info_list .content, #recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
-  PAGINATION: '.pagination, .page_box, .PageBox',
+  PAGINATION: '.pagination, .page_box, .PageBox, .common_recruilt_list .PageBox, .pagination_wrap',
   COMPANY_NAME:
     '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a, .company_nm .str_tit, .corp, span.corp, a.company:not(.company_popup)',
 

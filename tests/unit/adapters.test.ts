@@ -1159,7 +1159,38 @@ describe('Site Adapters 단위 테스트', () => {
       `;
 
       const nextUrl = adapter.getNextPageUrl(doc, 1);
-      expect(nextUrl).toBe('/zf_user/jobs/list/domestic?page=2&loc_mcd=101000');
+      expect(nextUrl).toContain('/zf_user/jobs/list/domestic?page=2&loc_mcd=101000');
+    });
+
+    it('사람인 직업별(job-category) 목록에서 onclick 내 &amp; 엔티티 및 #searchTitle 해시가 포함되어 있어도 깔끔하게 정규화된 다음 URL을 반환해야 한다', () => {
+      const doc = document.createElement('div');
+      doc.innerHTML = `
+        <div class="PageBox">
+          <span class="BtnType SizeS active">1</span>
+          <button class="BtnType SizeS" page="2" onclick="location.href='/zf_user/jobs/list/job-category?page=2&amp;cat_mcls=2&amp;isAjaxRequest=0&amp;page_count=50&amp;sort=RL&amp;type=job-category&amp;is_param=1#searchTitle'">2</button>
+        </div>
+      `;
+
+      const nextUrl = adapter.getNextPageUrl(doc, 1);
+      expect(nextUrl).not.toBeNull();
+      expect(nextUrl).toContain('/zf_user/jobs/list/job-category?page=2&cat_mcls=2');
+      expect(nextUrl).not.toContain('&amp;');
+      expect(nextUrl).not.toContain('#searchTitle');
+    });
+
+    it('사람인 페이징 10페이지 초과 시 .BtnNext(다음) 버튼의 onclick URL을 정상 추출해야 한다', () => {
+      const doc = document.createElement('div');
+      doc.innerHTML = `
+        <div class="PageBox">
+          <button class="BtnType SizeS" page="10">10</button>
+          <button class="BtnType SizeS BtnNext" onclick="location.href='/zf_user/jobs/list/job-category?page=11&cat_mcls=2#searchTitle'">다음</button>
+        </div>
+      `;
+
+      const nextUrl = adapter.getNextPageUrl(doc, 10);
+      expect(nextUrl).not.toBeNull();
+      expect(nextUrl).toContain('/zf_user/jobs/list/job-category?page=11&cat_mcls=2');
+      expect(nextUrl).not.toContain('#searchTitle');
     });
   });
 
