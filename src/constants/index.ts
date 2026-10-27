@@ -114,11 +114,11 @@ export const WANTED_SELECTORS = {
 
   // 상세 페이지(/wd/\d+) 셀렉터
   DETAIL_HEADER:
-    'section[class*="JobHeader_JobHeader"], div[class*="JobHeader_className"], [class*="JobHeader_JobHeader"], .job-header',
+    'header[class*="JobHeader"], section[class*="JobHeader_JobHeader"], div[class*="JobHeader_className"], [class*="JobHeader_JobHeader"], .job-header',
   DETAIL_TITLE_INNER: 'div[class*="JobHeader_JobHeader__Tools"], div[class*="JobHeader__Tools"], .job-header',
   DETAIL_POSITION_TITLE: 'h1.montage-g4lz5p, h1, [class*="JobHeader"] h1',
   DETAIL_COMPANY_NAME:
-    'a[class*="JobHeader_JobHeader__Tools__Company__Link"], a[class*="JobHeader__Tools__Company__Link"], a[data-attribute-id="company__click"], a[data-company-name]',
+    'a[class*="JobHeader_JobHeader__Tools__Company__Link"], a[class*="JobHeader__Tools__Company__Link"], [class*="JobHeader"] a[data-attribute-id="company__click"], [class*="JobHeader"] a[href*="/company/"]',
 
   // 프로모션 및 광고 배너(적극 채용 중인 회사 슬라이더, 프로모션 섹션 등)
   PROMOTION_BANNERS:

@@ -188,8 +188,11 @@ export class ContentController {
             .querySelectorAll(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`)
             .forEach((el) => el.remove());
           document
-            .querySelectorAll('[data-jp-rating-requested]')
-            .forEach((el) => el.removeAttribute('data-jp-rating-requested'));
+            .querySelectorAll('[data-jp-rating-in-flight], [data-jp-rating-requested]')
+            .forEach((el) => {
+              el.removeAttribute('data-jp-rating-in-flight');
+              el.removeAttribute('data-jp-rating-requested');
+            });
         }
 
         if (!message.settings.showBlindRating) {
@@ -197,8 +200,11 @@ export class ContentController {
             .querySelectorAll(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`)
             .forEach((el) => el.remove());
           document
-            .querySelectorAll('[data-blind-rating-requested]')
-            .forEach((el) => el.removeAttribute('data-blind-rating-requested'));
+            .querySelectorAll('[data-blind-rating-in-flight], [data-blind-rating-requested]')
+            .forEach((el) => {
+              el.removeAttribute('data-blind-rating-in-flight');
+              el.removeAttribute('data-blind-rating-requested');
+            });
         }
 
         // 비어있는 평점 래퍼 정리
@@ -448,25 +454,25 @@ export class ContentController {
   private async attachJobplanetRating(cardInfo: JobCardInfo): Promise<void> {
     if (!this.adapter || !cardInfo.cardElement || !cardInfo.companyName) return;
 
-    // 이미 주입되었거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
+    // 이미 주입되어 있거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
     if (
       cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`) ||
-      cardInfo.cardElement.getAttribute('data-jp-rating-requested') === 'true'
+      cardInfo.cardElement.getAttribute('data-jp-rating-in-flight') === 'true'
     ) {
       return;
     }
 
-    cardInfo.cardElement.setAttribute('data-jp-rating-requested', 'true');
+    cardInfo.cardElement.setAttribute('data-jp-rating-in-flight', 'true');
 
     try {
       const response = await this.requestJobplanetRating(cardInfo.companyName);
       if (response && response.status === 'found') {
         this.adapter.injectRatingBadge(cardInfo, response);
-      } else if (!response || response.status === 'error') {
-        cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
       }
     } catch {
-      cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
+      // 에러 발생 시 무시
+    } finally {
+      cardInfo.cardElement.removeAttribute('data-jp-rating-in-flight');
     }
   }
 
@@ -495,25 +501,25 @@ export class ContentController {
   private async attachBlindRating(cardInfo: JobCardInfo): Promise<void> {
     if (!this.adapter || !cardInfo.cardElement || !cardInfo.companyName) return;
 
-    // 이미 주입되었거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
+    // 이미 주입되어 있거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
     if (
       cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`) ||
-      cardInfo.cardElement.getAttribute('data-blind-rating-requested') === 'true'
+      cardInfo.cardElement.getAttribute('data-blind-rating-in-flight') === 'true'
     ) {
       return;
     }
 
-    cardInfo.cardElement.setAttribute('data-blind-rating-requested', 'true');
+    cardInfo.cardElement.setAttribute('data-blind-rating-in-flight', 'true');
 
     try {
       const response = await this.requestBlindRating(cardInfo.companyName);
       if (response && response.status === 'found') {
         this.adapter.injectRatingBadge(cardInfo, response);
-      } else if (!response || response.status === 'error') {
-        cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
       }
     } catch {
-      cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
+      // 에러 발생 시 무시
+    } finally {
+      cardInfo.cardElement.removeAttribute('data-blind-rating-in-flight');
     }
   }
 

@@ -504,6 +504,78 @@ describe('Site Adapters 단위 테스트', () => {
       expect(companyEl?.nextElementSibling).toBe(ratingWrap);
       expect(ratingWrap?.textContent).toContain('4.3');
     });
+
+    it('원티드 상세 페이지 URL 판별(isDetailPage)이 올바르게 동작해야 한다', () => {
+      expect(adapter.isDetailPage('https://www.wanted.co.kr/wd/326613')).toBe(true);
+      expect(adapter.isDetailPage('https://www.wanted.co.kr/wd/12345?query=frontend')).toBe(true);
+      expect(adapter.isDetailPage('https://www.wanted.co.kr/wdlist/518/872')).toBe(false);
+      expect(adapter.isDetailPage('https://www.wanted.co.kr/')).toBe(false);
+    });
+
+    it('원티드 실제 상세 페이지 픽스처(wanted_detail_326613.html)에서 헤더 파싱 및 회사명 옆 평점 뱃지 앵커링이 정확해야 한다', () => {
+      const fixturePath = path.resolve(__dirname, '../fixtures/wanted_detail_326613.html');
+      const fixtureHtml = fs.readFileSync(fixturePath, 'utf-8');
+      const container = document.createElement('div');
+      container.innerHTML = fixtureHtml;
+
+      // 1. 상세 페이지 헤더를 카드로 수집해야 함
+      const cards = adapter.getJobCardElements(container);
+      const detailHeader = cards.find((c) => c.tagName.toUpperCase() === 'HEADER');
+      expect(detailHeader).toBeDefined();
+
+      // 2. 카드 파싱 정보 검증
+      const info = adapter.parseCard(detailHeader!);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('와탭랩스(WhaTapLabs)');
+      expect(info?.title).toBe('Kubernetes 에이전트 개발자 (GPU/AI Observability)');
+      expect(info?.jobId).toBe('326613');
+
+      // 3. 회사명 앵커 요소 추출 검증 (점 기호 `∙` 대신 실제 <a> 회사 링크 태그여야 함)
+      const companyEl = adapter.getCompanyElement(detailHeader!);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.tagName.toUpperCase()).toBe('A');
+      expect(companyEl?.textContent?.trim()).toBe('와탭랩스(WhaTapLabs)');
+
+      // 4. 평점 뱃지 주입 검증 (회사명 <a> 바로 다음, 가운데 점 `∙` 앞)
+      adapter.injectRatingBadge(info!, {
+        platform: 'jobplanet',
+        companyName: '와탭랩스',
+        rating: 3.8,
+        status: 'found',
+        companyId: '311253',
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(info!, {
+        platform: 'blind',
+        companyName: '와탭랩스',
+        rating: 3.5,
+        status: 'found',
+        companyUrl: 'https://www.teamblind.com/kr/company/%EC%99%80%ED%83%AD%EB%9E%A9%EC%8A%A4',
+        cachedAt: Date.now(),
+      });
+
+      const ratingWrap = detailHeader!.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(ratingWrap).not.toBeNull();
+      expect(companyEl?.nextElementSibling).toBe(ratingWrap);
+
+      const jpBadge = ratingWrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`);
+      expect(jpBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('3.8');
+
+      const blindBadge = ratingWrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`);
+      expect(blindBadge).not.toBeNull();
+      expect(blindBadge?.textContent).toContain('3.5');
+
+      // 5. 인라인 [공고숨김 / 회사차단] 버튼 주입 검증 (상세 전용 클래스 확인)
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+      adapter.injectInlineButton(info!, { onBlockCompany, onBlockJob });
+
+      const btnGroup = detailHeader!.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+      expect(btnGroup?.classList.contains('job-filter-btn-group-detail')).toBe(true);
+    });
   });
 
   describe('SaraminAdapter DOM 파싱', () => {
