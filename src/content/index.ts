@@ -2,7 +2,17 @@ import { AdapterRegistry } from '../adapters';
 import { FilterEngine } from '../core/filter-engine';
 import { InfiniteScrollManager } from '../core/infinite-scroll';
 import { StorageManager } from '../core/storage';
-import { BlindRatingInfo, ExtensionMessage, FilterSettings, FilterStats, JobCardInfo, JobplanetRatingInfo, JobPlatform } from '../types';
+import {
+  BlindRatingInfo,
+  BlockItem,
+  DEFAULT_SETTINGS,
+  ExtensionMessage,
+  FilterSettings,
+  FilterStats,
+  JobCardInfo,
+  JobplanetRatingInfo,
+  JobPlatform,
+} from '../types';
 import { FILTER_CONFIG, RATING_BADGE_CONFIG } from '../constants';
 import { calculateJobExpiration } from '../utils/date';
 import { normalizeCompanyName } from '../utils/text';
@@ -30,8 +40,22 @@ export class ContentController {
     // 팝업 및 외부 메시지 리스너 최우선 등록 (초기화 지연 시에도 메시지 유실 방지)
     this.setupMessageListener();
 
-    this.settings = await StorageManager.getSettings();
-    const blockList = await StorageManager.getBlockList();
+    // [중요] 저장소 조회가 실패하더라도 필터링 이외의 기능(옵저버/메시지 응답)은
+    // 계속 동작해야 한다. 기존에는 아래 await 가 reject 되면 이후 초기화가 전부
+    // 중단되어 확장이 완전히 무력화되었다(손상된 차단 목록 1건으로 전체 정지).
+    try {
+      this.settings = await StorageManager.getSettings();
+    } catch (err) {
+      console.error('[JobFilter] 설정 로드 실패, 기본 설정으로 진행:', err);
+      this.settings = { ...DEFAULT_SETTINGS };
+    }
+
+    let blockList: BlockItem[] = [];
+    try {
+      blockList = await StorageManager.getBlockList();
+    } catch (err) {
+      console.error('[JobFilter] 차단 목록 로드 실패, 빈 목록으로 진행:', err);
+    }
     this.filterEngine = new FilterEngine(this.settings, blockList);
 
     // 무한 스크롤 초기화 (단, 상세 페이지에서는 비활성화)
@@ -205,6 +229,10 @@ export class ContentController {
     let promoAdsCount = 0;
     if (this.settings?.hideAds !== false) {
       promoAdsCount = this.adapter.hidePromotionBanners?.() || 0;
+    } else {
+      // [버그 수정] 광고 숨김 토글을 끄면 이전에 숨긴 배너를 복원해야 한다.
+      // (기존에는 hidePromotionBanners 호출만 건너뛰고 복구를 하지 않아 새로고침 전까지 배너가 사라진 채로 남았다)
+      this.adapter.restorePromotionBanners?.();
     }
 
     const elements = this.adapter.getJobCardElements();
@@ -250,11 +278,18 @@ export class ContentController {
           if (compKey) blockedCompanySet.add(compKey);
         }
       } else {
-        // 이미 사용자가 명시적으로 숨김 처리한 카드는 부활시키지 않고 숨김 상태 유지
-        if (
-          cardInfo.cardElement.getAttribute('data-job-filtered') === 'true' &&
-          cardInfo.cardElement.getAttribute('data-filter-mode') === 'hide'
-        ) {
+        // [중요] 사용자가 카드에서 직접 [공고숨김]을 누른 경우에만 부활시키지 않는다.
+        //
+        // 기존 구현은 `data-filter-mode === 'hide'` 이기만 하면 무조건 continue 해서,
+        // 회사 차단을 해제하거나 "광고 숨김"을 꺼도 카드가 복원되지 않았다(영구 숨김).
+        // 이제는 수동 숨김(data-filter-origin="manual")만 유지하고,
+        // 목록/설정 기반 필터는 해제 시 정상적으로 복원한다.
+        const origin = cardInfo.cardElement.getAttribute(FILTER_CONFIG.ATTR_FILTER_ORIGIN);
+        const isManualHide =
+          origin === FILTER_CONFIG.FILTER_ORIGIN_MANUAL &&
+          cardInfo.cardElement.getAttribute('data-filter-mode') === 'hide';
+
+        if (isManualHide) {
           totalBlocked++;
           const blockedType = cardInfo.cardElement.getAttribute('data-blocked-type');
           if (blockedType === 'company') {
@@ -269,6 +304,8 @@ export class ContentController {
         }
 
         this.filterEngine.removeFilter(cardInfo.cardElement);
+        cardInfo.cardElement.removeAttribute('data-blocked-type');
+        cardInfo.cardElement.removeAttribute(FILTER_CONFIG.ATTR_FILTER_ORIGIN);
 
         // 필터링되지 않은 정상 카드에 [공고숨김 / 회사차단] 듀얼 인라인 버튼 주입
         this.adapter.injectInlineButton(cardInfo, {
@@ -522,5 +559,8 @@ export class ContentController {
 // 스크립트 실행 (단위 테스트 환경에서는 자동 실행 방지)
 if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
   const controller = new ContentController();
-  controller.init();
+  // 초기화 실패가 unhandled rejection 으로 남지 않도록 반드시 catch 한다
+  controller.init().catch((err) => {
+    console.error('[JobFilter] 초기화 실패:', err);
+  });
 }

@@ -116,17 +116,23 @@ export class FilterEngine {
         }
       } else if (item.type === 'company') {
         const normalizedPattern = this.normalizeCompanyName(item.pattern);
-        if (
-          normalizedCompany.length > 0 &&
-          normalizedPattern.length > 0 &&
-          (normalizedCompany === normalizedPattern || normalizedCompany.includes(normalizedPattern))
-        ) {
-          return {
-            shouldFilter: true,
-            matchedItem: item,
-            isAdFilter: false,
-            reason: `차단된 회사: ${item.pattern}`,
-          };
+        if (normalizedCompany.length > 0 && normalizedPattern.length > 0) {
+          // 매칭 정책: 기본은 정확 일치(exact).
+          // contains 모드는 사용자가 계열사 일괄 차단을 명시적으로 선택한 경우에만 적용한다.
+          // (기존에는 항상 부분일치라 '카카오' 차단 시 '카카오뱅크'/'카카오페이'까지 차단됐다)
+          const isMatch =
+            normalizedCompany === normalizedPattern ||
+            (this.settings.companyMatchMode === 'contains' &&
+              normalizedCompany.includes(normalizedPattern));
+
+          if (isMatch) {
+            return {
+              shouldFilter: true,
+              matchedItem: item,
+              isAdFilter: false,
+              reason: `차단된 회사: ${item.pattern}`,
+            };
+          }
         }
       } else if (item.type === 'keyword') {
         const keyword = item.pattern.toLowerCase().trim();

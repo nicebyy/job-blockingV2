@@ -31,6 +31,15 @@ export interface BlockItem {
 
 
 /**
+ * 회사명 매칭 정책
+ * - 'contains': 차단 패턴이 카드 회사명에 포함되면 차단 (계열사 일괄 차단)
+ *   예) '카카오' 차단 -> 카카오뱅크, 카카오페이, 카카오엔터프라이즈 모두 차단
+ * - 'exact': 정규화된 회사명이 정확히 일치할 때만 차단
+ *   예) '카카오' 차단 -> 카카오만 차단, 카카오뱅크는 유지
+ */
+export type CompanyMatchMode = 'exact' | 'contains';
+
+/**
  * 사용자 환경 설정 인터페이스
  */
 export interface FilterSettings {
@@ -41,6 +50,11 @@ export interface FilterSettings {
   enableInfiniteScroll: boolean; // 페이지네이션을 무한 스크롤로 자동 변환 여부
   showJobplanetRating: boolean; // 잡플래닛 평점 뱃지 표시 여부 (초록색)
   showBlindRating: boolean; // 블라인드 평점 뱃지 표시 여부 (빨간색)
+  /**
+   * 회사명 매칭 정책 (기본: exact).
+   * 미지정 시 'exact' 로 동작한다. 기존 저장 설정에는 이 키가 없을 수 있으므로 optional.
+   */
+  companyMatchMode?: CompanyMatchMode;
 }
 
 /**
@@ -54,6 +68,9 @@ export const DEFAULT_SETTINGS: FilterSettings = {
   enableInfiniteScroll: true,
   showJobplanetRating: true,
   showBlindRating: true,
+  // [기본값] 정확 일치. '카카오' 차단 시 카카오뱅크/카카오페이까지 차단되는
+  // 과차단을 방지한다. 계열사 일괄 차단이 필요한 사용자는 옵션에서 변경 가능.
+  companyMatchMode: 'exact',
 };
 
 /**
