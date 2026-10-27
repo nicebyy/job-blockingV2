@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+# 같은 브랜치에서 새 푸시가 오면 이전 실행을 취소해 CI 자원을 절약한다
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # 1) 정적 검사 + 단위 테스트 (가장 빠른 피드백)
+  verify:
+    name: 타입 검사 · 단위 테스트
+    runs-on: ubuntu-latest
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: TypeScript 타입 검사
+        run: npx tsc --noEmit
+
+      - name: 단위 테스트
+        run: npm test
+
+  # 2) 프로덕션 빌드 + 산출물 무결성 검증
+  build:
+    name: 빌드 · 산출물 검증
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 빌드
+        run: npm run build
+
+      - name: 버전 일관성 검사
+        run: node scripts/check-version-sync.mjs
+
+      - name: 배포 산출물 무결성 검사
+        run: node scripts/check-dist-integrity.mjs
+
+      - name: 배포 패키지 생성
+        run: node scripts/package-release.mjs
+
+      - name: 패키지 업로드 (아티팩트)
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-package
+          path: release/*.zip
+          retention-days: 30
+
+  # 3) E2E 테스트 (Chromium 확장 로드)
+  e2e:
+    name: E2E 테스트
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: Playwright 브라우저 설치
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config.ts 는 로컬 개발 편의를 위해 headless: false 가 기본이다.
+      # CI 에는 디스플레이가 없으므로 환경변수로 headless 를 강제한다.
+      - name: E2E 테스트
+        run: npm run test:e2e
+        env:
+          CI: true
+          PW_HEADLESS: 'true'
+
+      - name: 실패 스크린샷/트레이스 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

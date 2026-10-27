@@ -5,7 +5,7 @@ export const APP_INFO = {
   NAME: 'Job Blocking V2',
   FULL_NAME: 'Job Blocking V2 - 채용 사이트 공고 필터링',
   DESCRIPTION: '원티드, 사람인, 잡코리아, 리멤버, 점핏 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
-  VERSION: '0.2.0',
+  VERSION: '0.2.1',
 } as const;
 
 /**
@@ -109,8 +109,22 @@ export const WANTED_SELECTORS = {
     'button.bookmarkBtn, button[data-position-name], button[data-company-name], [data-company-name]',
   AD_BADGE: '[data-attribute-id="badge__ad"], [class*="ad_badge"], [class*="badge_ad"]',
   JOB_LINK: 'a[href*="/wd/"]',
-  CLOSING_DATE:
-    'span[class*="CompanyNameWithLocationPeriod__location"], .due-date, [class*="dueDate"], [class*="due_date"]',
+  /**
+   * 원티드 목록 카드에는 **마감일이 존재하지 않는다**.
+   *
+   * 과거에 `span[class*="CompanyNameWithLocationPeriod__location"]` 을 마감일로
+   * 오인해 넣었으나, 실제로 이 클래스는 "서울 서초구 · 경력 4-8년" 같은
+   * **지역/경력 정보**를 담는다(실브라우저 렌더링 DOM 60개 카드 전수 확인).
+   *
+   * 그 결과 parseCard().closingDate 에 지역/경력 문자열이 들어가
+   * calculateJobExpiration() 이 파싱에 실패하고, 마감일 기반 TTL 자동 정리가
+   * 원티드에서만 조용히 무력화되었다.
+   *
+   * 원티드는 상세페이지에서도 마감일을 노출하지 않으므로(due-date/마감 텍스트 0건),
+   * 마감일 미제공 사이트로 취급하여 기본 30일 TTL 을 적용하는 것이 정확하다.
+   * 향후 원티드가 마감일을 노출하면 실제 마감일 전용 셀렉터를 여기에 추가할 것.
+   */
+  CLOSING_DATE: '',
 
   // 상세 페이지(/wd/\d+) 셀렉터
   DETAIL_HEADER:

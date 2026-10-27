@@ -1,17 +1,21 @@
 {
   "name": "job-blocking-v2",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "채용 사이트 공고 필터링 크롬 확장 프로그램",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "pretest:e2e": "npm run build",
     "test:e2e": "playwright test",
-    "release": "npm run build && node scripts/package-release.mjs",
+    "verify:version": "node scripts/check-version-sync.mjs",
+    "verify:dist": "node scripts/check-dist-integrity.mjs",
+    "verify:all": "npm run typecheck && npm test && npm run build && npm run verify:version && npm run verify:dist",
+    "release": "npm run build && npm run verify:version && npm run verify:dist && node scripts/package-release.mjs",
     "fetch:sample": "node scripts/fetch-sample.mjs",
     "eval:ts": "node scripts/eval-ts.mjs"
   },
