@@ -5,6 +5,31 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-27
+
+### 수정
+- **원티드**: 마감일 셀렉터가 지역·경력 텍스트("서울 서초구 · 경력 4-8년")를 마감일로
+  오인해, 마감일 기반 TTL 자동 정리가 원티드에서만 조용히 무력화되던 문제.
+  원티드는 목록·상세 모두 마감일을 제공하지 않으므로 마감일 미제공 사이트로 취급한다.
+
+### 추가
+- **CI**: GitHub Actions 파이프라인 도입 (`.github/workflows/ci.yml`)
+  - `verify`: TypeScript 타입 검사 + 단위 테스트
+  - `build`: 프로덕션 빌드 + 버전 일관성 + 배포 산출물 무결성 + 패키지 아티팩트
+  - `e2e`: Chromium 확장 로드 기반 E2E (headless)
+- **검증 스크립트**
+  - `npm run verify:version` — 4개 위치의 배포 버전 일관성 및 Chrome 버전 형식 검사
+  - `npm run verify:dist` — manifest 참조 파일 실존, HTML 자산, SW 로더 체인,
+    원격 코드 로딩 흔적 검사
+  - `npm run verify:all` — 타입검사 → 단위 → 빌드 → 버전 → 산출물 순차 검증
+- **문서**: `CHANGELOG.md` 신설, README에 테스트 가이드 및 릴리스 6단계 절차 문서화
+
+### 변경
+- **테스트 인프라**: E2E를 headless로 실행 가능하도록 개선
+  (`PW_HEADLESS`/`CI` 환경변수 지원, `launchPersistentContext`에 headless 명시 전달)
+- **테스트 인프라**: Playwright `trace`를 `retain-on-failure`로 변경
+  (retries 0에서 트레이스가 생성되지 않던 문제), 실패 스크린샷·비디오 보존
+
 ## [0.2.0] - 2026-10-27
 
 ### 추가
