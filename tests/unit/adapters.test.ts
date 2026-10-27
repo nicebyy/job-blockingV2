@@ -954,6 +954,40 @@ describe('Site Adapters 단위 테스트', () => {
       expect(normalJob?.style.display).not.toBe('none');
     });
 
+    it('사람인 hidePromotionBanners는 스폰서 상품 배너(.wrap_list_banner, .list_product), Nest 배너(.wrap_nest), 네이버 파워링크(#powerLink)를 일괄 숨김 처리해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="wrap_list_banner">
+          <ul class="list_product list_grand">
+            <li class="item">그랜드 공고</li>
+          </ul>
+        </div>
+        <div class="wrap_nest">Nest Ad Banner</div>
+        <div id="powerLink">Naver PowerLink</div>
+        <div class="recruit_line_banner">Line Banner</div>
+        <div id="default_list_wrap">
+          <div class="list_body">
+            <div class="list_item">일반 공고 1</div>
+          </div>
+        </div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBe(4);
+
+      const listBanner = container.querySelector<HTMLElement>('.wrap_list_banner');
+      const nestBanner = container.querySelector<HTMLElement>('.wrap_nest');
+      const powerLink = container.querySelector<HTMLElement>('#powerLink');
+      const lineBanner = container.querySelector<HTMLElement>('.recruit_line_banner');
+      const normalItem = container.querySelector<HTMLElement>('.list_item');
+
+      expect(listBanner?.style.display).toBe('none');
+      expect(nestBanner?.style.display).toBe('none');
+      expect(powerLink?.style.display).toBe('none');
+      expect(lineBanner?.style.display).toBe('none');
+      expect(normalItem?.style.display).not.toBe('none');
+    });
+
     it('사람인 지역별/직무별 목록(/zf_user/jobs/list/domestic)의 그랜드/프리미엄 채용공고(.list_product .item)를 파싱하고 차단 툴바 및 평점 뱃지를 주입해야 한다', () => {
       const container = document.createElement('div');
       container.innerHTML = `
@@ -1777,6 +1811,36 @@ describe('Site Adapters 단위 테스트', () => {
       expect(container).not.toBeNull();
       expect(container?.className).toBe('content');
       expect(container?.parentElement?.id).toBe('recruit_info_list');
+    });
+
+    it('사람인 getCardListContainer는 스폰서 상품 그리드(.list_product)를 절대 컨테이너로 반환하지 않아야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div class="wrap_list_banner">
+          <ul class="list_product list_grand">
+            <li class="item">스폰서 카드</li>
+          </ul>
+        </div>
+      `;
+
+      const container = saramin.getCardListContainer(doc);
+      expect(container).toBeNull();
+    });
+
+    it('사람인 getNextPageUrl은 페이지네이션 요소가 없는 정적/단일 페이지에서 null을 반환해야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div class="wrap_list_banner">
+          <ul class="list_product list_grand">
+            <li class="item">스폰서 카드</li>
+          </ul>
+        </div>
+      `;
+
+      const nextUrl = saramin.getNextPageUrl(doc, 1);
+      expect(nextUrl).toBeNull();
     });
   });
 
