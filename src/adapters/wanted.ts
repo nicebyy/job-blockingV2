@@ -110,9 +110,15 @@ export class WantedAdapter extends BaseSiteAdapter {
       if (match) jobId = match[1];
     }
 
-    // 6. 마감일 또는 지역/경력 정보 추출
-    const dateEl = element.querySelector<HTMLElement>(WANTED_SELECTORS.CLOSING_DATE);
-    const closingDate = dateEl?.textContent?.trim() || undefined;
+    // 6. 마감일 추출
+    //
+    // 원티드 목록 카드에는 마감일이 없다(지역/경력 정보만 노출).
+    // WANTED_SELECTORS.CLOSING_DATE 가 빈 문자열이면 조회하지 않고 undefined 로 둔다.
+    // 이렇게 해야 calculateJobExpiration() 이 기본 30일 TTL 을 적용한다.
+    const closingDateSelector = WANTED_SELECTORS.CLOSING_DATE;
+    const closingDate = closingDateSelector
+      ? element.querySelector<HTMLElement>(closingDateSelector)?.textContent?.trim() || undefined
+      : undefined;
 
     return {
       cardElement: element,

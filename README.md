@@ -192,6 +192,84 @@ npm run test
 npm run test:e2e
 ```
 
+> **headless 제어**: 로컬에서는 기본적으로 실제 브라우저 창이 열립니다(`headless: false`).
+> CI 등 무GUI 환경에서는 환경변수로 강제할 수 있습니다.
+> ```bash
+> PW_HEADLESS=true npm run test:e2e   # 또는 CI=true
+> ```
+
+### 통합 검증 (한 번에 실행)
+```bash
+npm run verify:all
+```
+타입 검사 → 단위 테스트 → 빌드 → 버전 일관성 → 배포 산출물 무결성을 순차 실행합니다.
+커밋 전 또는 PR 생성 전에 실행하는 것을 권장합니다.
+
+| 명령 | 설명 |
+| :--- | :--- |
+| `npm run typecheck` | TypeScript 타입 검사 (`tsc --noEmit`) |
+| `npm run verify:version` | 4개 위치의 배포 버전 일관성 검사 |
+| `npm run verify:dist` | `dist/` 가 실제 로드 가능한 확장인지 무결성 검사 |
+
+---
+
+## 📦 릴리스 절차 (Release Process)
+
+`main` 브랜치는 **프로덕션(크롬 웹스토어 배포) 전용**이며, `develop` 은 통합 개발 브랜치입니다.
+릴리스는 아래 순서로 진행합니다.
+
+### 1. 버전 범프
+4곳의 버전을 모두 갱신해야 합니다 (`npm run verify:version` 으로 검증).
+
+```bash
+npm version <x.y.z> --no-git-tag-version
+# 그리고 아래 2개 파일을 같은 값으로 수동 수정
+#   src/manifest.json          -> "version"
+#   src/constants/index.ts     -> APP_INFO.VERSION
+npm run verify:version
+```
+
+### 2. 전체 검증
+```bash
+npm run verify:all
+npm run test:e2e
+```
+
+### 3. develop → main 병합
+```bash
+git checkout main
+git merge --no-ff develop -m "release: v<x.y.z> 프로덕션 릴리스 (develop -> main)"
+```
+
+### 4. 배포 패키지 생성
+```bash
+npm run release
+# -> release/job-blocking-v2-v<x.y.z>.zip
+```
+`npm run release` 는 빌드 → 버전 검사 → 산출물 무결성 검사 → 패키징을 자동 수행합니다.
+생성된 zip 은 `manifest.json` 이 루트에 오도록 구성되며, 크롬 웹스토어 업로드에 바로 사용할 수 있습니다.
+
+### 5. 태그 및 푸시
+```bash
+git tag -a v<x.y.z> -m "v<x.y.z>"
+git push origin main
+git push origin v<x.y.z>
+```
+
+### 6. 크롬 웹스토어 제출
+1. `chrome://extensions` → 개발자 모드 → `dist` 로드하여 최종 동작 확인
+2. [Chrome Web Store 개발자 콘솔](https://chrome.google.com/webstore/devconsole)에서 zip 업로드
+3. 스토어 등록정보(스크린샷, 설명) 갱신 후 심사 제출
+
+### CI (GitHub Actions)
+`main`/`develop` 푸시 및 PR 시 아래가 자동 실행됩니다 (`.github/workflows/ci.yml`).
+
+| 잡 | 내용 |
+| :--- | :--- |
+| `verify` | TypeScript 타입 검사 + 단위 테스트 |
+| `build` | 프로덕션 빌드 + 버전 일관성 + 산출물 무결성 + 패키지 아티팩트 업로드 |
+| `e2e` | Chromium 확장 로드 기반 E2E (headless) |
+
 ---
 
 ## 🔒 개인정보처리방침 (Privacy Policy)

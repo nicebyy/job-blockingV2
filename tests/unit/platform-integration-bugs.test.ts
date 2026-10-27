@@ -21,7 +21,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RememberAdapter } from '../../src/adapters/remember';
 import { WantedAdapter } from '../../src/adapters/wanted';
-import { WANTED_SELECTORS } from '../../src/constants';
+import { WANTED_SELECTORS, EXPIRATION_CONFIG } from '../../src/constants';
+import { calculateJobExpiration } from '../../src/utils/date';
 
 describe('[회귀] 리멤버 렌더링 DOM 이 정상 파싱되어야 한다 (과거 오진 정정)', () => {
   const fixture = path.resolve(__dirname, '../fixtures/remember_postings_rendered.html');
@@ -118,33 +119,43 @@ describe('[BUG-2] 원티드 마감일 추출이 지역·경력 텍스트를 반�
     document.body.innerHTML = html;
   };
 
-  it('CLOSING_DATE 셀렉터가 지역/경력 텍스트를 매칭함을 확인한다 (회귀 감지용)', () => {
-    load();
-    const matched = Array.from(document.querySelectorAll(WANTED_SELECTORS.CLOSING_DATE));
-    expect(matched.length).toBeGreaterThan(0);
-
-    const locationLike = matched.filter((el) => /경력|신입/.test(el.textContent?.trim() ?? ''));
-    expect(locationLike.length).toBeGreaterThan(0);
+  it('CLOSING_DATE 셀렉터가 비어 있어야 한다 (지역/경력 텍스트를 마감일로 오인하지 않음)', () => {
+    // 원티드는 목록/상세 모두 마감일을 노출하지 않으므로 마감일 셀렉터가 없어야 한다.
+    expect(WANTED_SELECTORS.CLOSING_DATE).toBe('');
   });
 
-  it.fails(
-    'parseCard 의 closingDate 는 지역·경력 텍스트가 아닌 실제 마감일이어야 한다 (현재 실패 = 미해결)',
-    () => {
-      load();
-      const adapter = new WantedAdapter();
-      const cards = adapter.getJobCardElements(document);
-      const parsed = cards
-        .map((c) => adapter.parseCard(c))
-        .filter((p): p is NonNullable<typeof p> => p !== null);
+  it('parseCard 의 closingDate 가 지역·경력 텍스트를 담지 않아야 한다 (수정 완료)', () => {
+    load();
+    const adapter = new WantedAdapter();
+    const cards = adapter.getJobCardElements(document);
+    const parsed = cards
+      .map((c) => adapter.parseCard(c))
+      .filter((p): p is NonNullable<typeof p> => p !== null);
 
-      const withDate = parsed.filter((p) => p.closingDate && p.closingDate.trim().length > 0);
-      expect(withDate.length).toBeGreaterThan(0);
+    // 마감일이 없는 사이트이므로 closingDate 는 비어 있어야 한다
+    const withDate = parsed.filter((p) => p.closingDate && p.closingDate.trim().length > 0);
+    expect(withDate).toHaveLength(0);
 
-      for (const p of withDate) {
-        expect(p.closingDate).not.toMatch(
-          /경력|신입|서울|경기|부산|대구|인천|광주|대전|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주/
-        );
-      }
+    // 어떤 경우에도 지역/경력 텍스트가 마감일로 들어가면 안 된다
+    for (const p of parsed) {
+      if (!p.closingDate) continue;
+      expect(p.closingDate).not.toMatch(
+        /경력|신입|서울|경기|부산|대구|인천|광주|대전|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주/
+      );
     }
-  );
+  });
+
+  it('마감일이 없으므로 TTL 은 기본 30일로 계산되어야 한다', () => {
+    load();
+    const adapter = new WantedAdapter();
+    const cards = adapter.getJobCardElements(document);
+    const first = adapter.parseCard(cards[0])!;
+
+    const baseTime = Date.now();
+    const expiresAt = calculateJobExpiration(first.closingDate, baseTime);
+    const expected = baseTime + EXPIRATION_CONFIG.DEFAULT_EXPIRATION_DAYS * EXPIRATION_CONFIG.MS_PER_DAY;
+
+    // 기본 30일 TTL 이 적용되어야 한다 (지역/경력 텍스트로 인한 조기/부정확 만료 방지)
+    expect(expiresAt).toBe(expected);
+  });
 });
