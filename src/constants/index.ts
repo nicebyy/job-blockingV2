@@ -310,6 +310,8 @@ export const UI_MESSAGES = {
   OPTIONS_TITLE: 'Job Blocking V2 - 환경 설정',
   BLOCK_SUCCESS: (pattern: string) => `'${pattern}' 차단 등록 완료!`,
   IMPORT_SUCCESS: '차단 목록을 성공적으로 불러왔습니다!',
+  IMPORT_SUCCESS_WITH_SKIPPED: (imported: number, skipped: number) =>
+    `${imported}개 항목을 불러왔습니다. 형식이 올바르지 않은 ${skipped}개 항목은 제외되었습니다.`,
   IMPORT_INVALID_JSON: '올바르지 않은 JSON 파일입니다.',
   EMPTY_SEARCH_RESULT: '검색 결과가 없습니다.',
   EMPTY_BLOCK_LIST: '등록된 차단 항목이 없습니다.',
