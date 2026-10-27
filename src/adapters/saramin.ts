@@ -64,7 +64,9 @@ export class SaraminAdapter extends BaseSiteAdapter {
       if (
         container.classList.contains('list_product') ||
         container.classList.contains('wrap_list_banner') ||
-        container.classList.contains('banner_list')
+        container.classList.contains('banner_list') ||
+        // 광고/추천 영역은 절대 공고 목록 컨테이너가 될 수 없다
+        Boolean(container.closest(SARAMIN_SELECTORS.NON_LIST_REGIONS))
       ) {
         return null;
       }
@@ -81,6 +83,14 @@ export class SaraminAdapter extends BaseSiteAdapter {
       firstCard &&
       !firstCard.closest('.list_product, .wrap_list_banner, .banner_list')
     ) {
+      // [중요] 사람인 직업별/지역별 목록의 초기 HTML 에는 실제 공고 목록이 아직 없고
+      // 네이버 파워링크 광고 블록(#powerLink) 안의 <li class="list_item"> 만 존재한다.
+      // 이때 firstCard.parentElement 를 그대로 반환하면 광고 <ul> 이 공고 목록 컨테이너로
+      // 오인되어, 무한 스크롤이 광고 영역에 공고를 append 하는 심각한 오염이 발생한다.
+      const adRegion = firstCard.closest<HTMLElement>(SARAMIN_SELECTORS.NON_LIST_REGIONS);
+      if (adRegion) {
+        return null;
+      }
       const listBody = firstCard.closest<HTMLElement>('.list_body');
       if (listBody) return listBody;
       return firstCard.parentElement;

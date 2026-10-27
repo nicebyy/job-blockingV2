@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import { InfiniteScrollManager } from '../../src/core/infinite-scroll';
 import { SaraminAdapter } from '../../src/adapters/saramin';
 import { WantedAdapter } from '../../src/adapters/wanted';
@@ -254,7 +256,53 @@ describe('InfiniteScrollManager 단위 테스트', () => {
     expect(manager.getIsLoading()).toBe(false);
 
     const indicator = document.getElementById(INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID);
-    expect(indicator?.style.display).toBe('none');
+    // [회귀 방지] 표시 여부는 인라인 style 이 아니라 상태 클래스로 제어한다
+    // (CSS `display:flex !important` 가 인라인 none 을 덮어써 스피너가 항상 보이던 버그)
+    expect(indicator?.classList.contains(INFINITE_SCROLL_CONFIG.LOADING_ACTIVE_CLASS)).toBe(false);
+    expect(indicator?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('연속 fetch 실패가 한도를 넘으면 스피너를 멈추고 무한 재시도를 종료해야 한다', async () => {
+    document.body.innerHTML = `
+      <div id="recruit_info_list">
+        <div class="content">
+          <div class="item_recruit">공고 1</div>
+        </div>
+      </div>
+      <div class="pagination">
+        <a href="https://www.saramin.co.kr/zf_user/search?page=2" page="2">2</a>
+      </div>
+    `;
+
+    const mockFetch = vi.fn().mockRejectedValue(new Error('WAF blocked / network reset'));
+
+    const manager = new InfiniteScrollManager({
+      adapter: new SaraminAdapter(),
+      onCardsAppended: vi.fn(),
+      fetchFn: mockFetch as any,
+    });
+
+    manager.init();
+
+    // 한도(MAX_CONSECUTIVE_FAILURES) 미만에서는 계속 재시도 가능해야 한다
+    for (let i = 0; i < INFINITE_SCROLL_CONFIG.MAX_CONSECUTIVE_FAILURES; i++) {
+      const ok = await manager.loadNextPage();
+      expect(ok).toBe(false);
+      // 어떤 경우에도 스피너가 켜진 채 남아있으면 안 된다
+      const ind = document.getElementById(INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID);
+      if (ind) {
+        expect(ind.classList.contains(INFINITE_SCROLL_CONFIG.LOADING_ACTIVE_CLASS)).toBe(false);
+      }
+    }
+
+    // 한도 도달 후에는 무한 스크롤이 완전히 종료되어야 한다 (스피너 무한 루프 차단)
+    expect(manager.isDestroyed()).toBe(true);
+    expect(await manager.loadNextPage()).toBe(false);
+    const callsAfterDestroy = mockFetch.mock.calls.length;
+    expect(callsAfterDestroy).toBe(INFINITE_SCROLL_CONFIG.MAX_CONSECUTIVE_FAILURES);
+
+    // 사용자 안내 문구가 남아야 한다
+    expect(document.querySelector(`.${INFINITE_SCROLL_CONFIG.FAILURE_NOTICE_CLASS}`)).not.toBeNull();
   });
 
   it('잡코리아 어댑터는 getNextPageRequest를 통해 POST 요청 옵션으로 다음 페이지를 로드해야 한다', async () => {
@@ -429,5 +477,40 @@ describe('InfiniteScrollManager 단위 테스트', () => {
 
     const allCards = document.querySelectorAll('.item_recruit');
     expect(allCards.length).toBe(4); // 기존 1개 + 신규 3개
+  });
+
+  it('유휴 상태에서는 로딩 인디케이터가 is-active 클래스를 갖지 않아야 한다 (스피너 상시 표시 회귀 방지)', () => {
+    document.body.innerHTML = `
+      <div id="recruit_info_list">
+        <div class="content_wrap">
+          <div class="item_recruit">공고 1</div>
+        </div>
+      </div>
+      <div class="pagination">1 2</div>
+    `;
+
+    const manager = new InfiniteScrollManager({
+      adapter: new SaraminAdapter(),
+      onCardsAppended: vi.fn(),
+    });
+
+    manager.init();
+
+    const indicator = document.getElementById(INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID);
+    expect(indicator).not.toBeNull();
+    // 초기 생성 직후(로딩 전)에는 반드시 숨김 상태여야 한다
+    expect(indicator?.classList.contains(INFINITE_SCROLL_CONFIG.LOADING_ACTIVE_CLASS)).toBe(false);
+    expect(indicator?.getAttribute('aria-hidden')).toBe('true');
+
+    // CSS 가 로딩 인디케이터의 기본 표시를 none !important 로 강제하는지 검증
+    // (인라인 style.display 로는 !important 를 이길 수 없기 때문에 클래스 기반 제어가 필수)
+    const css = fs.readFileSync(path.resolve('src/content/style.css'), 'utf-8');
+    const baseRule = css.match(/\.job-filter-infinite-loading\s*\{([^}]*)\}/);
+    expect(baseRule).not.toBeNull();
+    expect(baseRule![1]).toMatch(/display:\s*none\s*!important/);
+    // 활성 상태에서만 표시 규칙이 존재해야 한다
+    expect(css).toMatch(
+      /\.job-filter-infinite-loading\.is-active\s*\{[^}]*display:\s*flex\s*!important/
+    );
   });
 });

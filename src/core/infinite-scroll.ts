@@ -16,6 +16,8 @@ export class InfiniteScrollManager {
   private isLoading = false;
   private hasMorePages = true;
   private consecutiveAutoRefills = 0;
+  /** 연속 fetch 실패 횟수 (무한 재시도 루프 방지용) */
+  private consecutiveFailures = 0;
 
   private sentinelElement: HTMLElement | null = null;
   private loadingIndicator: HTMLElement | null = null;
@@ -60,14 +62,16 @@ export class InfiniteScrollManager {
   private setupSentinel(container: HTMLElement): void {
     if (typeof document === 'undefined') return;
 
-    // 로딩 인디케이터
+    // 로딩 인디케이터 (표시 여부는 CSS 의 .is-active 상태 클래스로만 제어한다)
     const indicator = document.createElement('div');
     indicator.id = INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID;
     indicator.className = 'job-filter-infinite-loading';
-    indicator.style.display = 'none';
+    indicator.setAttribute('role', 'status');
+    indicator.setAttribute('aria-live', 'polite');
+    indicator.setAttribute('aria-hidden', 'true');
     indicator.innerHTML = `
       <div class="job-filter-spinner"></div>
-      <span>다음 공고를 불러오는 중입니다...</span>
+      <span>${INFINITE_SCROLL_CONFIG.LABELS.LOADING}</span>
     `;
     this.loadingIndicator = indicator;
 
@@ -262,11 +266,29 @@ export class InfiniteScrollManager {
       currentContainer.appendChild(fragment);
 
       this.currentPage++;
+      // 성공적으로 페이지를 받아왔으므로 연속 실패 카운터를 초기화한다
+      this.consecutiveFailures = 0;
       this.onCardsAppended(importedCards);
       return true;
     } catch (error) {
+      // [중요] 실패를 그대로 두면 센티넬이 화면에 남아 IntersectionObserver 가
+      // 즉시 재요청 → 실패 → 재요청을 무한 반복한다. 스피너가 영구히 도는
+      // "무한 대기" 현상의 직접 원인이다. 연속 실패 횟수를 세어 한도를 넘으면
+      // 무한 스크롤을 종료(destroy)하고 사용자에게 실패를 알린다.
+      this.consecutiveFailures++;
       if (!this.destroyed) {
-        console.warn('[JobFilter] 다음 페이지 로딩 실패:', error);
+        console.warn(
+          `[JobFilter] 다음 페이지 로딩 실패 (${this.consecutiveFailures}/${INFINITE_SCROLL_CONFIG.MAX_CONSECUTIVE_FAILURES}):`,
+          error
+        );
+      }
+
+      if (this.consecutiveFailures >= INFINITE_SCROLL_CONFIG.MAX_CONSECUTIVE_FAILURES) {
+        if (!this.destroyed) {
+          this.hasMorePages = false;
+          this.showLoadFailure();
+          this.destroy();
+        }
       }
       return false;
     } finally {
@@ -275,10 +297,29 @@ export class InfiniteScrollManager {
     }
   }
 
+  /**
+   * 연속 실패로 무한 스크롤을 포기할 때, 사용자가 "왜 더 안 불러오지?" 하고
+   * 헤매지 않도록 명시적 안내 문구를 남긴다.
+   */
+  private showLoadFailure(): void {
+    if (!this.loadingIndicator || typeof document === 'undefined') return;
+
+    const host = this.loadingIndicator.parentElement;
+    if (!host) return;
+
+    const notice = document.createElement('div');
+    notice.className = INFINITE_SCROLL_CONFIG.FAILURE_NOTICE_CLASS;
+    notice.textContent = INFINITE_SCROLL_CONFIG.LABELS.LOAD_FAILURE;
+    host.insertBefore(notice, this.loadingIndicator);
+  }
+
   private setLoadingVisible(visible: boolean): void {
-    if (this.loadingIndicator) {
-      this.loadingIndicator.style.display = visible ? 'flex' : 'none';
-    }
+    if (!this.loadingIndicator) return;
+    // [중요] 인라인 style.display 대신 상태 클래스로 제어한다.
+    // CSS 에 `display: flex !important` 가 걸려 있으면 인라인 일반 선언은 무시되므로
+    // (캐스케이드: !important > 인라인 일반) 스피너가 유휴 상태에서도 항상 보이는 버그가 있었다.
+    this.loadingIndicator.classList.toggle(INFINITE_SCROLL_CONFIG.LOADING_ACTIVE_CLASS, visible);
+    this.loadingIndicator.setAttribute('aria-hidden', visible ? 'false' : 'true');
   }
 
   public destroy(): void {

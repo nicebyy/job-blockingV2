@@ -136,6 +136,16 @@ export const INFINITE_SCROLL_CONFIG = {
   FETCH_TIMEOUT_MS: 10000,
   SENTINEL_ID: 'job-filter-scroll-sentinel',
   LOADING_INDICATOR_ID: 'job-filter-loading-indicator',
+  /** 로딩 인디케이터를 실제로 표시하는 상태 클래스 (CSS `.is-active` 와 1:1 대응) */
+  LOADING_ACTIVE_CLASS: 'is-active',
+  /** 연속 fetch 실패 허용 횟수 — 초과 시 무한 스크롤을 종료해 스피너 무한 루프를 막는다 */
+  MAX_CONSECUTIVE_FAILURES: 3,
+  /** 연속 실패로 중단되었을 때 표시하는 안내 문구 클래스 */
+  FAILURE_NOTICE_CLASS: 'job-filter-infinite-failure',
+  LABELS: {
+    LOADING: '다음 공고를 불러오는 중입니다...',
+    LOAD_FAILURE: '다음 공고를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.',
+  },
   ROOT_MARGIN: '1200px', // 바닥 도달 전 약 1.5~2 화면 전 선제적 백그라운드 프리페치
 } as const;
 
@@ -171,6 +181,18 @@ export const SARAMIN_SELECTORS = {
   // class="powerlink" 로 혼재하고, 예전 #section_contents 는 실제로 class="wrap_section_contents" 이다.
   PROMOTION_BANNERS:
     '.powerlink, #powerLink, #powerLink1, #powerLink2, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, .wrap_section_contents, section[aria-label="추천공고"], .list_curation_wrap, .wrap_list_banner, .banner_list, .list_product, .wrap_nest, .nest-standby-banner, .recruit_line_banner, .wrap_banner_line',
+
+  /**
+   * 공고 목록 컨테이너/카드로 절대 취급하면 안 되는 광고·추천 영역 셀렉터.
+   *
+   * [배경] 사람인 직업별 목록(/zf_user/jobs/list/job-category)의 초기 HTML 은
+   * 실제 공고가 RequireJS 로 나중에 채워지고, 그 전에는 네이버 파워링크 광고 블록
+   * (#powerLink) 안에만 <li class="list_item"> 가 존재한다.
+   * 이 광고 영역을 목록 컨테이너로 오인하면 무한 스크롤이 광고 목록에 공고를
+   * append 하여 UI 가 깨지고 스피너가 끝없이 도는 것처럼 보인다.
+   */
+  NON_LIST_REGIONS:
+    '#powerLink, #powerLink1, #powerLink2, .powerlink, .powerlink_list, .wrap_list_banner, .list_product, .banner_list, .wrap_nest, .wrap_recommend, #sri_banner, #sri_banner_fixed, #sri_banner_scrolled, .data_list',
 } as const;
 
 /**
