@@ -39,9 +39,14 @@ const skipIfMissing = (fixture: PlatformFixture) =>
 
 /**
  * 실제 DOM 셀렉터가 깨져 파싱이 불가능한 플랫폼.
- * (platform-integration-bugs.test.ts 에서 원인과 영향도를 문서화)
+ *
+ * [정정] 과거 리멤버를 이 목록에 넣었으나 **오진**이었다.
+ *  원인은 코드가 아니라 픽스처가 Next.js 하이드레이션 직후의 스켈레톤 상태였던 것.
+ *  실제 브라우저로 렌더링 완료 후 덤프한 DOM(remember_postings_rendered.html)에서는
+ *  91개 카드 중 90개가 정상 파싱되므로 리멤버 테스트를 활성화한다.
+ *  (platform-integration-bugs.test.ts 의 [회귀] 블록 참조)
  */
-const KNOWN_BROKEN_SELECTOR_PLATFORMS = new Set<string>(['remember']);
+const KNOWN_BROKEN_SELECTOR_PLATFORMS = new Set<string>();
 
 /** 테스트용 기본 설정 (평점/무한스크롤은 통합 테스트 범위 밖이므로 끔) */
 const testSettings = (overrides: Partial<FilterSettings> = {}): FilterSettings => ({
