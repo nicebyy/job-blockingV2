@@ -9,6 +9,10 @@ export class WantedAdapter extends BaseSiteAdapter {
     return url.includes(SITE_DOMAINS.WANTED);
   }
 
+  public override isDetailPage(url: string = typeof window !== 'undefined' ? window.location.href : ''): boolean {
+    return /\/wd\/\d+/.test(url);
+  }
+
   public getJobCardElements(container: Document | HTMLElement = document): HTMLElement[] {
     const rawElements = Array.from(
       container.querySelectorAll<HTMLElement>(WANTED_SELECTORS.JOB_CARDS)
@@ -121,12 +125,17 @@ export class WantedAdapter extends BaseSiteAdapter {
   }
 
   public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
-    // 1. 표준 셀렉터 확인 (단, cardElement 자체 또는 링크 태그가 오매칭되는 것 방지)
-    const standardEl =
-      cardElement.querySelector<HTMLElement>(
-        'span[class*="CompanyNameWithLocationPeriod__company"], span[class*="__company__"], span[class*="companyName"], span[class*="Company_name"], .company-name'
-      ) ||
+    // 1. 상세 페이지 회사명 링크 우선 확인 (<a> 태그 허용)
+    const detailCompanyEl =
       cardElement.querySelector<HTMLElement>(WANTED_SELECTORS.DETAIL_COMPANY_NAME);
+    if (detailCompanyEl && detailCompanyEl !== cardElement) {
+      return detailCompanyEl;
+    }
+
+    // 2. 표준 셀렉터 확인 (단, cardElement 자체 또는 일반 카드의 링크 태그가 오매칭되는 것 방지)
+    const standardEl = cardElement.querySelector<HTMLElement>(
+      'span[class*="CompanyNameWithLocationPeriod__company"], span[class*="__company__"], span[class*="companyName"], span[class*="Company_name"], .company-name'
+    );
     if (
       standardEl &&
       standardEl !== cardElement &&
@@ -135,20 +144,24 @@ export class WantedAdapter extends BaseSiteAdapter {
       return standardEl;
     }
 
-    // 2. data-company-name 속성을 가진 카드(캐러셀 / 테마 포지션 카드 등)의 실제 텍스트 표시 요소 탐색
+    // 3. data-company-name 속성을 가진 카드(캐러셀 / 테마 포지션 카드 등)의 실제 텍스트 표시 요소 탐색
     const companyName =
       cardElement.getAttribute('data-company-name') ||
       cardElement.querySelector('[data-company-name]')?.getAttribute('data-company-name');
 
     if (companyName) {
-      const candidates = Array.from(cardElement.querySelectorAll<HTMLElement>('span, p, div, strong'));
+      const candidates = Array.from(cardElement.querySelectorAll<HTMLElement>('span, p, div, strong, a'));
       const textMatch = candidates.find(
-        (el) => el.children.length === 0 && el.textContent?.trim() === companyName
+        (el) =>
+          el.children.length === 0 &&
+          el.textContent?.trim() === companyName &&
+          el !== cardElement &&
+          (!el.getAttribute('href')?.includes('/wd/') || el.getAttribute('href')?.includes('/company/'))
       );
       if (textMatch) return textMatch;
     }
 
-    // 3. MiniJobCard / Carousel 헤더 구조 fallback (제목 다음의 두 번째 텍스트 요소)
+    // 4. MiniJobCard / Carousel 헤더 구조 fallback (제목 다음의 두 번째 텍스트 요소)
     const miniTitle = cardElement.querySelector<HTMLElement>('[class*="MiniJobCard__positionTitle"]');
     if (miniTitle?.nextElementSibling instanceof HTMLElement) {
       return miniTitle.nextElementSibling;
@@ -159,7 +172,7 @@ export class WantedAdapter extends BaseSiteAdapter {
       return header.children[1] as HTMLElement;
     }
 
-    // 4. PositionGroupJobCard fallback: title 요소 다음 컨테이너의 첫 번째 span
+    // 5. PositionGroupJobCard fallback: title 요소 다음 컨테이너의 첫 번째 span
     const titleEl = cardElement.querySelector<HTMLElement>(WANTED_SELECTORS.POSITION_TITLE);
     if (titleEl) {
       const nextSibling = titleEl.nextElementSibling;

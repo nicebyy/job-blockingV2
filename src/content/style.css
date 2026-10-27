@@ -189,6 +189,7 @@ li.listItem:hover .job-filter-btn-group,
 .jv_header .job-filter-btn-group,
 .title_inner .job-filter-btn-group,
 .wrap_jv_header .job-filter-btn-group,
+header[class*="JobHeader"] .job-filter-btn-group,
 section[class*="JobHeader"] .job-filter-btn-group,
 div[class*="JobHeader"] .job-filter-btn-group,
 div[class*="sc-80824a9d-0"] .job-filter-btn-group,
@@ -656,6 +657,23 @@ div[class*="sc-80824a9d-0"] .job-filter-ratings-wrap {
   display: inline-flex !important;
   vertical-align: middle !important;
   margin-left: 8px !important;
+}
+
+/* 원티드 상세 페이지(/wd/*) 헤더 평점 뱃지 정렬 */
+header[class*="JobHeader"] a[class*="Company__Link"],
+section[class*="JobHeader"] a[class*="Company__Link"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+header[class*="JobHeader"] .job-filter-ratings-wrap,
+section[class*="JobHeader"] .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  margin-left: 8px !important;
+  margin-right: 4px !important;
 }
 
 
