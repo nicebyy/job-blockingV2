@@ -1116,6 +1116,38 @@ describe('Site Adapters 단위 테스트', () => {
       expect(listContainer?.classList.contains('list_body')).toBe(true);
     });
 
+    it('사람인 getCardListContainer는 상위 래퍼(#default_list_wrap)가 매칭되더라도 내부의 .list_body를 우선 반환해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div id="default_list_wrap">
+          <div class="common_recruilt_list">
+            <div class="list_body">
+              <div class="list_item">공고 1</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const listContainer = adapter.getCardListContainer(container);
+      expect(listContainer).not.toBeNull();
+      expect(listContainer?.classList.contains('list_body')).toBe(true);
+    });
+
+    it('사람인 getCardListContainer는 컨테이너 셀렉터 미매칭 시에도 firstCard.closest(.list_body)를 우선 반환해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="custom_unknown_wrap">
+          <div class="list_body">
+            <div class="list_item">공고 1</div>
+          </div>
+        </div>
+      `;
+
+      const listContainer = adapter.getCardListContainer(container);
+      expect(listContainer).not.toBeNull();
+      expect(listContainer?.classList.contains('list_body')).toBe(true);
+    });
+
     it('사람인 지역별/직무별 목록 페이지의 PageBox 버튼 페이징 및 onclick URL을 getNextPageUrl에서 올바르게 추출해야 한다', () => {
       const doc = document.createElement('div');
       doc.innerHTML = `
