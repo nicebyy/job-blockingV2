@@ -14,7 +14,8 @@ td.tplTit .titBx,
 ol.rankList > li,
 li.dmpItem,
 li.listItem,
-div[class*="sc-d609d44f-0"] {
+div[class*="sc-d609d44f-0"],
+div[class*="sc-289d3ccd-0"] {
   position: relative !important;
 }
 
@@ -55,6 +56,7 @@ li:has([class*="sc-18344c98"][data-job-filtered="true"][data-filter-mode="hide"]
 li:has([class*="sc-d2fb7cfc"][data-job-filtered="true"][data-filter-mode="hide"]),
 li:has([class*="sc-3c9cd5df"][data-job-filtered="true"][data-filter-mode="hide"]),
 li[class*="sc-3c9cd5df-0"][data-job-filtered="true"][data-filter-mode="hide"],
+div[class*="sc-289d3ccd-0"][data-job-filtered="true"][data-filter-mode="hide"],
 div:has(> a[href*="/position/"][data-job-filtered="true"][data-filter-mode="hide"]),
 div[class*="sc-d609d44f-0"][data-job-filtered="true"][data-filter-mode="hide"] {
   display: none !important;
@@ -479,6 +481,31 @@ div[class*="sc-d2fb7cfc-7"],
 p[class*="sc-18344c98-6"] {
   display: inline !important;
   vertical-align: middle !important;
+}
+
+/* 리멤버(Remember) '내 직무 인기 공고'(sc-289d3ccd-0) 카드 인라인 [공고숨김 / 회사차단] 툴바 위치 최적화 */
+div[class*="sc-289d3ccd-0"] .job-filter-btn-group {
+  top: 8px !important;
+  right: 38px !important;
+  z-index: 100 !important;
+}
+
+/* 리멤버(Remember) '내 직무 인기 공고' 회사명 및 평점 뱃지 가로 정렬 최적화 */
+p[class*="sc-289d3ccd-4"],
+div[class*="sc-289d3ccd-4"] {
+  flex-grow: 0 !important;
+  flex-basis: auto !important;
+  max-width: calc(100% - 110px) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+div[class*="sc-289d3ccd-0"] .job-filter-ratings-wrap {
+  flex-shrink: 0 !important;
+  margin-left: 4px !important;
 }
 
 /* 점핏(Jumpit) 공고 카드 회사명 행 및 평점 뱃지 정렬 */

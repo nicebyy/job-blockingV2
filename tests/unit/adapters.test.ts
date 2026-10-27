@@ -2377,6 +2377,231 @@ describe('Site Adapters 단위 테스트', () => {
       const res4 = engine.evaluateJobCard(adapter.parseCard(li4)!);
       expect(res4.shouldFilter).toBe(false);
     });
+
+    it('내 직무 인기 공고 카드(sc-289d3ccd-0)를 올바르게 수집 및 파싱해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <section id="PopularPostings">
+          <ul class="sc-9f83fe7b-2">
+            <div class="sc-289d3ccd-0" data-banner="https://cdn.rememberapp.co.kr/banner1.jpg">
+              <a href="/job/posting/112233?curationLocation=job_posting_tab&source=popular_job_posting">
+                <div class="sc-289d3ccd-7">
+                  <button class="bookmark-btn">북마크</button>
+                </div>
+                <div class="sc-289d3ccd-6">
+                  <div class="info-row">
+                    <div class="sc-289d3ccd-1 logo"></div>
+                    <p class="sc-289d3ccd-4">(주)쏘카</p>
+                  </div>
+                  <div>
+                    <h3 class="sc-289d3ccd-3">Product Engineer</h3>
+                  </div>
+                </div>
+              </a>
+            </div>
+            <div class="sc-289d3ccd-0">
+              <a href="/job/postings/445566">
+                <div class="sc-289d3ccd-7"></div>
+                <div class="sc-289d3ccd-6">
+                  <div class="info-row">
+                    <div class="sc-289d3ccd-1 logo"></div>
+                    <p class="sc-289d3ccd-4">(주)두산 디지털이노베이션</p>
+                  </div>
+                  <div>
+                    <h3 class="sc-289d3ccd-3">AI Application 개발/운영 (서울)</h3>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </ul>
+        </section>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(2);
+      expect(cards[0].classList.contains('sc-289d3ccd-0')).toBe(true);
+      expect(cards[1].classList.contains('sc-289d3ccd-0')).toBe(true);
+
+      const info1 = adapter.parseCard(cards[0])!;
+      expect(info1).not.toBeNull();
+      expect(info1.companyName).toBe('(주)쏘카');
+      expect(info1.title).toBe('Product Engineer');
+      expect(info1.jobId).toBe('112233');
+      expect(info1.isAd).toBe(false);
+
+      const info2 = adapter.parseCard(cards[1])!;
+      expect(info2).not.toBeNull();
+      expect(info2.companyName).toBe('(주)두산 디지털이노베이션');
+      expect(info2.title).toBe('AI Application 개발/운영 (서울)');
+      expect(info2.jobId).toBe('445566');
+    });
+
+    it('내 직무 인기 공고 카드(sc-289d3ccd-0)에 [공고숨김] 및 [회사차단] 듀얼 버튼이 주입되고, 클릭 시 카드(div)가 즉시 숨겨져야 한다', () => {
+      const card = document.createElement('div');
+      card.className = 'sc-289d3ccd-0';
+      card.innerHTML = `
+        <a href="/job/posting/112233">
+          <div class="sc-289d3ccd-7">
+            <button class="bookmark-btn">북마크</button>
+          </div>
+          <div class="sc-289d3ccd-6">
+            <p class="sc-289d3ccd-4">(주)쏘카</p>
+            <h3 class="sc-289d3ccd-3">Product Engineer</h3>
+          </div>
+        </a>
+      `;
+
+      const cardInfo = adapter.parseCard(card)!;
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(cardInfo, { onBlockCompany, onBlockJob });
+
+      const btnGroup = card.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.CONTAINER}`);
+      expect(btnGroup).not.toBeNull();
+
+      // [공고숨김] 버튼 클릭 시 div.sc-289d3ccd-0 즉시 숨김
+      const jobBtn = card.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.JOB_BUTTON}`) as HTMLButtonElement;
+      expect(jobBtn).not.toBeNull();
+
+      jobBtn.click();
+      expect(onBlockJob).toHaveBeenCalledTimes(1);
+      expect(card.style.display).toBe('none');
+      expect(card.getAttribute('data-job-filtered')).toBe('true');
+      expect(card.getAttribute('data-filter-mode')).toBe('hide');
+      expect(card.getAttribute('data-blocked-type')).toBe('job');
+
+      // [회사차단] 버튼 클릭 시 div.sc-289d3ccd-0 즉시 숨김
+      card.style.display = 'block';
+      const compBtn = card.querySelector(`.${INLINE_BUTTON_CONFIG.CLASSES.COMPANY_BUTTON}`) as HTMLButtonElement;
+      expect(compBtn).not.toBeNull();
+
+      compBtn.click();
+      expect(onBlockCompany).toHaveBeenCalledTimes(1);
+      expect(onBlockCompany).toHaveBeenCalledWith('(주)쏘카');
+      expect(card.style.display).toBe('none');
+      expect(card.getAttribute('data-blocked-type')).toBe('company');
+    });
+
+    it('내 직무 인기 공고 카드(sc-289d3ccd-0)에 잡플래닛 및 블라인드 평점 뱃지가 회사명(p.sc-289d3ccd-4) 바로 옆에 정상 주입되어야 한다', () => {
+      const card = document.createElement('div');
+      card.className = 'sc-289d3ccd-0';
+      card.innerHTML = `
+        <a href="/job/posting/112233">
+          <div class="sc-289d3ccd-6">
+            <div class="company-row">
+              <p class="sc-289d3ccd-4">(주)쏘카</p>
+            </div>
+            <h3 class="sc-289d3ccd-3">Product Engineer</h3>
+          </div>
+        </a>
+      `;
+
+      const cardInfo = adapter.parseCard(card)!;
+      const companyEl = adapter.getCompanyElement(card);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent).toBe('(주)쏘카');
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        status: 'found',
+        companyName: '(주)쏘카',
+        rating: 3.9,
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        status: 'found',
+        companyName: '(주)쏘카',
+        rating: 3.8,
+        cachedAt: Date.now(),
+      });
+
+      const badges = card.querySelectorAll(`.${RATING_BADGE_CONFIG.CLASSES.BADGE}`);
+      expect(badges.length).toBe(2);
+      expect(card.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`)).not.toBeNull();
+      expect(card.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`)).not.toBeNull();
+
+      // 평점 래퍼 컨테이너가 회사명 요소 바로 다음 형제로 주입되었는지 확인
+      const wrap = card.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(companyEl?.nextElementSibling).toBe(wrap);
+    });
+
+    it('FilterEngine과 연동하여 내 직무 인기 공고 카드가 회사명, 키워드, 공고ID로 필터링되어야 한다', () => {
+      const engine = new FilterEngine(
+        {
+          mode: 'hide',
+          blurIntensity: 6,
+          hideAds: true,
+          showInlineButton: true,
+          enableInfiniteScroll: true,
+          showJobplanetRating: true,
+          showBlindRating: true,
+        },
+        [
+          { id: '1', pattern: '쏘카', type: 'company', createdAt: Date.now() },
+          { id: '2', pattern: 'Backend', type: 'keyword', createdAt: Date.now() },
+          { id: '3', pattern: '333333', type: 'job', createdAt: Date.now() },
+        ]
+      );
+
+      // 1. 회사 차단
+      const card1 = document.createElement('div');
+      card1.className = 'sc-289d3ccd-0';
+      card1.innerHTML = `
+        <a href="/job/posting/11111">
+          <div class="sc-289d3ccd-6">
+            <p class="sc-289d3ccd-4">(주)쏘카</p>
+            <h3 class="sc-289d3ccd-3">Frontend Developer</h3>
+          </div>
+        </a>
+      `;
+      const res1 = engine.evaluateJobCard(adapter.parseCard(card1)!);
+      expect(res1.shouldFilter).toBe(true);
+
+      // 2. 키워드 차단
+      const card2 = document.createElement('div');
+      card2.className = 'sc-289d3ccd-0';
+      card2.innerHTML = `
+        <a href="/job/posting/22222">
+          <div class="sc-289d3ccd-6">
+            <p class="sc-289d3ccd-4">(주)무신사</p>
+            <h3 class="sc-289d3ccd-3">Backend Engineer (무신사)</h3>
+          </div>
+        </a>
+      `;
+      const res2 = engine.evaluateJobCard(adapter.parseCard(card2)!);
+      expect(res2.shouldFilter).toBe(true);
+
+      // 3. 단일 공고 ID 차단
+      const card3 = document.createElement('div');
+      card3.className = 'sc-289d3ccd-0';
+      card3.innerHTML = `
+        <a href="/job/posting/333333">
+          <div class="sc-289d3ccd-6">
+            <p class="sc-289d3ccd-4">(주)고위드</p>
+            <h3 class="sc-289d3ccd-3">Fullstack Engineer</h3>
+          </div>
+        </a>
+      `;
+      const res3 = engine.evaluateJobCard(adapter.parseCard(card3)!);
+      expect(res3.shouldFilter).toBe(true);
+
+      // 4. 통과 공고
+      const card4 = document.createElement('div');
+      card4.className = 'sc-289d3ccd-0';
+      card4.innerHTML = `
+        <a href="/job/posting/444444">
+          <div class="sc-289d3ccd-6">
+            <p class="sc-289d3ccd-4">(주)당근마켓</p>
+            <h3 class="sc-289d3ccd-3">iOS Engineer</h3>
+          </div>
+        </a>
+      `;
+      const res4 = engine.evaluateJobCard(adapter.parseCard(card4)!);
+      expect(res4.shouldFilter).toBe(false);
+    });
   });
 
   describe('JumpitAdapter DOM 파싱', () => {

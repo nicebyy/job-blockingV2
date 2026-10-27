@@ -158,30 +158,32 @@ export class RememberAdapter extends BaseSiteAdapter {
       return;
     }
 
-    // 리멤버 리스트/큐레이션 카드: 상위 li(그리드 또는 캐러셀 셀)가 존재할 경우 숨김 시 빈칸이 남지 않고 뒤의 카드가 당겨오도록 li 전체를 함께 즉시 숨김
-    const targetLi =
+    // 리멤버 리스트/큐레이션/인기공고 카드: 상위 li(그리드 또는 캐러셀 셀) 또는 카드 컨테이너(sc-289d3ccd-0)가 존재할 경우 숨김 시 빈칸이 남지 않고 뒤의 카드가 당겨오도록 카드 전체를 함께 즉시 숨김
+    const targetCard =
       cardInfo.cardElement.tagName.toUpperCase() === 'LI'
         ? cardInfo.cardElement
-        : cardInfo.cardElement.closest<HTMLElement>('li');
+        : (cardInfo.cardElement.closest<HTMLElement>(
+            'li, div[class*="sc-289d3ccd-0"], div[class*="sc-18344c98-0"]'
+          ) || cardInfo.cardElement);
 
-    if (targetLi) {
+    if (targetCard) {
       const onBlockCompany = typeof actions === 'function' ? actions : actions.onBlockCompany;
       const onBlockJob = typeof actions === 'object' ? actions.onBlockJob : undefined;
 
       super.injectInlineButton(cardInfo, {
         onBlockCompany: (compName) => {
-          targetLi.style.setProperty('display', 'none', 'important');
-          targetLi.setAttribute('data-job-filtered', 'true');
-          targetLi.setAttribute('data-filter-mode', 'hide');
-          targetLi.setAttribute('data-blocked-type', 'company');
+          targetCard.style.setProperty('display', 'none', 'important');
+          targetCard.setAttribute('data-job-filtered', 'true');
+          targetCard.setAttribute('data-filter-mode', 'hide');
+          targetCard.setAttribute('data-blocked-type', 'company');
           onBlockCompany?.(compName);
         },
         onBlockJob: (info) => {
-          targetLi.style.setProperty('display', 'none', 'important');
-          targetLi.setAttribute('data-job-filtered', 'true');
-          targetLi.setAttribute('data-filter-mode', 'hide');
-          targetLi.setAttribute('data-blocked-type', 'job');
-          onBlockJob?.({ ...info, cardElement: targetLi });
+          targetCard.style.setProperty('display', 'none', 'important');
+          targetCard.setAttribute('data-job-filtered', 'true');
+          targetCard.setAttribute('data-filter-mode', 'hide');
+          targetCard.setAttribute('data-blocked-type', 'job');
+          onBlockJob?.({ ...info, cardElement: targetCard });
         },
       });
       return;
