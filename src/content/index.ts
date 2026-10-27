@@ -353,6 +353,16 @@ export class ContentController {
     // 유효 공고 개수 확인 후 필요 시 다음 페이지 자동 채우기 (Auto-Refill)
     const visibleCount = elements.length - this.currentStats.totalBlocked;
     if (this.settings?.enableInfiniteScroll) {
+      // SPA / 비동기 검색 패널(RequireJS) 등에 의해 컨테이너/페이지네이션이 동적으로 로드된 경우 무한 스크롤 지연 활성화
+      if (
+        !this.infiniteScroll &&
+        this.adapter?.supportsInfiniteScroll &&
+        !this.adapter.isDetailPage?.() &&
+        this.adapter.getPaginationElement?.(document) &&
+        this.adapter.getCardListContainer?.(document)
+      ) {
+        this.setupInfiniteScroll();
+      }
       this.infiniteScroll?.checkAndAutoRefill(visibleCount);
     }
   }
