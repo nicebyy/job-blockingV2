@@ -9,8 +9,20 @@ build/
 coverage/
 test-results/
 
-# Multi-Agent Worktrees (Mandatory Isolation)
-.agents/worktrees/
+# Worktrees & Workspace
+.agents/
+.worktrees/
+
+# Local Rules & Config
+gemini.md
+GEMINI.md
+.gemini/
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.claude/
+.clinerules
 
 # IDE & Editor
 .vscode/
