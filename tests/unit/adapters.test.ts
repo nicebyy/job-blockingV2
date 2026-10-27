@@ -1940,6 +1940,218 @@ describe('Site Adapters 단위 테스트', () => {
       expect(onBlockCompany).toHaveBeenCalledWith('엔에이치엔클라우드(주)');
     });
 
+    it('잡코리아 메인 캐러셀에서 공고 숨김 시 부모 그리드 셀이 함께 숨겨지고 다음 슬라이드의 카드가 당겨져 빈자리 없이 재정렬되어야 한다 (Cross-Slide Reflow)', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div data-slot="carousel" data-sentry-element="Carousel">
+          <div data-slot="carousel-content" data-sentry-component="CarouselContent">
+            <!-- 슬라이드 0 -->
+            <div data-slot="carousel-item" data-sentry-component="CarouselItem">
+              <div class="grid grid-col-4 gap-[20px]">
+                <div class="cell-s0-0">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사0</span>
+                    <div class="flex justify-between"><span>공고0</span></div>
+                  </div>
+                </div>
+                <div class="cell-s0-1">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">차단대상회사</span>
+                    <div class="flex justify-between"><span>숨길공고1</span></div>
+                  </div>
+                </div>
+                <div class="cell-s0-2">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사2</span>
+                    <div class="flex justify-between"><span>공고2</span></div>
+                  </div>
+                </div>
+                <div class="cell-s0-3">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사3</span>
+                    <div class="flex justify-between"><span>공고3</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 슬라이드 1 -->
+            <div data-slot="carousel-item" data-sentry-component="CarouselItem">
+              <div class="grid grid-col-4 gap-[20px]">
+                <div class="cell-s1-0">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사4</span>
+                    <div class="flex justify-between"><span>공고4</span></div>
+                  </div>
+                </div>
+                <div class="cell-s1-1">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사5</span>
+                    <div class="flex justify-between"><span>공고5</span></div>
+                  </div>
+                </div>
+                <div class="cell-s1-2">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사6</span>
+                    <div class="flex justify-between"><span>공고6</span></div>
+                  </div>
+                </div>
+                <div class="cell-s1-3">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사7</span>
+                    <div class="flex justify-between"><span>공고7</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(8);
+
+      const targetCard = cards[1]; // cell-s0-1 내의 카드
+      const targetCell = adapter.getParentGridCell(targetCard);
+      expect(targetCell).not.toBeNull();
+      expect(targetCell?.classList.contains('cell-s0-1')).toBe(true);
+
+      // 1. 카드 및 부모 셀 숨김 처리
+      adapter.hideCardAndParentCell(targetCard, 'job');
+      expect(targetCard.style.display).toBe('none');
+      expect(targetCard.getAttribute('data-job-filtered')).toBe('true');
+      expect(targetCell?.style.display).toBe('none');
+      expect(targetCell?.getAttribute('data-job-filtered')).toBe('true');
+
+      // 2. 캐러셀 슬라이드 재정렬 실행
+      adapter.reflow(container);
+
+      const slides = container.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]');
+      const grid0 = slides[0].querySelector<HTMLElement>('.grid');
+      const grid1 = slides[1].querySelector<HTMLElement>('.grid');
+
+      // 슬라이드 0의 활성(보이는) 셀은 4개로 유지되어야 함 (슬라이드 1의 첫 카드가 당겨옴)
+      const activeInSlide0 = Array.from(grid0?.children || []).filter(
+        (cell) => (cell as HTMLElement).style.display !== 'none'
+      );
+      expect(activeInSlide0.length).toBe(4);
+
+      // 당겨온 마지막 카드가 슬라이드 1의 첫 카드(cell-s1-0)여야 함
+      expect(activeInSlide0[3].classList.contains('cell-s1-0')).toBe(true);
+      expect(activeInSlide0[3].textContent).toContain('회사4');
+
+      // 슬라이드 1에는 3개의 카드가 남아있어야 함
+      const activeInSlide1 = Array.from(grid1?.children || []).filter(
+        (cell) => (cell as HTMLElement).style.display !== 'none'
+      );
+      expect(activeInSlide1.length).toBe(3);
+    });
+
+    it('잡코리아 메인 캐러셀에서 슬라이드의 모든 카드가 앞 슬라이드로 당겨지면 빈 슬라이드는 자동으로 display: none 처리되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div data-slot="carousel" data-sentry-element="Carousel">
+          <div data-slot="carousel-content">
+            <!-- 슬라이드 0 (카드가 2개 숨겨짐) -->
+            <div data-slot="carousel-item">
+              <div class="grid grid-col-4">
+                <div class="cell-s0-0"><div data-component-type="CARD_JOB_BASIC"><span>A</span></div></div>
+                <div class="cell-s0-1" style="display:none" data-job-filtered="true"><div data-component-type="CARD_JOB_BASIC"><span>B</span></div></div>
+                <div class="cell-s0-2" style="display:none" data-job-filtered="true"><div data-component-type="CARD_JOB_BASIC"><span>C</span></div></div>
+                <div class="cell-s0-3"><div data-component-type="CARD_JOB_BASIC"><span>D</span></div></div>
+              </div>
+            </div>
+            <!-- 슬라이드 1 (원래 2개만 있던 마지막 슬라이드) -->
+            <div data-slot="carousel-item">
+              <div class="grid grid-col-4">
+                <div class="cell-s1-0"><div data-component-type="CARD_JOB_BASIC"><span>E</span></div></div>
+                <div class="cell-s1-1"><div data-component-type="CARD_JOB_BASIC"><span>F</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      adapter.reflow(container);
+
+      const slides = container.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]');
+      const grid0 = slides[0].querySelector<HTMLElement>('.grid');
+
+      // 슬라이드 0에 E, F가 당겨와 활성 카드가 총 4개가 됨
+      const activeInSlide0 = Array.from(grid0?.children || []).filter(
+        (cell) => (cell as HTMLElement).style.display !== 'none'
+      );
+      expect(activeInSlide0.length).toBe(4);
+
+      // 슬라이드 1은 이제 활성 카드가 0개이므로 display: none 처리됨
+      expect(slides[1].style.display).toBe('none');
+      expect(slides[1].getAttribute('data-job-filtered')).toBe('true');
+    });
+
+    it('잡코리아 CardJobBasic 카드에서 인라인 [이 공고 숨기기] 및 [회사 차단] 클릭 시 즉시 부모 셀 숨김 및 reflow가 트리거되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div data-slot="carousel" data-sentry-element="Carousel">
+          <div data-slot="carousel-content">
+            <div data-slot="carousel-item">
+              <div class="grid grid-col-4">
+                <div class="cell-0">
+                  <div data-component-type="CARD_JOB_BASIC">
+                    <span class="truncate">카카오페이</span>
+                    <div class="flex justify-between"><span>iOS 개발자</span></div>
+                  </div>
+                </div>
+                <div class="cell-1">
+                  <div data-component-type="CARD_JOB_BASIC">
+                    <span class="truncate">네이버</span>
+                    <div class="flex justify-between"><span>백엔드 개발자</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div data-slot="carousel-item">
+              <div class="grid grid-col-4">
+                <div class="cell-2">
+                  <div data-component-type="CARD_JOB_BASIC">
+                    <span class="truncate">라인</span>
+                    <div class="flex justify-between"><span>서버 엔지니어</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      const cardInfo = adapter.parseCard(cards[0]);
+      expect(cardInfo).not.toBeNull();
+
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(cardInfo!, { onBlockCompany, onBlockJob });
+
+      const cell0 = container.querySelector<HTMLElement>('.cell-0');
+      const hideJobBtn = cards[0].querySelector<HTMLButtonElement>('.job-filter-btn-job');
+      expect(hideJobBtn).not.toBeNull();
+
+      // [이 공고 숨기기] 클릭
+      hideJobBtn?.click();
+
+      // 1. 카드와 부모 셀이 즉시 display: none 처리되었는지 검증
+      expect(cards[0].style.display).toBe('none');
+      expect(cell0?.style.display).toBe('none');
+
+      // 2. 콜백 호출 검증
+      expect(onBlockJob).toHaveBeenCalled();
+
+      // 3. 슬라이드 1의 cell-2(라인)가 슬라이드 0으로 당겨졌는지 검증
+      const slides = container.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]');
+      const grid0 = slides[0].querySelector<HTMLElement>('.grid');
+      expect(grid0?.contains(container.querySelector('.cell-2'))).toBe(true);
+    });
+
     it('잡코리아 인기 TOP 100(ol.rankList > li.dmpItem) 공고 카드를 정확히 수집 및 파싱하고 평점 뱃지와 인라인 툴바가 올바르게 주입되어야 한다', () => {
       const container = document.createElement('div');
       container.innerHTML = `

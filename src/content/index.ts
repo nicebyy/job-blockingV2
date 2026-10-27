@@ -267,6 +267,27 @@ export class ContentController {
         this.filterEngine.applyFilter(cardInfo.cardElement, effectiveMode);
         totalBlocked++;
 
+        // 그리드 셀 내부 카드인 경우 부모 셀의 숨김 스타일 동기화 (그리드 빈 슬롯 방지)
+        const parentCell = cardInfo.cardElement.parentElement;
+        const grandParent = parentCell?.parentElement;
+        const isGridChild =
+          grandParent &&
+          (grandParent.classList.contains('grid') ||
+            grandParent.className.includes('grid-col') ||
+            grandParent.getAttribute('data-slot') === 'carousel-item');
+
+        if (parentCell && isGridChild) {
+          if (effectiveMode === 'hide') {
+            parentCell.style.setProperty('display', 'none', 'important');
+            parentCell.setAttribute('data-job-filtered', 'true');
+            parentCell.setAttribute('data-filter-mode', 'hide');
+          } else {
+            parentCell.style.display = '';
+            parentCell.removeAttribute('data-job-filtered');
+            parentCell.removeAttribute('data-filter-mode');
+          }
+        }
+
         if (evalResult.isAdFilter) {
           cardInfo.cardElement.setAttribute('data-blocked-type', 'ad');
           blockedAds++;
@@ -313,6 +334,14 @@ export class ContentController {
         cardInfo.cardElement.removeAttribute('data-blocked-type');
         cardInfo.cardElement.removeAttribute(FILTER_CONFIG.ATTR_FILTER_ORIGIN);
 
+        // 그리드 셀 내부 카드인 경우 부모 셀의 숨김 스타일도 해제 복원
+        const restoreParent = cardInfo.cardElement.parentElement;
+        if (restoreParent && restoreParent.getAttribute('data-job-filtered') === 'true') {
+          restoreParent.style.display = '';
+          restoreParent.removeAttribute('data-job-filtered');
+          restoreParent.removeAttribute('data-filter-mode');
+        }
+
         // 필터링되지 않은 정상 카드에 [공고숨김 / 회사차단] 듀얼 인라인 버튼 주입
         this.adapter.injectInlineButton(cardInfo, {
           onBlockCompany: async (companyName) => {
@@ -349,6 +378,9 @@ export class ContentController {
     };
 
     this.notifyBadgeUpdate(this.currentStats.totalBlocked);
+
+    // 필터링 적용 완료 후 캐러셀/그리드 카드 자동 재정렬 (빈자리 채우기)
+    this.adapter.reflow?.(document);
 
     // 유효 공고 개수 확인 후 필요 시 다음 페이지 자동 채우기 (Auto-Refill)
     const visibleCount = elements.length - this.currentStats.totalBlocked;
