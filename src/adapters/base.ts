@@ -33,6 +33,10 @@ export interface SiteAdapter {
    * 사용자가 "추천/광고 공고 숨김" 토글을 끄면 호출된다.
    */
   restorePromotionBanners?(container?: Document | HTMLElement): void;
+  /**
+   * 공고 필터링(숨김/차단) 후 그리드 또는 캐러셀 슬라이드 내 빈 공간을 채우기 위한 재정렬 훅
+   */
+  reflow?(container?: Document | HTMLElement): void;
 }
 
 export interface BlockActions {
@@ -90,6 +94,10 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
 
   public getPaginationElement?(_currentDoc: Document): HTMLElement | null {
     return null;
+  }
+
+  public reflow?(_container?: Document | HTMLElement): void {
+    // 기본 구현은 no-op (그리드나 캐러셀 재정렬이 필요한 하위 어댑터에서 오버라이드)
   }
 
   /**

@@ -19,6 +19,8 @@ li.dmpItem,
 li.listItem,
 div[data-component-type="CARD_JOB_BASIC"],
 div[data-sentry-component="CardJobBasic"],
+div[class*="JobCard_JobCard"],
+[class*="MiniJobCard"],
 div[class*="sc-d609d44f-0"],
 div[class*="sc-289d3ccd-0"] {
   position: relative !important;
@@ -65,6 +67,9 @@ div[class*="sc-289d3ccd-0"][data-job-filtered="true"][data-filter-mode="hide"],
 div:has(> a[href*="/position/"][data-job-filtered="true"][data-filter-mode="hide"]),
 div:has(> [data-component-type="CARD_JOB_BASIC"][data-job-filtered="true"][data-filter-mode="hide"]),
 div:has(> [data-sentry-component="CardJobBasic"][data-job-filtered="true"][data-filter-mode="hide"]),
+[data-slot="carousel-item"] .grid > div:has(> [data-component-type="CARD_JOB_BASIC"][data-job-filtered="true"][data-filter-mode="hide"]),
+[data-slot="carousel-item"] .grid > div:has(> [data-sentry-component="CardJobBasic"][data-job-filtered="true"][data-filter-mode="hide"]),
+[data-slot="carousel-item"] .grid > div[data-job-filtered="true"][data-filter-mode="hide"],
 [data-component-type="CARD_JOB_BASIC"][data-job-filtered="true"][data-filter-mode="hide"],
 [data-sentry-component="CardJobBasic"][data-job-filtered="true"][data-filter-mode="hide"],
 div[class*="sc-d609d44f-0"][data-job-filtered="true"][data-filter-mode="hide"] {
@@ -184,6 +189,8 @@ li.dmpItem:hover .job-filter-btn-group,
 li.listItem:hover .job-filter-btn-group,
 div[data-component-type="CARD_JOB_BASIC"]:hover .job-filter-btn-group,
 div[data-sentry-component="CardJobBasic"]:hover .job-filter-btn-group,
+div[class*="JobCard_JobCard"]:hover .job-filter-btn-group,
+[class*="MiniJobCard"]:hover .job-filter-btn-group,
 .job-filter-btn-group:hover,
 .job-filter-btn-group:focus-within {
   opacity: 1 !important;
@@ -723,6 +730,96 @@ section[class*="JobHeader"] .job-filter-ratings-wrap {
   margin-left: 8px !important;
   margin-right: 4px !important;
 }
+
+/* 원티드 채용 목록 공고 카드(.JobCard) 본문 가로 Flex-Wrap 레이아웃 및 평점 뱃지 가로 정렬 */
+div[class*="JobCard_JobCard__body"],
+div[class*="JobCard_container"] div[class*="body"] {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  row-gap: 2px !important;
+  column-gap: 0px !important;
+}
+
+div[class*="JobCard_JobCard__body"] > span[class*="JobCard__body__position"],
+div[class*="JobCard_JobCard__body"] > span[class*="body__position"],
+div[class*="JobCard_container"] div[class*="body"] > *:first-child {
+  width: 100% !important;
+  flex-basis: 100% !important;
+}
+
+div[class*="JobCard_JobCard__body"] > span[class*="CompanyNameWithLocationPeriod__company"],
+div[class*="JobCard_JobCard__body"] > span[class*="__company__"],
+div[class*="JobCard_container"] div[class*="body"] > *:nth-child(2) {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  width: auto !important;
+  max-width: calc(100% - 135px) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+div[class*="JobCard_JobCard__body"] .job-filter-ratings-wrap,
+div[class*="JobCard_container"] div[class*="body"] .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  flex-shrink: 0 !important;
+  margin-left: 6px !important;
+}
+
+div[class*="JobCard_JobCard__body"] > span[class*="CompanyNameWithLocationPeriod__location"],
+div[class*="JobCard_JobCard__body"] > span[class*="__location__"],
+div[class*="JobCard_container"] div[class*="body"] > *:nth-child(4),
+div[class*="JobCard_container"] div[class*="body"] > *:last-child {
+  width: 100% !important;
+  flex-basis: 100% !important;
+}
+
+/* 원티드 메인/홈 미니 공고 카드(MiniJobCard) 헤더 가로 Flex-Wrap 레이아웃 및 평점 뱃지 정렬 */
+[class*="MiniJobCard"] header {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  row-gap: 2px !important;
+  column-gap: 0px !important;
+}
+
+[class*="MiniJobCard"] header > [class*="positionTitle"],
+[class*="MiniJobCard"] header > *:first-child {
+  width: 100% !important;
+  flex-basis: 100% !important;
+}
+
+[class*="MiniJobCard"] header > *:nth-child(2) {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  width: auto !important;
+  max-width: calc(100% - 135px) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+[class*="MiniJobCard"] header .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  flex-shrink: 0 !important;
+  margin-left: 6px !important;
+}
+
+[class*="MiniJobCard"] header > *:nth-child(4),
+[class*="MiniJobCard"] header > *:last-child {
+  width: 100% !important;
+  flex-basis: 100% !important;
+}
+
 
 
 

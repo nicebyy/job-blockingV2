@@ -245,6 +245,13 @@ export const JOBKOREA_SELECTORS = {
     '[data-sentry-component="TitleContent"] h1, [data-sentry-component="Title"] h1, div[data-jobview-section="atf"] h1, h1.font-bold, .artReadJob .sumWrap h3, .artReadJob h3, .sumWrap .tit',
   DETAIL_RECOMMEND_CARDS:
     '#recommended-section [data-sentry-element="Grid"] > div, #recommended-section div[class*="Card"], .box-recommend li',
+
+  // 메인 페이지 캐러셀 및 그리드 셀렉터
+  CAROUSEL: '[data-slot="carousel"], [data-sentry-element="Carousel"]',
+  CAROUSEL_ITEM: '[data-slot="carousel-item"], [data-sentry-component="CarouselItem"]',
+  CAROUSEL_GRID: '.grid, [class*="grid"]',
+  CAROUSEL_CARD_BASIC:
+    '[data-component-type="CARD_JOB_BASIC"], [data-sentry-component="CardJobBasic"]',
 } as const;
 
 /**
@@ -260,6 +267,8 @@ export const JOBKOREA_CONFIG = {
   DEFAULT_PAGE_SIZE: '40',
   DEFAULT_ORDER: '20',
   DEFAULT_TAB_INDEX: '0',
+  DEFAULT_CAROUSEL_CAPACITY: 4,
+  ATTR_INITIAL_CAPACITY: 'data-initial-capacity',
   BODY_PARAMS: {
     PAGE: 'page',
     PAGE_SIZE: 'pagesize',
