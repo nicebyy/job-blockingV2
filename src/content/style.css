@@ -208,7 +208,43 @@ div[data-sentry-component="CardJobBasic"] .job-filter-btn-group {
   right: 52px !important;
 }
 
-/* 상세 페이지 인라인 [공고숨김 / 회사차단] 듀얼 버튼 그룹 전용 스타일 (입사지원 버튼 겹침 방지 및 상시 노출) */
+/* 잡코리아 채용목록(.tplJobList) 테이블 행 툴바 위치 보정
+ *
+ * [실측 근거 — 라이브 페이지]
+ * 툴바는 제목 셀(td.tplTit)에 absolute 로 앵커되고, 잡코리아 사이트 CSS 가
+ * td.tplTit 안의 .titBx 에 `margin-top: 26px` 를 주기 때문에 제목 첫 줄은
+ * 행 상단에서 26px 아래에서 시작한다. 즉 td 기준 0~26px 구간은 비어 있는 상단 밴드다.
+ *
+ * 기존 기본값(top:10px, 높이 23px → 10~33px)은 이 빈 밴드를 넘어 제목 첫 줄(26px~)을
+ * 침범하여 긴 제목 공고 19개 행에서 글자와 겹쳤다.
+ *
+ * top:2px 는 23px 높이 캡슐이 2~25px 에 놓여 상단 여백 밴드 안에 정확히 들어가므로
+ *   - 제목/조건/설명 텍스트와 절대 겹치지 않고 (라이브 60행 전수 검사: 겹침 0)
+ *   - 행 높이도 늘리지 않으며 (absolute 배치 유지 - 정적 흐름 침범 없음)
+ *   - 우측 상단 코너에 가지런히 정렬된다.
+ * 우측은 스크랩 버튼/미리보기 열과 겹치지 않는 제목 셀 오른쪽 안쪽 여백을 유지한다.
+ */
+.tplJobList tr.devloopArea td.tplTit > .job-filter-btn-group,
+.tplJobList tr[data-gno] td.tplTit > .job-filter-btn-group {
+  top: 2px !important;
+}
+
+/* 상세 페이지 인라인 [공고숨김 / 회사차단] 듀얼 버튼 그룹 전용 스타일 (입사지원 버튼 겹침 방지 및 상시 노출)
+ *
+ * [중요 / 회귀 방지] 이 블록은 "상세 페이지에서만 존재하는" 앵커에만 매칭해야 한다.
+ * 1차 판별은 JS 가 명시적으로 부여하는 `.job-filter-btn-group-detail` 클래스이고,
+ * 아래 플랫폼별 상세 헤더 셀렉터는 클래스 누락 시를 대비한 안전망이다.
+ *
+ * 과거에는 페이지 전체를 감싸는 컨테이너까지 매칭되는 구조 셀렉터
+ * `div:has(> h1):has(a[href*="/company/"])` 가 포함되어 있었다.
+ * 잡코리아 채용목록(`/recruit/joblist`)은 목록 전체를 `<div id="content"><h1 class="skip">…` 로
+ * 감싸므로, 로그인 세션·배너 등으로 그 안에 기업 링크(`a[href*="/company/"]`)가 하나라도
+ * 존재하는 순간 이 규칙이 목록의 "모든 행" 툴바에 매칭되었다.
+ * 그 결과 (1) 호버해야만 보이던 [공고숨김/회사차단] 캡슐이 전 행에 상시 노출되고,
+ * (2) `position: static` 으로 강제되어 제목 셀 흐름에 끼어들며 행 하단으로 흘러내리고
+ *     행 높이까지 늘어나는(위치가 부자연스러운) 현상이 발생했다.
+ * → 구조 기반(페이지 레이아웃 추정) 매칭은 금지하고, 반드시 JS 클래스로만 판별한다.
+ */
 .job-filter-btn-group-detail,
 .jv_header .job-filter-btn-group,
 .title_inner .job-filter-btn-group,
@@ -216,8 +252,7 @@ div[data-sentry-component="CardJobBasic"] .job-filter-btn-group {
 header[class*="JobHeader"] .job-filter-btn-group,
 section[class*="JobHeader"] .job-filter-btn-group,
 div[class*="JobHeader"] .job-filter-btn-group,
-div[class*="sc-80824a9d-0"] .job-filter-btn-group,
-div:has(> h1):has(a[href*="/company/"]) .job-filter-btn-group {
+div[class*="sc-80824a9d-0"] .job-filter-btn-group {
   position: static !important;
   display: inline-flex !important;
   vertical-align: middle !important;
