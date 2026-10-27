@@ -4,6 +4,7 @@
   "short_name": "Job Blocking V2",
   "version": "0.1.0",
   "description": "원티드, 사람인, 잡코리아, 리멤버, 점핏 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.",
+  "minimum_chrome_version": "105",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -12,8 +13,7 @@
   },
   "permissions": [
     "storage",
-    "activeTab",
-    "tabs"
+    "activeTab"
   ],
   "host_permissions": [
     "https://*.wanted.co.kr/*",
