@@ -70,6 +70,8 @@ export class SaraminAdapter extends BaseSiteAdapter {
       }
       const innerContent = container.querySelector<HTMLElement>('.content');
       if (innerContent) return innerContent;
+      const innerBody = container.querySelector<HTMLElement>('.list_body');
+      if (innerBody) return innerBody;
       return container;
     }
     const firstCard = doc.querySelector<HTMLElement>(
@@ -79,6 +81,8 @@ export class SaraminAdapter extends BaseSiteAdapter {
       firstCard &&
       !firstCard.closest('.list_product, .wrap_list_banner, .banner_list')
     ) {
+      const listBody = firstCard.closest<HTMLElement>('.list_body');
+      if (listBody) return listBody;
       return firstCard.parentElement;
     }
     return null;

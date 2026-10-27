@@ -325,6 +325,64 @@ td.tplCo .job-filter-ratings-wrap,
   margin-top: 4px !important;
 }
 
+/* 사람인 지역별/직무별 일반 공고 행(.list_item) 가로 Flex 레이아웃 보장
+   - 상위 부모 계층(.list_recruiting .list_body 등)과 무관하게 모든 .list_item 및 .box_item이
+     사람인 표준 4열 Flex 가로 레이아웃(회사명 / 공고제목 / 지원자격 / 입사지원)을 유지하도록 강제.
+   - 컨테이너 분리 또는 동적 로드 시 Flex가 풀려 좌측 166px 영역에 수직 적층되는 UI 깨짐 원천 방지. */
+.list_item {
+  position: relative !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border-bottom: 1px solid #ebebeb !important;
+}
+
+.list_item .box_item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  padding: 24px 28px !important;
+  box-sizing: border-box !important;
+}
+
+.list_item .box_item .col {
+  display: block !important;
+  min-height: 51px !important;
+  box-sizing: border-box !important;
+  vertical-align: top !important;
+}
+
+.list_item .box_item .company_nm {
+  width: 166px !important;
+  min-width: 166px !important;
+  max-width: 166px !important;
+  flex: 0 0 166px !important;
+}
+
+.list_item .box_item .notification_info {
+  margin-left: 64px !important;
+  width: 556px !important;
+  flex: 1 1 556px !important;
+  min-width: 0 !important;
+}
+
+.list_item .box_item .recruit_info {
+  margin-left: 56px !important;
+  width: 232px !important;
+  min-width: 232px !important;
+  max-width: 232px !important;
+  flex: 0 0 232px !important;
+}
+
+.list_item .box_item .support_info {
+  margin-left: 24px !important;
+  width: 106px !important;
+  min-width: 106px !important;
+  max-width: 106px !important;
+  text-align: right !important;
+  flex: 0 0 106px !important;
+}
+
 /* 사람인 그리드 상품 카드(.list_product .item) 내 평점 뱃지 정렬 */
 .list_product .item .job-filter-ratings-wrap {
   display: inline-flex !important;
