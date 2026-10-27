@@ -176,11 +176,11 @@ export const SARAMIN_SELECTORS = {
   DETAIL_TITLE_INNER: '.title_inner, .wrap_corp_info, .area_corp',
 
 
-  // 프로모션 및 광고 배너(스폰서 상품 공고 배너, AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너, 네이버 파워링크, Nest 배너 등)
+  // 프로모션 및 광고 배너(메인 홈 주요채용 유료 광고 섹션, 스폰서 상품 공고 배너, AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너, 네이버 파워링크, Nest 배너 등)
   // 참고: 사람인은 파워링크 요소가 id="powerLink" / id="powerLink1" / id="powerLink2" 또는
   // class="powerlink" 로 혼재하고, 예전 #section_contents 는 실제로 class="wrap_section_contents" 이다.
   PROMOTION_BANNERS:
-    '.powerlink, #powerLink, #powerLink1, #powerLink2, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, .wrap_section_contents, section[aria-label="추천공고"], .list_curation_wrap, .wrap_list_banner, .banner_list, .list_product, .wrap_nest, .nest-standby-banner, .recruit_line_banner, .wrap_banner_line',
+    '#section_banner, .main_product, .cont_product, .prd_platinum, .prd_prime, .prd_special, .prd_hotbanner, .prd_best, .prd_extract, .top_poduct, .prd_list, .tit_banner, .banner_theme_recruit, .card_official_prod, .powerlink, #powerLink, #powerLink1, #powerLink2, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, .wrap_section_contents, section[aria-label="추천공고"], .list_curation_wrap, .wrap_list_banner, .banner_list, .list_product, .wrap_nest, .nest-standby-banner, .recruit_line_banner, .wrap_banner_line',
 
   /**
    * 공고 목록 컨테이너/카드로 절대 취급하면 안 되는 광고·추천 영역 셀렉터.
@@ -192,7 +192,7 @@ export const SARAMIN_SELECTORS = {
    * append 하여 UI 가 깨지고 스피너가 끝없이 도는 것처럼 보인다.
    */
   NON_LIST_REGIONS:
-    '#powerLink, #powerLink1, #powerLink2, .powerlink, .powerlink_list, .wrap_list_banner, .list_product, .banner_list, .wrap_nest, .wrap_recommend, #sri_banner, #sri_banner_fixed, #sri_banner_scrolled, .data_list',
+    '#powerLink, #powerLink1, #powerLink2, .powerlink, .powerlink_list, .wrap_list_banner, .list_product, .banner_list, .wrap_nest, .wrap_recommend, #sri_banner, #sri_banner_fixed, #sri_banner_scrolled, .data_list, #section_banner, .main_product, .cont_product, .prd_list',
 
   // 단일 공고 상세페이지 URL 패턴 (canonical 기준: /zf_user/jobs/view?rec_idx=NNNN)
   DETAIL_URL_PATTERNS: ['/zf_user/jobs/view', 'rec_idx=', '/jobs/relay/view'],

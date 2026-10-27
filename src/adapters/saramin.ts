@@ -58,12 +58,29 @@ export class SaraminAdapter extends BaseSiteAdapter {
 
 
   /**
-   * AI 검색 배너, 개인 맞춤 추천 공고 섹션, 스토어 프로모션 배너 등 불필요한 마케팅/추천 요소 숨김
+   * AI 검색 배너, 개인 맞춤 추천 공고 섹션, 메인 홈 유료 광고 상품(플래티넘/프라임/스페셜 등) 및 프로모션 배너 숨김
    */
   public override hidePromotionBanners(container: Document | HTMLElement = document): number {
     const rawBanners = Array.from(
       container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.PROMOTION_BANNERS)
     );
+
+    // 공정위 상품안내 고지 기반 배너 버튼([aria-label*="상품안내"], .btn_product) 상위 컨테이너 추가 탐색 (미래 개편 대응)
+    const productGuideBtns = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        '.btn_product, [aria-label*="상품안내"], [aria-label*="상품 안내"]'
+      )
+    );
+    for (const btn of productGuideBtns) {
+      const adSection =
+        btn.closest<HTMLElement>(
+          '#section_banner, .main_product, .cont_product, .wrap_list_banner, .top_poduct, section'
+        ) || btn.parentElement;
+      if (adSection && !rawBanners.includes(adSection)) {
+        rawBanners.push(adSection);
+      }
+    }
+
     const topLevelBanners = rawBanners.filter(
       (el) => !rawBanners.some((parent) => parent !== el && parent.contains(el))
     );

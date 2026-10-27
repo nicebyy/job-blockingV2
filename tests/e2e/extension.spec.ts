@@ -124,13 +124,13 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     const badges = await page.locator('.job-filter-rating-badge').all();
     expect(badges.length).toBeGreaterThan(0);
 
-    // 첫 번째 카드(매드업)의 회사명 및 평점 뱃지 가시성 및 가로 인라인 정렬 확인
-    const madupCard = page.locator('li:has-text("매드업")').first();
-    const wrap = madupCard.locator('.job-filter-ratings-wrap');
+    // 첫 번째 카드(디알비동일)의 회사명 및 평점 뱃지 가시성 및 가로 인라인 정렬 확인
+    const targetCard = page.locator('li:has-text("디알비동일")').first();
+    const wrap = targetCard.locator('.job-filter-ratings-wrap');
     await expect(wrap).toBeVisible();
 
     // 회사명 요소와 평점 뱃지가 동일 행(같은 Y좌표 라인)에 배치되었는지 검증
-    const compBox = await madupCard.locator('span[class*="CompanyNameWithLocationPeriod__company"]').boundingBox();
+    const compBox = await targetCard.locator('span[class*="CompanyNameWithLocationPeriod__company"]').boundingBox();
     const wrapBox = await wrap.boundingBox();
     expect(compBox).not.toBeNull();
     expect(wrapBox).not.toBeNull();

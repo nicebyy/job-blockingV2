@@ -1155,6 +1155,72 @@ describe('Site Adapters 단위 테스트', () => {
       expect(normalItem?.style.display).not.toBe('none');
     });
 
+    it('사람인 메인 홈의 주요채용 및 유료 광고 상품 섹션(section#section_banner.main_product: 회원/곽현기님이 꼭 봐야 할 공고, 플래티넘, 프라임, 상품안내 등)을 hidePromotionBanners로 일괄 완전 숨김 처리하고 restorePromotionBanners로 복원할 수 있어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <section id="section_banner" class="main_product">
+          <div class="cont_product prd_platinum">
+            <div class="inner_cont">
+              <div class="top_poduct">
+                <strong class="tit_cont" id="product_platinum">곽현기님이 꼭 봐야 할 공고 (플래티넘)</strong>
+                <button class="btn_product" data-banner="platinum" aria-label="플래티넘 상품 안내">
+                  <span>상품안내</span>
+                </button>
+              </div>
+              <ul class="prd_list plus" id="_platinumPlus">
+                <li class="expanded" data-rec_idx="55389676">
+                  <span class="c_name">(주)지에스네트웍스</span>
+                  <span class="title">신입사원 공채</span>
+                </li>
+                <li class="option" data-rec_idx="55076829">
+                  <span class="c_name">(주)세스코</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="cont_product prd_prime">
+            <div class="inner_cont">
+              <div class="top_poduct">
+                <strong class="tit_cont" id="product_prime">최고의 인기 공고 (프라임)</strong>
+                <button class="btn_product" data-banner="prime" aria-label="프라임 상품안내">
+                  <span>상품안내</span>
+                </button>
+              </div>
+              <ul class="prd_list" id="_prime"></ul>
+            </div>
+          </div>
+        </section>
+        <div id="recruit_info_list">
+          <div class="content_wrap">
+            <div class="item_recruit">
+              <div class="area_corp"><span class="corp_name"><a href="#">일반기업</a></span></div>
+              <div class="area_job"><h2 class="job_tit"><a href="#">일반공고</a></h2></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBeGreaterThanOrEqual(1);
+
+      const sectionBanner = container.querySelector<HTMLElement>('#section_banner');
+      const normalJob = container.querySelector<HTMLElement>('.item_recruit');
+
+      // 최상위 광고 섹션(#section_banner)이 숨김 처리되어야 함
+      expect(sectionBanner?.style.display).toBe('none');
+      expect(sectionBanner?.getAttribute('data-job-filtered')).toBe('true');
+      expect(sectionBanner?.getAttribute('data-blocked-type')).toBe('ad');
+
+      // 일반 공고는 영향받지 않아야 함
+      expect(normalJob?.style.display).not.toBe('none');
+
+      // restorePromotionBanners 호출 시 정상 복원되어야 함
+      adapter.restorePromotionBanners(container);
+      expect(sectionBanner?.style.display).toBe('');
+      expect(sectionBanner?.getAttribute('data-job-filtered')).toBeNull();
+      expect(sectionBanner?.getAttribute('data-blocked-type')).toBeNull();
+    });
+
     it('사람인 지역별/직무별 목록(/zf_user/jobs/list/domestic)의 그랜드/프리미엄 채용공고(.list_product .item)를 파싱하고 차단 툴바 및 평점 뱃지를 주입해야 한다', () => {
       const container = document.createElement('div');
       container.innerHTML = `
