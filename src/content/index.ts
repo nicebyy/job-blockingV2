@@ -135,6 +135,12 @@ export class ContentController {
     this.infiniteScroll = new InfiniteScrollManager({
       adapter: this.adapter,
       onCardsAppended: () => {
+        // 신규 카드가 DOM에 주입되었을 때 즉시 필터링 적용 및
+        // DOM 삽입으로 인해 발생한 MutationObserver의 중복 지연 재스캔 방지
+        if (this.debounceTimer) {
+          window.clearTimeout(this.debounceTimer);
+          this.debounceTimer = null;
+        }
         this.scanAndFilter();
       },
     });

@@ -95,10 +95,10 @@ export class InfiniteScrollManager {
           const entry = entries[0];
           if (entry?.isIntersecting && !this.isLoading && this.hasMorePages) {
             this.consecutiveAutoRefills = 0; // 유저 스크롤 시 카운트 리셋
-            this.loadNextPage();
+            this.loadNextPage(false);
           }
         },
-        { rootMargin: '400px' }
+        { rootMargin: INFINITE_SCROLL_CONFIG.ROOT_MARGIN }
       );
       this.observer.observe(sentinel);
     }
@@ -118,7 +118,7 @@ export class InfiniteScrollManager {
       this.consecutiveAutoRefills < INFINITE_SCROLL_CONFIG.MAX_CONSECUTIVE_FETCHES
     ) {
       this.consecutiveAutoRefills++;
-      return await this.loadNextPage();
+      return await this.loadNextPage(true);
     }
 
     return false;
@@ -126,8 +126,9 @@ export class InfiniteScrollManager {
 
   /**
    * 다음 페이지의 공고를 백그라운드에서 fetch하여 현재 목록에 추가
+   * @param isAutoRefill 화면 내 유효 공고 부족으로 인한 연속 자동 리필 여부 (서버 보호용 딜레이 적용)
    */
-  public async loadNextPage(): Promise<boolean> {
+  public async loadNextPage(isAutoRefill = false): Promise<boolean> {
     if (this.isLoading || !this.hasMorePages || this.destroyed) {
       return false;
     }
@@ -147,13 +148,17 @@ export class InfiniteScrollManager {
     this.setLoadingVisible(true);
 
     try {
-      // 딜레이 적용 (서버 부하 및 차단 방지)
-      if (INFINITE_SCROLL_CONFIG.FETCH_DELAY_MS > 0) {
+      // 딜레이 적용 (연속 자동 채우기 시 서버 부하 방지, 일반 사용자 스크롤 시에는 0ms로 즉각 프리페치)
+      const delayMs = isAutoRefill
+        ? INFINITE_SCROLL_CONFIG.AUTO_REFILL_DELAY_MS
+        : INFINITE_SCROLL_CONFIG.FETCH_DELAY_MS;
+
+      if (delayMs > 0) {
         await new Promise((resolve) => {
           const timer = setTimeout(() => {
             this.pendingTimers.delete(timer);
             resolve(undefined);
-          }, INFINITE_SCROLL_CONFIG.FETCH_DELAY_MS);
+          }, delayMs);
           this.pendingTimers.add(timer);
         });
       }
@@ -224,7 +229,8 @@ export class InfiniteScrollManager {
           .filter(Boolean)
       );
 
-      // 카드 요소들을 현재 문서에 복제/추가 (중복 제외)
+      // 카드 요소들을 현재 문서에 복제/추가 (DocumentFragment 일괄 삽입으로 Reflow 최소화)
+      const fragment = document.createDocumentFragment();
       const importedCards: HTMLElement[] = [];
       for (const card of nextCards) {
         const parsed = this.adapter.parseCard(card);
@@ -237,7 +243,7 @@ export class InfiniteScrollManager {
         }
 
         const imported = document.importNode(card, true);
-        currentContainer.appendChild(imported);
+        fragment.appendChild(imported);
         importedCards.push(imported);
       }
 
@@ -252,6 +258,8 @@ export class InfiniteScrollManager {
         this.destroy();
         return false;
       }
+
+      currentContainer.appendChild(fragment);
 
       this.currentPage++;
       this.onCardsAppended(importedCards);
