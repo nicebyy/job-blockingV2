@@ -84,8 +84,10 @@ section.keyword_up_logo_area,
 section.wrap_store,
 .wrap_store,
 #store_product,
-/* 사람인은 예전 #section_contents 가 실제로는 class="wrap_section_contents" 로 렌더링된다 */
-.wrap_section_contents,
+/* [주의] .wrap_section_contents 는 절대 숨기면 안 된다.
+   목록 페이지의 지역·직업·검색어·상세조건 필터 패널 전체를 감싸는 컨테이너로,
+   숨기면 사용자가 검색 조건을 조작할 수 없다. (input 216개 규모)
+   과거 #section_contents 를 이 클래스로 오인해 회귀가 발생한 이력이 있다. */
 section[aria-label="추천공고"],
 .list_curation_wrap,
 .wrap_list_banner,

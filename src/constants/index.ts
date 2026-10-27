@@ -221,9 +221,22 @@ export const SARAMIN_SELECTORS = {
 
   // 프로모션 및 광고 배너(메인 홈 주요채용 유료 광고 섹션, 스폰서 상품 공고 배너, AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너, 네이버 파워링크, Nest 배너 등)
   // 참고: 사람인은 파워링크 요소가 id="powerLink" / id="powerLink1" / id="powerLink2" 또는
-  // class="powerlink" 로 혼재하고, 예전 #section_contents 는 실제로 class="wrap_section_contents" 이다.
+  // class="powerlink" 로 혼재한다.
+  //
+  // [절대 포함 금지] .wrap_section_contents / .main_option / .tab_section
+  //  위 요소들은 목록 페이지의 **지역·직업·검색어·상세조건 필터 패널 전체**를 감싸는 컨테이너이다.
+  //  (예전 #section_contents 를 .wrap_section_contents 로 바꿔 넣었다가 필터 UI 전체가
+  //   display:none 되어 사용자가 검색 조건을 조작할 수 없게 되는 회귀가 발생했다.)
+  //  input 216개·button 34개가 내부에 있으며, 이 영역은 광고가 아니라 검색 폼이다.
   PROMOTION_BANNERS:
-    '#section_banner, .main_product, .cont_product, .prd_platinum, .prd_prime, .prd_special, .prd_hotbanner, .prd_best, .prd_extract, .top_poduct, .prd_list, .tit_banner, .banner_theme_recruit, .card_official_prod, .powerlink, #powerLink, #powerLink1, #powerLink2, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, .wrap_section_contents, section[aria-label="추천공고"], .list_curation_wrap, .wrap_list_banner, .banner_list, .list_product, .wrap_nest, .nest-standby-banner, .recruit_line_banner, .wrap_banner_line',
+    '#section_banner, .main_product, .cont_product, .prd_platinum, .prd_prime, .prd_special, .prd_hotbanner, .prd_best, .prd_extract, .top_poduct, .prd_list, .tit_banner, .banner_theme_recruit, .card_official_prod, .powerlink, #powerLink, #powerLink1, #powerLink2, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, section[aria-label="추천공고"], .list_curation_wrap, .wrap_list_banner, .banner_list, .list_product, .wrap_nest, .nest-standby-banner, .recruit_line_banner, .wrap_banner_line',
+
+  /**
+   * 검색 필터/폼 영역 — 어떤 경우에도 숨기면 안 되는 보호 대상.
+   * hidePromotionBanners() 가 실수로 이 영역을 매칭해도 건너뛰도록 방어한다.
+   */
+  PROTECTED_FILTER_AREAS:
+    '.main_option, .tab_section, .wrap_section_contents, .search_option, .wrap_search, form[name="search"]',
 
   /**
    * 공고 목록 컨테이너/카드로 절대 취급하면 안 되는 광고·추천 영역 셀렉터.
