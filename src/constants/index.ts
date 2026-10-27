@@ -190,7 +190,20 @@ export const JOBKOREA_SELECTORS = {
   CLOSING_DATE: '.side .day, td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
   FAVORITE_BUTTON: '.dev-btn-favor, .devFavor, .tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
   PROMOTION_BANNERS:
-    '#dev-TopHeadlineAGI, #TopHeadlineAGI, #dev-HeadlineAGI, #HeadlineAGI, .listTopHeadline, .listHeadline, .listBannerWrap, .job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI',
+    '#dev-TopHeadlineAGI, #TopHeadlineAGI, #dev-HeadlineAGI, #HeadlineAGI, .listTopHeadline, .listHeadline, .listBannerWrap, .job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI, [data-section-alias="CPC_SMARTFIT_HOME_PC"], [data-section-alias="CPT_FIRSTVVIP_PC"], [data-section-alias="CPT_VIP_PC"], [data-section-alias="CPT_EXCELLENT_PC"]',
+  MAIN_AD_SECTION_ALIASES: [
+    'CPC_SMARTFIT_HOME_PC',
+    'CPT_FIRSTVVIP_PC',
+    'CPT_VIP_PC',
+    'CPT_EXCELLENT_PC',
+  ] as const,
+  MAIN_AD_TITLES: [
+    '나에게 꼭 맞는 공고',
+    '주목할 만한 JOB',
+    '주목할만한 JOB',
+    '놓치면 아쉬운 JOB',
+    '지원자가 몰리는 JOB',
+  ] as const,
 
   // 상세 페이지(/Recruit/GI_Read/*) 셀렉터
   DETAIL_CONTAINER:

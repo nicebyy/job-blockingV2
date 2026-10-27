@@ -71,6 +71,52 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
     const rawBanners = Array.from(
       container.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.PROMOTION_BANNERS)
     );
+
+    // 잡코리아 메인 페이지 텍스트 기반 광고 섹션 탐색 (동적 SDUI 렌더링 폴백 보장)
+    const candidateHeadings = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'h2, [data-sentry-component="TitlePC"] h2, [data-sentry-component="TitlePC"], .title, div'
+      )
+    );
+    for (const el of candidateHeadings) {
+      if (
+        Array.from(el.children).some(
+          (child) =>
+            child.textContent &&
+            JOBKOREA_SELECTORS.MAIN_AD_TITLES.some((t) => child.textContent?.includes(t))
+        )
+      ) {
+        continue;
+      }
+      const text = el.textContent?.trim().replace(/\s+/g, ' ') || '';
+      if (JOBKOREA_SELECTORS.MAIN_AD_TITLES.some((adTitle) => text.includes(adTitle))) {
+        let sectionContainer: HTMLElement | null =
+          el.closest<HTMLElement>('[data-section-alias]') ||
+          el.closest<HTMLElement>('[data-animation-section="true"]');
+
+        if (!sectionContainer) {
+          let cur: HTMLElement | null = el.parentElement;
+          while (cur && cur !== container && cur !== document.body) {
+            if (
+              cur.tagName.toUpperCase() === 'SECTION' ||
+              cur.parentElement === container ||
+              cur.parentElement === document.body
+            ) {
+              sectionContainer = cur;
+              if (cur.parentElement === container || cur.parentElement === document.body) {
+                break;
+              }
+            }
+            cur = cur.parentElement;
+          }
+        }
+
+        if (sectionContainer && !rawBanners.includes(sectionContainer)) {
+          rawBanners.push(sectionContainer);
+        }
+      }
+    }
+
     const topLevelBanners = rawBanners.filter(
       (el) => !rawBanners.some((parent) => parent !== el && parent.contains(el))
     );
