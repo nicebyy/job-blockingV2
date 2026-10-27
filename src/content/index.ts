@@ -389,7 +389,11 @@ export class ContentController {
     this.adapter.reflow?.(document);
 
     // 유효 공고 개수 확인 후 필요 시 다음 페이지 자동 채우기 (Auto-Refill)
-    const visibleCount = elements.length - this.currentStats.totalBlocked;
+    //
+    // 주의: totalBlocked 에는 프로모션 배너 수(promoAdsCount)가 포함되어 있으나
+    // 배너는 공고 카드가 아니므로 elements.length 에서 빼면 이중 차감이 된다.
+    // 실제 "공고 카드 중 차단된 수"만 계산해야 Auto-Refill 이 조기에 오동작하지 않는다.
+    const visibleCount = elements.length - (totalBlocked - promoAdsCount);
     if (this.settings?.enableInfiniteScroll) {
       // SPA / 비동기 검색 패널(RequireJS) 등에 의해 컨테이너/페이지네이션이 동적으로 로드된 경우 무한 스크롤 지연 활성화
       if (

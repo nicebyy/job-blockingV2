@@ -193,6 +193,9 @@ export const SARAMIN_SELECTORS = {
    */
   NON_LIST_REGIONS:
     '#powerLink, #powerLink1, #powerLink2, .powerlink, .powerlink_list, .wrap_list_banner, .list_product, .banner_list, .wrap_nest, .wrap_recommend, #sri_banner, #sri_banner_fixed, #sri_banner_scrolled, .data_list',
+
+  // 단일 공고 상세페이지 URL 패턴 (canonical 기준: /zf_user/jobs/view?rec_idx=NNNN)
+  DETAIL_URL_PATTERNS: ['/zf_user/jobs/view', 'rec_idx=', '/jobs/relay/view'],
 } as const;
 
 /**
@@ -600,7 +603,9 @@ export const SUPPORT_CONFIG = {
     RATING_BANNER_TITLE: 'Job Blocking V2가 도움이 되셨나요? ⭐',
     RATING_BANNER_DESC: '크롬 웹스토어에 따뜻한 별점 5점과 리뷰를 남겨주시면 큰 힘이 됩니다!',
     RATING_BANNER_ACTION: '⭐ 별점 5점 리뷰 남기기',
-    RATING_BANNER_DISMISS: '다음에 하기',
+    // 주의: 이 버튼은 "일시적 닫기"가 아니라 영구 숨김(dismissRatingBanner)을 수행한다.
+    // 라벨이 동작과 일치하도록 "다시 보지 않기"로 표기한다.
+    RATING_BANNER_DISMISS: '다시 보지 않기',
   },
   STORAGE_KEYS: {
     DISMISS_RATING_BANNER: 'job_filter_dismiss_rating_banner',

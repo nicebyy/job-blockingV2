@@ -11,6 +11,26 @@ export class SaraminAdapter extends BaseSiteAdapter {
     return url.includes(SITE_DOMAINS.SARAMIN) && !url.includes('jumpit.');
   }
 
+  /**
+   * 단일 공고 상세페이지 여부.
+   *
+   * 사람인 상세페이지는 canonical URL 기준 `/zf_user/jobs/view?rec_idx=NNNN` 형태이며,
+   * 릴레이 뷰(`/jobs/relay/view`)도 단일 공고 화면이다.
+   * 목록/검색 페이지(`/zf_user/search/recruit`, `/zf_user/jobs/list/*`)는 제외한다.
+   */
+  public override isDetailPage(
+    url: string = typeof window !== 'undefined' ? window.location.href : ''
+  ): boolean {
+    if (!url) return false;
+
+    // 목록/검색 페이지는 상세가 아님 (rec_idx 파라미터가 붙어 있어도 목록일 수 있으므로 우선 배제)
+    if (/\/(search|list)\//.test(url) || /\/zf_user\/jobs\/list/.test(url)) {
+      return false;
+    }
+
+    return SARAMIN_SELECTORS.DETAIL_URL_PATTERNS.some((pattern) => url.includes(pattern));
+  }
+
   public getJobCardElements(container: Document | HTMLElement = document): HTMLElement[] {
     const listCards = Array.from(
       container.querySelectorAll<HTMLElement>(SARAMIN_SELECTORS.JOB_CARDS)
