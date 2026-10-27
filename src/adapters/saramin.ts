@@ -84,8 +84,30 @@ export class SaraminAdapter extends BaseSiteAdapter {
     const topLevelBanners = rawBanners.filter(
       (el) => !rawBanners.some((parent) => parent !== el && parent.contains(el))
     );
+
+    // [안전장치] 검색 필터/폼 영역은 절대 숨기지 않는다.
+    //
+    // 과거 PROMOTION_BANNERS 에 .wrap_section_contents 를 넣었다가
+    // 지역·직업·검색어·상세조건 필터 패널 전체(input 216개)가 display:none 되어
+    // 사용자가 검색 조건을 조작할 수 없게 되는 회귀가 있었다.
+    // 셀렉터가 다시 잘못 추가되더라도 이 가드가 2차 방어선이 된다.
+    const isProtectedFilterArea = (el: HTMLElement): boolean => {
+      // 자기 자신이 보호 대상이거나, 보호 대상 내부에 있으면 건너뛴다
+      if (el.closest(SARAMIN_SELECTORS.PROTECTED_FILTER_AREAS)) return true;
+      // 검색 폼 컨트롤을 다수 포함하는 컨테이너도 필터 영역으로 간주한다
+      const formControls = el.querySelectorAll('input, select, textarea').length;
+      return formControls >= 3;
+    };
+
     let count = 0;
     topLevelBanners.forEach((el) => {
+      if (isProtectedFilterArea(el)) {
+        console.warn(
+          '[JobFilter] 필터/검색 영역으로 판단되어 광고 숨김에서 제외합니다:',
+          el.className
+        );
+        return;
+      }
       el.style.display = 'none';
       el.setAttribute('data-job-filtered', 'true');
       el.setAttribute('data-filter-mode', 'hide');

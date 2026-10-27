@@ -5,6 +5,19 @@
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-27
+
+### 수정 (긴급 핫픽스)
+- **사람인**: 지역별·직업별 목록(`/zf_user/jobs/list/domestic`)에서 **지역·직업·검색어·상세조건
+  필터 UI 전체가 사라져 조작할 수 없던 치명적 회귀** 수정.
+  광고 숨김 셀렉터(`PROMOTION_BANNERS`)에 포함되어 있던 `.wrap_section_contents` 가
+  실제로는 검색 필터 패널 전체를 감싸는 컨테이너였고, 이로 인해 필터 컨트롤 241개 중
+  228개가 `display:none` 처리되고 있었다.
+  - `PROMOTION_BANNERS` 및 `style.css` 에서 해당 셀렉터 제거
+  - `PROTECTED_FILTER_AREAS` 상수 신설 및 `hidePromotionBanners()` 에 2차 방어 가드 추가
+    (필터 영역은 셀렉터가 잘못 추가되어도 숨기지 않음)
+  - 실브라우저 수집 DOM 기반 회귀 테스트 5건 추가 (`saramin_filter_panel.html` 픽스처)
+
 ## [0.2.2] - 2026-10-27
 
 ### 수정
