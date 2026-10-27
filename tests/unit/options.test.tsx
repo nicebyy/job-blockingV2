@@ -5,6 +5,8 @@ import { Options } from '../../src/options/Options';
 import { StorageManager } from '../../src/core/storage';
 import { OPTIONS_FILTER_CONFIG } from '../../src/constants';
 
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
 describe('Options 환경설정 페이지 단위 테스트', () => {
   let container: HTMLDivElement;
   let root: Root;

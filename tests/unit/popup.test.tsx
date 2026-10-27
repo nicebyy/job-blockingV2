@@ -5,6 +5,8 @@ import { Popup } from '../../src/popup/Popup';
 import { StorageManager } from '../../src/core/storage';
 import { POPUP_STATS_CONFIG } from '../../src/constants';
 
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
 describe('Popup 팝업 페이지 단위 테스트', () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -320,4 +322,113 @@ describe('Popup 팝업 페이지 단위 테스트', () => {
       expect.any(Function)
     );
   });
+
+  it('모드 토글 버튼 클릭 시 settings.mode가 hide로 전환되고 SETTINGS_CHANGED 메시지가 전송되어야 한다', async () => {
+    const sendMessageMock = vi.fn();
+    (global as any).chrome.tabs.sendMessage = sendMessageMock;
+
+    await act(async () => {
+      root.render(<Popup />);
+    });
+
+    const toggleInputs = container.querySelectorAll<HTMLInputElement>('.switch input[type="checkbox"]');
+    const modeInput = toggleInputs[0];
+    expect(modeInput.checked).toBe(false); // 기본 blur 상태에서는 hide 체크박스가 false
+
+    await act(async () => {
+      modeInput.click();
+    });
+
+    const updatedSettings = await StorageManager.getSettings();
+    expect(updatedSettings.mode).toBe('hide');
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      101,
+      expect.objectContaining({
+        type: 'SETTINGS_CHANGED',
+        settings: expect.objectContaining({ mode: 'hide' }),
+      }),
+      expect.any(Function)
+    );
+  });
+
+  it('광고 숨김 토글 스위치 클릭 시 hideAds 설정이 반전되고 SETTINGS_CHANGED 메시지가 전송되어야 한다', async () => {
+    const sendMessageMock = vi.fn();
+    (global as any).chrome.tabs.sendMessage = sendMessageMock;
+
+    await act(async () => {
+      root.render(<Popup />);
+    });
+
+    const toggleInputs = container.querySelectorAll<HTMLInputElement>('.switch input[type="checkbox"]');
+    const adsInput = toggleInputs[1];
+    expect(adsInput.checked).toBe(true); // 기본 hideAds = true
+
+    await act(async () => {
+      adsInput.click();
+    });
+
+    const updatedSettings = await StorageManager.getSettings();
+    expect(updatedSettings.hideAds).toBe(false);
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      101,
+      expect.objectContaining({
+        type: 'SETTINGS_CHANGED',
+        settings: expect.objectContaining({ hideAds: false }),
+      }),
+      expect.any(Function)
+    );
+  });
+
+  it('무한 스크롤 및 평점 토글 스위치 클릭 시 해당 설정이 저장되고 브로드캐스트되어야 한다', async () => {
+    const sendMessageMock = vi.fn();
+    (global as any).chrome.tabs.sendMessage = sendMessageMock;
+
+    await act(async () => {
+      root.render(<Popup />);
+    });
+
+    const toggleInputs = container.querySelectorAll<HTMLInputElement>('.switch input[type="checkbox"]');
+    const scrollInput = toggleInputs[2];
+    const jpInput = toggleInputs[3];
+    const blindInput = toggleInputs[4];
+
+    expect(scrollInput.checked).toBe(true);
+    expect(jpInput.checked).toBe(true);
+    expect(blindInput.checked).toBe(true);
+
+    // 무한 스크롤 토글
+    await act(async () => {
+      scrollInput.click();
+    });
+    let updated = await StorageManager.getSettings();
+    expect(updated.enableInfiniteScroll).toBe(false);
+
+    // 잡플래닛 평점 토글
+    await act(async () => {
+      jpInput.click();
+    });
+    updated = await StorageManager.getSettings();
+    expect(updated.showJobplanetRating).toBe(false);
+
+    // 블라인드 평점 토글
+    await act(async () => {
+      blindInput.click();
+    });
+    updated = await StorageManager.getSettings();
+    expect(updated.showBlindRating).toBe(false);
+
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      101,
+      expect.objectContaining({
+        type: 'SETTINGS_CHANGED',
+        settings: expect.objectContaining({
+          enableInfiniteScroll: false,
+          showJobplanetRating: false,
+          showBlindRating: false,
+        }),
+      }),
+      expect.any(Function)
+    );
+  });
 });
+

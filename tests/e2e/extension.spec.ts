@@ -88,4 +88,110 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     const insideImgBox = await wtableCard.locator('.img_box .job-filter-ratings-wrap').count();
     expect(insideImgBox).toBe(0);
   });
+
+  test('팝업 창에서 환경 설정(블러/숨김 모드, 광고 숨김, 무한 스크롤, 평점 토글)을 정상적으로 변경하고 저장할 수 있어야 한다', async ({
+    page,
+    extensionId,
+  }) => {
+    await page.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
+
+    // 1. 블러/숨김 모드 토글 (기본: blur)
+    const modeSlider = page.locator('.switch .slider').nth(0);
+    await expect(page.locator('.toggle-label').first()).toContainText(UI_MESSAGES.TOGGLE_LABELS.MODE_BLUR);
+    await modeSlider.click();
+    await expect(page.locator('.toggle-label').first()).toContainText(UI_MESSAGES.TOGGLE_LABELS.MODE_HIDE);
+
+    // 2. 광고 숨기기 토글 (기본: true -> checked)
+    const adsSlider = page.locator('.switch .slider').nth(1);
+    await expect(page.locator('.switch input[type="checkbox"]').nth(1)).toBeChecked();
+    await adsSlider.click();
+    await expect(page.locator('.switch input[type="checkbox"]').nth(1)).not.toBeChecked();
+
+    // 3. 무한 스크롤 토글 (기본: true -> checked)
+    const scrollSlider = page.locator('.switch .slider').nth(2);
+    await expect(page.locator('.switch input[type="checkbox"]').nth(2)).toBeChecked();
+    await scrollSlider.click();
+    await expect(page.locator('.switch input[type="checkbox"]').nth(2)).not.toBeChecked();
+
+    // 4. 잡플래닛 평점 토글 (기본: true -> checked)
+    const jpSlider = page.locator('.switch .slider').nth(3);
+    await expect(page.locator('.switch input[type="checkbox"]').nth(3)).toBeChecked();
+    await jpSlider.click();
+    await expect(page.locator('.switch input[type="checkbox"]').nth(3)).not.toBeChecked();
+
+    // 5. 블라인드 평점 토글 (기본: true -> checked)
+    const blindSlider = page.locator('.switch .slider').nth(4);
+    await expect(page.locator('.switch input[type="checkbox"]').nth(4)).toBeChecked();
+    await blindSlider.click();
+    await expect(page.locator('.switch input[type="checkbox"]').nth(4)).not.toBeChecked();
+
+    // 새로고침 후에도 변경된 환경 설정이 유지되는지 검증
+    await page.reload();
+    await expect(page.locator('.toggle-label').first()).toContainText(UI_MESSAGES.TOGGLE_LABELS.MODE_HIDE);
+    await expect(page.locator('.switch input[type="checkbox"]').nth(0)).toBeChecked();
+    await expect(page.locator('.switch input[type="checkbox"]').nth(1)).not.toBeChecked();
+    await expect(page.locator('.switch input[type="checkbox"]').nth(2)).not.toBeChecked();
+    await expect(page.locator('.switch input[type="checkbox"]').nth(3)).not.toBeChecked();
+    await expect(page.locator('.switch input[type="checkbox"]').nth(4)).not.toBeChecked();
+  });
+
+  test('점핏(Jumpit) 페이지에서 [공고숨김] 및 [회사차단] 클릭 시 카드가 숨김/블러 처리되고 차단 집계가 정확히 반영되어야 한다', async ({
+    page,
+    extensionId,
+  }) => {
+    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/jumpit_positions.html');
+    const fixtureHtml = fs.readFileSync(fixturePath, 'utf8');
+
+    await page.route('https://jumpit.saramin.co.kr/positions?sort=popular', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html; charset=utf-8',
+        body: fixtureHtml,
+      });
+    });
+
+    await page.goto('https://jumpit.saramin.co.kr/positions?sort=popular', {
+      waitUntil: 'domcontentloaded',
+    });
+
+    await page.waitForTimeout(3000);
+
+    // 1. 위볼린 공고 카드 확인
+    const weibolinCard = page.locator('.sc-d609d44f-0:has-text("위볼린")').first();
+    await expect(weibolinCard).toBeVisible();
+
+    // [공고숨김] 버튼 클릭 (사용자 명시적 의도로 블러 모드와 관계없이 항상 완전 숨김)
+    const hideJobBtn = weibolinCard.locator('.job-filter-btn-job');
+    await hideJobBtn.click({ force: true });
+
+    // 위볼린 공고 카드가 완전 숨김(hidden) 처리되었는지 확인
+    await expect(weibolinCard).toBeHidden();
+
+    // 2. 와탭랩스 공고 카드 (2개 존재) 확인
+    const wtableCards = page.locator('.sc-d609d44f-0:has-text("와탭랩스")');
+    await expect(wtableCards).toHaveCount(2);
+
+    // 첫 번째 와탭랩스 카드의 [회사차단] 버튼 클릭 (기본 설정인 블러 모드에 따라 흐리게 처리)
+    const blockCompanyBtn = wtableCards.first().locator('.job-filter-btn-company');
+    await blockCompanyBtn.click({ force: true });
+
+    // 와탭랩스의 모든 카드에 블러 필터 속성이 일괄 적용되었는지 확인
+    await expect(wtableCards.first()).toHaveAttribute('data-job-filtered', 'true');
+    await expect(wtableCards.first()).toHaveAttribute('data-filter-mode', 'blur');
+    await expect(wtableCards.nth(1)).toHaveAttribute('data-job-filtered', 'true');
+    await expect(wtableCards.nth(1)).toHaveAttribute('data-filter-mode', 'blur');
+
+    // 3. 팝업 창을 열어서 통계 집계가 정확히 연동되었는지 확인
+    const popupPage = await page.context().newPage();
+    await popupPage.goto(`chrome-extension://${extensionId}/src/popup/index.html`);
+
+    // 전체 등록 누적 모드 확인: 공고 1건 + 회사 1건 -> 총 2건
+    const statValues = popupPage.locator('.stat-value');
+    await expect(statValues.nth(0)).toHaveText('2'); // 전체
+    await expect(statValues.nth(1)).toHaveText('1'); // 회사 (와탭랩스)
+    await expect(statValues.nth(2)).toHaveText('1'); // 공고 (위볼린)
+
+    await popupPage.close();
+  });
 });
+
