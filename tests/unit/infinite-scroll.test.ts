@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { InfiniteScrollManager } from '../../src/core/infinite-scroll';
@@ -512,5 +512,230 @@ describe('InfiniteScrollManager 단위 테스트', () => {
     expect(css).toMatch(
       /\.job-filter-infinite-loading\.is-active\s*\{[^}]*display:\s*flex\s*!important/
     );
+  });
+
+  /**
+   * [회귀] 사람인 직업별 목록(/zf_user/jobs/list/job-category) 무한 스크롤이
+   * 11페이지에서 더 이상 늘어나지 않던 버그.
+   *
+   * 원인: 사람인 PageBox 의 "다음" 버튼은 10페이지 단위 블록의 첫 페이지를 가리킨다.
+   *   - 1페이지 DOM 의 "다음" → page=11
+   *   - 11페이지 DOM 의 "다음" → page=21
+   * 무한 스크롤은 원본(1페이지) DOM 을 계속 참조하므로 11페이지 이후에도 page=11 만
+   * 반복 요청했고, 중복 카드만 돌아와 "신규 카드 0개 → 종료"로 조용히 멈췄다.
+   */
+  describe('사람인 목록 11페이지 이후 무한 스크롤 회귀 방지', () => {
+    const originalLocation = window.location;
+
+    beforeEach(() => {
+      delete (window as any).location;
+      (window as any).location = new URL(
+        'https://www.saramin.co.kr/zf_user/jobs/list/job-category?cat_mcls=2&page_count=50&sort=RL&type=job-category'
+      );
+    });
+
+    afterEach(() => {
+      (window as any).location = originalLocation;
+    });
+
+    /** 사람인 목록 1페이지 DOM (PageBox 의 "다음" 은 항상 page=11) */
+    const buildFirstPageDom = () => {
+      document.body.innerHTML = `
+        <div id="default_list_wrap">
+          <section class="list_recruiting">
+            <div class="list_body">
+              <div id="rec-1" class="list_item">
+                <div class="area_corp"><strong class="corp_name"><a href="#">기업1</a></strong></div>
+                <div class="area_job"><h2 class="job_tit"><a href="#">공고1</a></h2></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="PageBox">
+          <span class="BtnType SizeS active">1</span>
+          <button class="BtnType SizeS" page="2" onclick="location.href='/zf_user/jobs/list/job-category?page=2&amp;cat_mcls=2&amp;page_count=50&amp;sort=RL&amp;type=job-category'">2</button>
+          <button class="BtnType SizeS BtnNext" onclick="location.href='/zf_user/jobs/list/job-category?page=11&amp;cat_mcls=2&amp;page_count=50&amp;sort=RL&amp;type=job-category'">다음</button>
+        </div>
+      `;
+    };
+
+    /** 요청 URL 의 page 파라미터에 맞춰 서로 다른 공고를 반환하는 가짜 응답 */
+    const createPageAwareFetch = () => {
+      const requestedPages: number[] = [];
+      const fetchFn = vi.fn().mockImplementation((url: string) => {
+        const page = Number(new URL(url).searchParams.get('page') || '1');
+        requestedPages.push(page);
+        const body = Array.from({ length: 50 })
+          .map(
+            (_, i) =>
+              `<div id="rec-${page}-${i}" class="list_item">
+                 <div class="area_corp"><strong class="corp_name"><a href="#">기업 ${page}-${i}</a></strong></div>
+                 <div class="area_job"><h2 class="job_tit"><a href="#">공고 ${page}-${i}</a></h2></div>
+               </div>`
+          )
+          .join('');
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () =>
+            Promise.resolve(
+              `<html><body><div id="default_list_wrap"><section class="list_recruiting"><div class="list_body">${body}</div></section></div>
+               <div class="PageBox"><button class="BtnType SizeS BtnNext" onclick="location.href='/zf_user/jobs/list/job-category?page=11&amp;cat_mcls=2'">다음</button></div>
+               </body></html>`
+            ),
+        });
+      });
+      return { fetchFn, requestedPages };
+    };
+
+    it('11페이지를 받은 뒤에도 12페이지를 요청해야 한다 (page=11 재요청으로 멈추지 않아야 함)', async () => {
+      buildFirstPageDom();
+      const { fetchFn, requestedPages } = createPageAwareFetch();
+
+      const manager = new InfiniteScrollManager({
+        adapter: new SaraminAdapter(),
+        onCardsAppended: vi.fn(),
+        fetchFn: fetchFn as any,
+      });
+      manager.init();
+
+      // 11페이지까지 연속 로딩 (1 → 2 → … → 11)
+      for (let i = 0; i < 10; i++) {
+        expect(await manager.loadNextPage()).toBe(true);
+      }
+      expect(manager.getCurrentPage()).toBe(11);
+      expect(requestedPages).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+      // 12페이지 요청도 정상적으로 이어져야 한다
+      expect(await manager.loadNextPage()).toBe(true);
+      expect(manager.getCurrentPage()).toBe(12);
+      expect(requestedPages[requestedPages.length - 1]).toBe(12);
+      // 동일 페이지 반복 요청이 없어야 한다
+      expect(new Set(requestedPages).size).toBe(requestedPages.length);
+      expect(manager.isDestroyed()).toBe(false);
+    });
+
+    it('페이지네이션 링크가 stale 하여 같은 페이지를 재요청하려 하면 무한 반복 대신 안전하게 종료해야 한다', async () => {
+      buildFirstPageDom();
+      // 항상 존재하지 않는 고정 URL 만 반환하는(=링크가 갱신되지 않는) 비정상 어댑터 시뮬레이션
+      const fixedUrlAdapter = new SaraminAdapter();
+      vi.spyOn(fixedUrlAdapter, 'getNextPageUrl').mockReturnValue(
+        'https://www.saramin.co.kr/zf_user/jobs/list/job-category?page=11&cat_mcls=2'
+      );
+      // 매니저가 스스로 페이지를 올리므로 currentPage 는 증가하지만, 어댑터가 같은 URL 만 주는 상황
+      const fetchFn = vi.fn().mockImplementation((url: string) => {
+        const page = Number(new URL(url).searchParams.get('page') || '11');
+        const body = `<div id="rec-fixed-${page}" class="list_item">
+            <div class="area_corp"><strong class="corp_name"><a href="#">기업 ${page}</a></strong></div>
+            <div class="area_job"><h2 class="job_tit"><a href="#">공고 ${page}</a></h2></div>
+          </div>`;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(`<html><body>${body}</body></html>`),
+        });
+      });
+
+      const manager = new InfiniteScrollManager({
+        adapter: fixedUrlAdapter,
+        onCardsAppended: vi.fn(),
+        fetchFn: fetchFn as any,
+      });
+      manager.init();
+
+      // 첫 요청은 성공
+      expect(await manager.loadNextPage()).toBe(true);
+      // 같은 URL 재요청이 감지되면 fetch 없이 즉시 종료되어야 한다 (무한 루프 방지)
+      expect(await manager.loadNextPage()).toBe(false);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      expect(manager.isDestroyed()).toBe(true);
+    });
+
+    it('?page=11 로 진입한 경우 1페이지부터 재요청하지 않고 12페이지부터 이어가야 한다', async () => {
+      delete (window as any).location;
+      (window as any).location = new URL(
+        'https://www.saramin.co.kr/zf_user/jobs/list/job-category?cat_mcls=2&page_count=50&page=11'
+      );
+
+      document.body.innerHTML = `
+        <div id="default_list_wrap">
+          <section class="list_recruiting">
+            <div class="list_body">
+              <div id="rec-11-1" class="list_item">
+                <div class="area_corp"><strong class="corp_name"><a href="#">기업11</a></strong></div>
+                <div class="area_job"><h2 class="job_tit"><a href="#">공고11</a></h2></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div class="PageBox">
+          <span class="BtnType SizeS active">11</span>
+          <button class="BtnType SizeS" page="12" onclick="location.href='/zf_user/jobs/list/job-category?page=12&amp;cat_mcls=2'">12</button>
+          <button class="BtnType SizeS BtnNext" onclick="location.href='/zf_user/jobs/list/job-category?page=21&amp;cat_mcls=2'">다음</button>
+        </div>
+      `;
+
+      const { fetchFn, requestedPages } = createPageAwareFetch();
+      const manager = new InfiniteScrollManager({
+        adapter: new SaraminAdapter(),
+        onCardsAppended: vi.fn(),
+        fetchFn: fetchFn as any,
+      });
+      manager.init();
+
+      // DOM 의 활성 페이지(11)에서 이어서 시작해야 한다
+      expect(manager.getCurrentPage()).toBe(11);
+
+      expect(await manager.loadNextPage()).toBe(true);
+      expect(requestedPages).toEqual([12]);
+      expect(manager.getCurrentPage()).toBe(12);
+    });
+
+    /**
+     * IntersectionObserver 는 교차 상태가 "바뀔 때만" 이벤트를 준다.
+     * 사용자가 바닥에 머무른 채 로딩이 끝나면(센티넬이 계속 화면 안)
+     * 다음 이벤트가 오지 않아 목록이 멈춘 것처럼 보였다.
+     */
+    it('바닥에 머문 채 로딩이 끝나면 IntersectionObserver 이벤트가 없어도 다음 페이지를 이어서 불러와야 한다', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: false });
+      try {
+        buildFirstPageDom();
+        const { fetchFn, requestedPages } = createPageAwareFetch();
+
+        // IntersectionObserver 를 수동 제어 가능한 스텁으로 교체
+        let observerCallback: ((entries: any[]) => void) | null = null;
+        const OriginalObserver = (window as any).IntersectionObserver;
+        (window as any).IntersectionObserver = vi.fn().mockImplementation((cb: any) => {
+          observerCallback = cb;
+          return { observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn() };
+        });
+
+        try {
+          const manager = new InfiniteScrollManager({
+            adapter: new SaraminAdapter(),
+            onCardsAppended: vi.fn(),
+            fetchFn: fetchFn as any,
+          });
+          manager.init();
+
+          // 센티넬이 화면 안에 들어옴 → 로딩 시작
+          observerCallback!([{ isIntersecting: true }]);
+          await vi.advanceTimersByTimeAsync(0);
+          expect(requestedPages).toEqual([2]);
+
+          // 로딩이 끝났지만 교차 상태는 그대로 true → 새 이벤트가 오지 않는 상황
+          // 스스로 재확인해서 3페이지를 이어서 요청해야 한다
+          await vi.advanceTimersByTimeAsync(
+            INFINITE_SCROLL_CONFIG.INTERSECTION_REFILL_DELAY_MS + 50
+          );
+          expect(requestedPages).toEqual([2, 3]);
+          expect(manager.isDestroyed()).toBe(false);
+        } finally {
+          (window as any).IntersectionObserver = OriginalObserver;
+        }
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

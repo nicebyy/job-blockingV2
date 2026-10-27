@@ -29,6 +29,18 @@ export class InfiniteScrollManager {
   private currentController: AbortController | null = null;
   /** 삭제 시 정리해야 하는 대기 타이머 (딜레이 / 타임아웃) */
   private pendingTimers: Set<ReturnType<typeof setTimeout>> = new Set();
+  /**
+   * 직전에 "성공적으로" 요청했던 페이지 URL.
+   * 페이지네이션 링크가 stale 하여 같은 페이지를 계속 재요청하는 루프를 감지하는 안전장치.
+   * (실패 후 재시도는 정상 동작이므로 성공한 요청만 기록한다)
+   */
+  private lastSuccessfulUrl: string | null = null;
+  /** 센티넬의 마지막 교차 상태 (로딩 완료 후 누락된 트리거 재확인용) */
+  private sentinelIntersecting = false;
+  /** 바닥에 머문 채 연속 자동 로딩한 횟수 (서버 보호 — 한도 도달 시 잠시 쉬었다 재개) */
+  private consecutiveIntersectionLoads = 0;
+  /** 센티넬 재확인 예약 타이머 */
+  private pendingRefillTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: InfiniteScrollOptions) {
     this.adapter = options.adapter;
@@ -53,6 +65,14 @@ export class InfiniteScrollManager {
       return false;
     }
     pagination.style.display = 'none';
+
+    // [중요] ?page=N / ?recruitPage=N 처럼 페이지가 지정된 URL 로 진입한 경우,
+    // 1페이지부터 다시 받아오면 중복 공고만 쌓이고 목록이 이어지지 않는다.
+    // 어댑터가 알려주는 현재 페이지 번호에서 이어서 로딩한다.
+    const detectedPage = this.adapter.getCurrentPageNumber?.(document);
+    if (typeof detectedPage === 'number' && Number.isFinite(detectedPage) && detectedPage > 0) {
+      this.currentPage = detectedPage;
+    }
 
     // 센티넬 및 로딩 인디케이터 생성
     this.setupSentinel(container);
@@ -97,7 +117,21 @@ export class InfiniteScrollManager {
       this.observer = new IntersectionObserver(
         (entries) => {
           const entry = entries[0];
-          if (entry?.isIntersecting && !this.isLoading && this.hasMorePages) {
+          if (!entry) return;
+
+          // [중요] 교차 상태는 "변화할 때만" 콜백이 온다.
+          // 로딩 중에는 센티넬이 화면 안에 계속 머무르므로(isIntersecting === true 유지)
+          // 로딩이 끝난 뒤에도 다시 콜백이 오지 않아, 사용자가 바닥에 머무르면
+          // 다음 페이지가 영원히 로딩되지 않는 "스크롤 정지"가 발생한다.
+          // 따라서 마지막 교차 상태를 기억해 두고 로딩 종료 후 스스로 재확인한다.
+          this.sentinelIntersecting = entry.isIntersecting;
+          if (!entry.isIntersecting) {
+            // 화면 밖으로 나가면 재확인 연쇄 카운트를 초기화한다
+            this.consecutiveIntersectionLoads = 0;
+            return;
+          }
+
+          if (!this.isLoading && this.hasMorePages) {
             this.consecutiveAutoRefills = 0; // 유저 스크롤 시 카운트 리셋
             this.loadNextPage(false);
           }
@@ -106,6 +140,45 @@ export class InfiniteScrollManager {
       );
       this.observer.observe(sentinel);
     }
+  }
+
+  /**
+   * 로딩이 끝난 뒤 센티넬이 여전히 화면 안(여유 영역 포함)에 있으면 다음 페이지 로딩을 이어간다.
+   *
+   * IntersectionObserver 는 교차 상태가 "바뀔 때만" 이벤트를 주므로, 로딩 중에 센티넬이
+   * 계속 보이는 상태(사용자가 바닥에 머무르는 경우)에서는 로딩 완료 후 이벤트가 오지 않는다.
+   * 이 메서드가 그 누락된 트리거를 메운다.
+   *
+   * 서버 보호를 위해 연속 자동 로딩 횟수에 한도를 두되, 한도에 도달하면 영구 정지하지 않고
+   * 더 긴 휴지 시간을 둔 뒤 다시 이어간다(사용자는 "잠깐 멈췄다 이어짐"으로 인지).
+   */
+  private scheduleIntersectionRefill(): void {
+    if (this.destroyed || !this.hasMorePages || this.isLoading) return;
+    if (!this.sentinelIntersecting || !this.sentinelElement) return;
+    if (this.pendingRefillTimer) return;
+
+    const reachedBatchLimit =
+      this.consecutiveIntersectionLoads >= INFINITE_SCROLL_CONFIG.MAX_CONSECUTIVE_FETCHES;
+
+    const delayMs = reachedBatchLimit
+      ? INFINITE_SCROLL_CONFIG.INTERSECTION_REFILL_COOLDOWN_MS
+      : INFINITE_SCROLL_CONFIG.INTERSECTION_REFILL_DELAY_MS;
+
+    const timer = setTimeout(() => {
+      this.pendingRefillTimer = null;
+      this.pendingTimers.delete(timer);
+      if (this.destroyed || this.isLoading || !this.hasMorePages) return;
+      if (!this.sentinelIntersecting) return;
+
+      if (reachedBatchLimit) {
+        // 휴지 시간이 지나면 배치 카운터를 리셋하고 이어서 로딩한다
+        this.consecutiveIntersectionLoads = 0;
+      }
+      this.consecutiveIntersectionLoads++;
+      this.loadNextPage(false);
+    }, delayMs);
+    this.pendingRefillTimer = timer;
+    this.pendingTimers.add(timer);
   }
 
   /**
@@ -129,6 +202,46 @@ export class InfiniteScrollManager {
   }
 
   /**
+   * 요청의 고유 키(URL + 메서드 + body)를 만든다.
+   * 잡코리아처럼 URL 은 고정이고 POST body 의 page 로 구분되는 사이트도 정확히 구분하기 위함.
+   */
+  private buildRequestKey(url: string, options?: RequestInit): string {
+    const method = (options?.method || 'GET').toUpperCase();
+    const body = typeof options?.body === 'string' ? options.body : '';
+    return `${method} ${url}${body ? ` | ${body}` : ''}`;
+  }
+
+  /**
+   * 다음 페이지 URL/요청을 계산하고, 같은 페이지를 반복 요청하려는지 검사한다.
+   * @returns 유효한 요청이면 { url, options, key }, 그렇지 않으면 null
+   */
+  private resolveNextRequest(): { url: string; options?: RequestInit; key: string } | null {
+    const nextRequest = this.adapter.getNextPageRequest
+      ? this.adapter.getNextPageRequest(document, this.currentPage)
+      : null;
+    const nextUrl = nextRequest?.url || this.adapter.getNextPageUrl?.(document, this.currentPage);
+
+    if (!nextUrl) {
+      return null;
+    }
+
+    const key = this.buildRequestKey(nextUrl, nextRequest?.options);
+
+    // [중요] 페이지네이션 링크가 stale 하여 "이미 받아온 페이지"를 다시 요청하는 경우,
+    // 중복 공고만 반환되므로 신규 카드 0개로 조용히 종료되거나 같은 요청을 무한 반복하게 된다.
+    // (예: 사람인 목록의 "다음" 버튼은 1페이지 DOM 에서 항상 page=11 을 가리킨다)
+    if (this.lastSuccessfulUrl !== null && key === this.lastSuccessfulUrl) {
+      console.warn(
+        '[JobFilter] 다음 페이지 URL 이 직전에 성공한 요청과 동일하여 무한 스크롤을 종료합니다:',
+        nextUrl
+      );
+      return null;
+    }
+
+    return { url: nextUrl, options: nextRequest?.options, key };
+  }
+
+  /**
    * 다음 페이지의 공고를 백그라운드에서 fetch하여 현재 목록에 추가
    * @param isAutoRefill 화면 내 유효 공고 부족으로 인한 연속 자동 리필 여부 (서버 보호용 딜레이 적용)
    */
@@ -137,16 +250,14 @@ export class InfiniteScrollManager {
       return false;
     }
 
-    const nextRequest = this.adapter.getNextPageRequest
-      ? this.adapter.getNextPageRequest(document, this.currentPage)
-      : null;
-    const nextUrl = nextRequest?.url || this.adapter.getNextPageUrl?.(document, this.currentPage);
-
-    if (!nextUrl) {
+    const nextRequest = this.resolveNextRequest();
+    if (!nextRequest) {
       this.hasMorePages = false;
       this.destroy();
       return false;
     }
+
+    const nextUrl = nextRequest.url;
 
     this.isLoading = true;
     this.setLoadingVisible(true);
@@ -266,6 +377,8 @@ export class InfiniteScrollManager {
       currentContainer.appendChild(fragment);
 
       this.currentPage++;
+      // 성공한 요청을 기록해, 같은 페이지를 반복 요청하는 stale 페이지네이션 루프를 감지한다
+      this.lastSuccessfulUrl = nextRequest.key;
       // 성공적으로 페이지를 받아왔으므로 연속 실패 카운터를 초기화한다
       this.consecutiveFailures = 0;
       this.onCardsAppended(importedCards);
@@ -294,6 +407,9 @@ export class InfiniteScrollManager {
     } finally {
       this.isLoading = false;
       this.setLoadingVisible(false);
+      // 로딩 중 센티넬이 계속 화면 안에 있었던 경우 IntersectionObserver 이벤트가
+      // 다시 오지 않으므로(=스크롤 정지), 여기서 다음 페이지 로딩을 이어준다.
+      this.scheduleIntersectionRefill();
     }
   }
 
@@ -325,6 +441,14 @@ export class InfiniteScrollManager {
   public destroy(): void {
     // 이후 도착하는 비동기 결과가 DOM 을 건드리지 않도록 먼저 플래그를 세운다
     this.destroyed = true;
+
+    // 센티넬 재확인 예약 취소
+    if (this.pendingRefillTimer) {
+      clearTimeout(this.pendingRefillTimer);
+      this.pendingTimers.delete(this.pendingRefillTimer);
+      this.pendingRefillTimer = null;
+    }
+    this.sentinelIntersecting = false;
 
     // 진행 중인 fetch 취소
     if (this.currentController) {

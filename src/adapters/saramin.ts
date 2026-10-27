@@ -139,6 +139,149 @@ export class SaraminAdapter extends BaseSiteAdapter {
     return doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.PAGINATION);
   }
 
+  /**
+   * 현재 화면이 실제로 몇 페이지인지 DOM/URL 에서 읽는다.
+   *
+   * 사용자가 `?page=11` / `?recruitPage=11` 처럼 페이지가 지정된 URL 로 바로 진입한 경우,
+   * 무한 스크롤이 1페이지부터 다시 받아오면 중복 공고만 쌓이고 목록이 이어지지 않는다.
+   */
+  public override getCurrentPageNumber(
+    doc: Document | HTMLElement = document
+  ): number | null {
+    const fromDom = this.readActivePageNumber(doc);
+    if (fromDom !== null) return fromDom;
+    return this.readPageNumberFromUrl(this.getLocationHref());
+  }
+
+  /** 활성(현재) 페이지 마커의 텍스트/속성에서 페이지 번호를 읽는다 */
+  private readActivePageNumber(doc: Document | HTMLElement): number | null {
+    const activeEl = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.ACTIVE_PAGE);
+    if (!activeEl) return null;
+
+    const candidates = [
+      activeEl.getAttribute('page'),
+      activeEl.getAttribute('data-page'),
+      activeEl.textContent,
+    ];
+    for (const candidate of candidates) {
+      const matched = candidate?.match(/\d+/);
+      if (!matched) continue;
+      const page = Number(matched[0]);
+      if (Number.isFinite(page) && page > 0) return page;
+    }
+    return null;
+  }
+
+  /** URL 의 page / recruitPage 쿼리에서 페이지 번호를 읽는다 */
+  private readPageNumberFromUrl(url: string): number | null {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url, 'https://www.saramin.co.kr');
+      for (const key of SARAMIN_SELECTORS.PAGE_QUERY_PARAMS) {
+        const raw = parsed.searchParams.get(key);
+        if (raw === null) continue;
+        const page = Number(raw);
+        if (Number.isFinite(page) && page > 0) return page;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  /** 현재 브라우저 위치(테스트 환경에서는 폴백) */
+  private getLocationHref(): string {
+    return typeof window !== 'undefined' && window.location?.href
+      ? window.location.href
+      : 'https://www.saramin.co.kr/zf_user/jobs/list';
+  }
+
+  /**
+   * 페이지네이션 링크(onclick / href)에서 실제 이동 URL 을 해석한다.
+   * onclick 의 `location.href = '...'` 를 우선 사용하고, 이동 URL 이 없는 `#hash` 전용 href 는 무시한다.
+   */
+  private resolvePaginationLinkUrl(
+    pageLink: HTMLAnchorElement | HTMLButtonElement | null,
+    baseUrl: string
+  ): string | null {
+    if (!pageLink) return null;
+
+    const rawOnClick = pageLink.getAttribute('onclick');
+    if (rawOnClick) {
+      const match = rawOnClick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
+      if (match) {
+        let cleanUrl = match[1].replace(/&amp;/g, '&');
+        const hashIdx = cleanUrl.indexOf('#');
+        if (hashIdx !== -1) cleanUrl = cleanUrl.slice(0, hashIdx);
+        try {
+          return new URL(cleanUrl, baseUrl).toString();
+        } catch {
+          return cleanUrl;
+        }
+      }
+    }
+
+    const rawHref = pageLink.getAttribute('href');
+    if (
+      rawHref &&
+      !rawHref.startsWith('#') &&
+      !rawHref.includes('javascript:') &&
+      // a[href*="page=N"] 은 "page_count=N" 도 매칭하므로 쿼리 파라미터 형태를 명시적으로 확인한다
+      /[?&](page|recruitPage)=\d+/.test(rawHref)
+    ) {
+      const cleanHref = rawHref.replace(/&amp;/g, '&').split('#')[0];
+      try {
+        return new URL(cleanHref, baseUrl).toString();
+      } catch {
+        return (pageLink as HTMLAnchorElement).href || cleanHref;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 현재 URL 의 쿼리를 유지한 채 다음 페이지 URL 을 만든다.
+   * 사람인 검색 목록은 recruitPage, 그 외 목록(직업별/지역별/산업별)은 page 를 사용한다.
+   */
+  private buildNextPageUrl(nextPage: number, doc: Document | HTMLElement): string | null {
+    try {
+      const currentUrl = new URL(this.getLocationHref());
+      // 해시(#recruit_info, #searchTitle 등) 제거
+      currentUrl.hash = '';
+
+      const isSearchPage =
+        currentUrl.pathname.includes('/search') ||
+        currentUrl.searchParams.has('recruitPage') ||
+        currentUrl.searchParams.has('searchword') ||
+        Boolean(
+          doc.querySelector('#recruit_info, #recruit_info_list, a[href*="#recruit_info"]')
+        );
+
+      if (isSearchPage) {
+        // 반대편 파라미터가 남아 있으면 서버가 무시/혼동할 수 있으므로 제거한다
+        currentUrl.searchParams.delete('page');
+        currentUrl.searchParams.set('recruitPage', String(nextPage));
+      } else {
+        currentUrl.searchParams.delete('recruitPage');
+        currentUrl.searchParams.set('page', String(nextPage));
+      }
+      return currentUrl.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * 다음 페이지 URL 계산.
+   *
+   * [중요] 사람인 목록의 페이지 번호 블록은 10개 단위로 끊겨 있고, "다음" 버튼은
+   * "다음 블록의 첫 페이지"를 가리킨다. 예를 들어 1페이지 DOM 의 "다음" 버튼은
+   * 언제나 `page=11` 이므로, 그 URL 을 그대로 사용하면 11페이지 이후로는 계속
+   * 11페이지를 받아오게 되고(중복 판정) 무한 스크롤이 조용히 멈춘다.
+   * 따라서 링크가 가리키는 페이지 번호가 실제로 찾는 페이지(nextPage)와 일치할 때만
+   * 링크를 신뢰하고, 그렇지 않으면 현재 URL 의 쿼리를 유지한 채 페이지 번호를 직접 갱신한다.
+   */
   public override getNextPageUrl(
     doc: Document | HTMLElement = document,
     currentPage: number
@@ -154,39 +297,14 @@ export class SaraminAdapter extends BaseSiteAdapter {
         '.pagination .next, .page_box .btn_next, .PageBox .BtnType.next, .PageBox button.next, .PageBox .BtnNext, .PageBox button.BtnNext, .BtnNext'
       );
 
-    const baseUrl =
-      typeof window !== 'undefined' && window.location?.href
-        ? window.location.href
-        : 'https://www.saramin.co.kr';
+    const baseUrl = this.getLocationHref();
+    const linkedUrl = this.resolvePaginationLinkUrl(pageLink, baseUrl);
 
-    const rawOnClick = pageLink?.getAttribute('onclick');
-    if (rawOnClick) {
-      const match = rawOnClick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
-      if (match) {
-        let cleanUrl = match[1].replace(/&amp;/g, '&');
-        const hashIdx = cleanUrl.indexOf('#');
-        if (hashIdx !== -1) cleanUrl = cleanUrl.slice(0, hashIdx);
-        try {
-          return new URL(cleanUrl, baseUrl).toString();
-        } catch {
-          return cleanUrl;
-        }
-      }
-    }
-
-    // a 태그가 실제 이동 URL(page/recruitPage 쿼리가 포함되고 # 해시 전용이 아닌 URL)을 갖고 있는 경우 반환
-    const rawHref = pageLink?.getAttribute('href');
-    if (
-      rawHref &&
-      !rawHref.startsWith('#') &&
-      !rawHref.includes('javascript:') &&
-      (rawHref.includes('page=') || rawHref.includes('recruitPage='))
-    ) {
-      const cleanHref = rawHref.replace(/&amp;/g, '&').split('#')[0];
-      try {
-        return new URL(cleanHref, baseUrl).toString();
-      } catch {
-        return (pageLink as HTMLAnchorElement).href || cleanHref;
+    // 링크가 실제로 "다음 페이지"를 가리키는 경우에만 그대로 사용한다
+    if (linkedUrl) {
+      const linkedPage = this.readPageNumberFromUrl(linkedUrl);
+      if (linkedPage === nextPage) {
+        return linkedUrl;
       }
     }
 
@@ -195,29 +313,8 @@ export class SaraminAdapter extends BaseSiteAdapter {
       return null;
     }
 
-    // 2. 현재 URL 기준 query parameter 갱신 (사람인 검색은 recruitPage, 일반 목록은 page 사용)
-    try {
-      const currentUrl = new URL(
-        typeof window !== 'undefined' ? window.location.href : 'https://www.saramin.co.kr/zf_user/search/recruit'
-      );
-      // 해시(#recruit_info, #searchTitle 등) 제거
-      currentUrl.hash = '';
-
-      const isSearchPage =
-        currentUrl.pathname.includes('/search') ||
-        currentUrl.searchParams.has('recruitPage') ||
-        currentUrl.searchParams.has('searchword') ||
-        Boolean(doc.querySelector('#recruit_info, #recruit_info_list, a[href*="#recruit_info"]'));
-
-      if (isSearchPage) {
-        currentUrl.searchParams.set('recruitPage', String(nextPage));
-      } else {
-        currentUrl.searchParams.set('page', String(nextPage));
-      }
-      return currentUrl.toString();
-    } catch {
-      return null;
-    }
+    // 2. 현재 URL 기준 query parameter 갱신 (링크가 stale 한 경우 및 링크가 없는 마지막 페이지)
+    return this.buildNextPageUrl(nextPage, doc);
   }
 
   public parseCard(element: HTMLElement): JobCardInfo | null {
