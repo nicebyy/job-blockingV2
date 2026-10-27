@@ -1537,6 +1537,123 @@ describe('Site Adapters 단위 테스트', () => {
       expect(normalList?.style.display).not.toBe('none');
     });
 
+    it('잡코리아 메인 페이지의 4대 광고 섹션(나에게 꼭 맞는 공고, 주목할 만한 JOB, 놓치면 아쉬운 JOB, 지원자가 몰리는 JOB)을 hidePromotionBanners로 완전 숨김 처리하고 restorePromotionBanners로 복원할 수 있어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <!-- 1. 나에게 꼭 맞는 공고 (CPC_SMARTFIT_HOME_PC) -->
+        <div data-animation-section="true" data-render-type="GRID_CARD_DEFAULT" data-section-alias="CPC_SMARTFIT_HOME_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>나에게 꼭 맞는 공고 <span class="badge">AD</span></h2>
+            </div>
+            <div class="cards">공고 카드 목록</div>
+          </div>
+        </div>
+
+        <!-- 2. 주목할 만한 JOB (CPT_FIRSTVVIP_PC) -->
+        <div data-animation-section="true" data-render-type="GRID_CARD_SEPERATED" data-section-alias="CPT_FIRSTVVIP_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>주목할 만한 JOB <span class="badge">AD</span></h2>
+              <a href="/service/company/option">상품안내 &gt;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 놓치면 아쉬운 JOB (CPT_VIP_PC) -->
+        <div data-animation-section="true" data-render-type="GRID_CARD_THUMBNAIL" data-section-alias="CPT_VIP_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>놓치면 아쉬운 JOB <span class="badge">AD</span></h2>
+              <a href="/service/company/option">상품안내 &gt;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 지원자가 몰리는 JOB (CPT_EXCELLENT_PC) -->
+        <div data-animation-section="true" data-render-type="GRID_CARD_LOGO" data-section-alias="CPT_EXCELLENT_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>지원자가 몰리는 JOB <span class="badge">AD</span></h2>
+              <a href="/service/company/option">상품안내 &gt;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. 일반 섹션 (AI 추천 인사이트 등 - 숨겨지지 않아야 함) -->
+        <div data-animation-section="true" data-section-alias="AI_INSIGHT_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <h2>AI 매칭 인사이트</h2>
+          </div>
+        </div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBe(4);
+
+      const sec1 = container.querySelector<HTMLElement>('[data-section-alias="CPC_SMARTFIT_HOME_PC"]');
+      const sec2 = container.querySelector<HTMLElement>('[data-section-alias="CPT_FIRSTVVIP_PC"]');
+      const sec3 = container.querySelector<HTMLElement>('[data-section-alias="CPT_VIP_PC"]');
+      const sec4 = container.querySelector<HTMLElement>('[data-section-alias="CPT_EXCELLENT_PC"]');
+      const normalSec = container.querySelector<HTMLElement>('[data-section-alias="AI_INSIGHT_PC"]');
+
+      expect(sec1?.style.display).toBe('none');
+      expect(sec1?.getAttribute('data-job-filtered')).toBe('true');
+      expect(sec1?.getAttribute('data-blocked-type')).toBe('ad');
+
+      expect(sec2?.style.display).toBe('none');
+      expect(sec2?.getAttribute('data-job-filtered')).toBe('true');
+
+      expect(sec3?.style.display).toBe('none');
+      expect(sec3?.getAttribute('data-job-filtered')).toBe('true');
+
+      expect(sec4?.style.display).toBe('none');
+      expect(sec4?.getAttribute('data-job-filtered')).toBe('true');
+
+      // 일반 섹션은 숨김 대상이 아님
+      expect(normalSec?.style.display).not.toBe('none');
+      expect(normalSec?.getAttribute('data-job-filtered')).toBeNull();
+
+      // restorePromotionBanners 호출 시 복원 검증
+      adapter.restorePromotionBanners(container);
+      expect(sec1?.style.display).toBe('');
+      expect(sec1?.getAttribute('data-job-filtered')).toBeNull();
+      expect(sec2?.style.display).toBe('');
+      expect(sec3?.style.display).toBe('');
+      expect(sec4?.style.display).toBe('');
+    });
+
+    it('잡코리아 메인 페이지 광고 섹션이 data-section-alias가 없는 동적 DOM 환경이어도 제목 텍스트로 폴백 탐색하여 숨김 처리해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="main-custom-section">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>주목할만한 JOB</h2>
+            </div>
+            <div class="card-list">광고 카드들</div>
+          </div>
+        </div>
+        <div class="main-custom-section-2">
+          <section>
+            <h2>지원자가 몰리는 JOB</h2>
+            <div class="card-list">광고 카드들</div>
+          </section>
+        </div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBe(2);
+
+      const sec1 = container.querySelector<HTMLElement>('.main-custom-section');
+      const sec2 = container.querySelector<HTMLElement>('.main-custom-section-2');
+
+      expect(sec1?.style.display).toBe('none');
+      expect(sec1?.getAttribute('data-job-filtered')).toBe('true');
+      expect(sec2?.style.display).toBe('none');
+      expect(sec2?.getAttribute('data-job-filtered')).toBe('true');
+    });
+
     it('잡코리아 인기 TOP 100(ol.rankList > li.dmpItem) 공고 카드를 정확히 수집 및 파싱하고 평점 뱃지와 인라인 툴바가 올바르게 주입되어야 한다', () => {
       const container = document.createElement('div');
       container.innerHTML = `
