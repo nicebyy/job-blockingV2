@@ -1,0 +1,559 @@
+/* 공고 카드 요소들의 포지셔닝 컨텍스트 보장 (버튼 툴바가 부모가 아닌 개별 카드 내에 정확히 앵커되도록 설정) */
+.job-filter-card-host,
+.item_recruit,
+.list-post,
+[data-cy="job-card"],
+li[class*="Card_"],
+.jview,
+tr.devloopArea,
+tr[data-gno],
+td.tplTit,
+.titBx,
+td.tplTit .titBx,
+.job-recommendation-item,
+ol.rankList > li,
+li.dmpItem,
+li.listItem,
+div[class*="sc-d609d44f-0"],
+div[class*="sc-289d3ccd-0"] {
+  position: relative !important;
+}
+
+/* 채용 공고 카드 필터링 스타일 */
+[data-job-filtered="true"][data-filter-mode="blur"] {
+  position: relative !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+[data-job-filtered="true"][data-filter-mode="blur"]:hover {
+  filter: blur(2px) !important;
+  opacity: 0.75 !important;
+}
+
+/* 테이블 행(tr) 블러 처리 시 자식 td 요소 필터링 */
+tr[data-job-filtered="true"][data-filter-mode="blur"] td {
+  filter: blur(6px) !important;
+  opacity: 0.3 !important;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+tr[data-job-filtered="true"][data-filter-mode="blur"]:hover td {
+  filter: blur(2px) !important;
+  opacity: 0.75 !important;
+}
+
+[data-job-filtered="true"][data-filter-mode="hide"] {
+  display: none !important;
+}
+
+/* 원티드, 리멤버 등 공고 숨김 시 상위 li 그리드 아이템도 완전 숨김 처리하여 빈 공간(빈칸) 없이 다음 공고가 즉각 당겨오도록 보장 */
+li:has(> [data-job-filtered="true"][data-filter-mode="hide"]),
+li:has([data-cy="job-card"][data-job-filtered="true"][data-filter-mode="hide"]),
+li[class*="Card_"][data-job-filtered="true"][data-filter-mode="hide"],
+li:has([class*="sc-364cfa5d"][data-job-filtered="true"][data-filter-mode="hide"]),
+li:has([class*="sc-18344c98"][data-job-filtered="true"][data-filter-mode="hide"]),
+li:has([class*="sc-d2fb7cfc"][data-job-filtered="true"][data-filter-mode="hide"]),
+li:has([class*="sc-3c9cd5df"][data-job-filtered="true"][data-filter-mode="hide"]),
+li[class*="sc-3c9cd5df-0"][data-job-filtered="true"][data-filter-mode="hide"],
+div[class*="sc-289d3ccd-0"][data-job-filtered="true"][data-filter-mode="hide"],
+div:has(> a[href*="/position/"][data-job-filtered="true"][data-filter-mode="hide"]),
+div[class*="sc-d609d44f-0"][data-job-filtered="true"][data-filter-mode="hide"] {
+  display: none !important;
+}
+
+/* 사람인, 잡코리아, 원티드, 리멤버 AI 검색/프로모션/적극채용회사/프리미엄대표기업/상단광고 배너 자동 숨김 */
+.area_ai_search,
+section.type_searchup,
+section.keyword_up_logo_area,
+.wrap_searchup,
+section.wrap_store,
+.wrap_store,
+#store_product,
+#section_contents,
+section[aria-label="추천공고"],
+.list_curation_wrap,
+.job-recommendation,
+div.job-recommendation,
+.area-recommend-job,
+.dev-banner,
+#dev-BNewsAGI,
+#dev-TopHeadlineAGI,
+#TopHeadlineAGI,
+#dev-HeadlineAGI,
+#HeadlineAGI,
+.listTopHeadline,
+.listHeadline,
+.listBannerWrap,
+section[class*="AdTargetList_"],
+div[class*="AdTargetList_"],
+[class*="AdTargetList_AdTargetList"],
+#companyJobBoard,
+section[class*="sc-79e4e802-0"],
+section:has(img[src*="ad-cdn.rememberapp.co.kr"]),
+section:has(img[alt*="광고 배너"]),
+section:has(a[href*="/job/board/premium-top-companies"]),
+section:has(a[href*="job_board_top_banner"]),
+aside[class*="sc-3ef60426-1"],
+div[class*="POSITIONS_BANNER"],
+div[class*="MAIN_BANNER"],
+div[class*="MAIN_WING_BANNER"],
+div[class*="POSITION_VIEW_WING_BANNER"] {
+  display: none !important;
+}
+
+/* 사람인 기업정보 팝업 스타일 보정 (다른 공고 카드 요소와의 겹침 방지) */
+.lpop_corp_info {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* 주입되는 인라인 [차단/숨김] 버튼 그룹 (모던 글래스모피즘 플로팅 캡슐 툴바) */
+.job-filter-btn-group {
+  position: absolute !important;
+  top: 10px !important;
+  right: 12px !important;
+  z-index: 100 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 4px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 2px 8px -1px rgba(15, 23, 42, 0.08), 0 1px 3px -1px rgba(15, 23, 42, 0.04) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-4px) scale(0.98) !important;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.15s ease !important;
+  box-sizing: border-box !important;
+}
+
+/* 카드 호버 시 및 그룹 자체 호버/포커스 시 부드럽게 노출 (Hover Reveal) */
+.job-filter-card-host:hover .job-filter-btn-group,
+.item_recruit:hover .job-filter-btn-group,
+[data-cy="job-card"]:hover .job-filter-btn-group,
+.list-post:hover .job-filter-btn-group,
+.jview:hover .job-filter-btn-group,
+.wrap_jview .jview:hover .job-filter-btn-group,
+tr.devloopArea:hover .job-filter-btn-group,
+tr[data-gno]:hover .job-filter-btn-group,
+.tplJobList tr:hover .job-filter-btn-group,
+tr:hover .job-filter-btn-group,
+td.tplTit:hover .job-filter-btn-group,
+.titBx:hover .job-filter-btn-group,
+.job-recommendation-item:hover .job-filter-btn-group,
+.rankList li:hover .job-filter-btn-group,
+li.dmpItem:hover .job-filter-btn-group,
+li.listItem:hover .job-filter-btn-group,
+.job-filter-btn-group:hover,
+.job-filter-btn-group:focus-within {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) scale(1) !important;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.12), 0 2px 4px -1px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* 상세 페이지 인라인 [공고숨김 / 회사차단] 듀얼 버튼 그룹 전용 스타일 (입사지원 버튼 겹침 방지 및 상시 노출) */
+.job-filter-btn-group-detail,
+.jv_header .job-filter-btn-group,
+.title_inner .job-filter-btn-group,
+.wrap_jv_header .job-filter-btn-group,
+section[class*="JobHeader"] .job-filter-btn-group,
+div[class*="JobHeader"] .job-filter-btn-group,
+div[class*="sc-80824a9d-0"] .job-filter-btn-group,
+div:has(> h1):has(a[href*="/company/"]) .job-filter-btn-group {
+  position: static !important;
+  display: inline-flex !important;
+  vertical-align: middle !important;
+  margin-left: 10px !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* 캡슐 내부 개별 세그먼트 버튼 */
+
+.job-filter-hide-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3.5px !important;
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.2px !important;
+  color: #64748b !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+  outline: none !important;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 두 버튼 사이의 섬세한 디바이더 */
+.job-filter-btn-divider {
+  display: inline-block !important;
+  width: 1px !important;
+  height: 11px !important;
+  background-color: #e2e8f0 !important;
+  margin: 0 1px !important;
+}
+
+/* [공고숨김] 호버 상태 */
+.job-filter-btn-job:hover {
+  color: #d97706 !important;
+  background-color: #fef3c7 !important;
+}
+
+/* [회사차단] 호버 상태 */
+.job-filter-btn-company:hover {
+  color: #dc2626 !important;
+  background-color: #fee2e2 !important;
+}
+
+.job-filter-hide-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.job-filter-btn-icon,
+.job-filter-hide-btn svg {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  flex-shrink: 0 !important;
+}
+
+.job-filter-btn-text {
+  display: inline-block !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.2px !important;
+}
+
+
+/* 무한 스크롤 로딩 인디케이터 스타일 */
+.job-filter-infinite-loading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  padding: 18px 0 !important;
+  margin: 16px 0 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+  background-color: #f8fafc !important;
+  border-radius: 8px !important;
+  border: 1px dashed #cbd5e1 !important;
+}
+
+.job-filter-spinner {
+  width: 16px !important;
+  height: 16px !important;
+  border: 2px solid #e2e8f0 !important;
+  border-top-color: #2563eb !important;
+  border-radius: 50% !important;
+  animation: job-filter-spin 0.6s linear infinite !important;
+}
+
+@keyframes job-filter-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 잡플래닛 및 블라인드 평점 뱃지 스타일 */
+.job-filter-ratings-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  vertical-align: middle !important;
+  margin-left: 6px !important;
+}
+
+/* 잡코리아 테이블 열(td.tplCo) 내 평점 뱃지 줄바꿈 최적화 */
+td.tplCo .job-filter-ratings-wrap,
+.tplCo .job-filter-ratings-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 3px !important;
+  margin-left: 0 !important;
+  margin-top: 4px !important;
+}
+
+/* 잡코리아 관심기업(찜하기) 하트 버튼 겹침 방지 및 안정적 인라인 배치 */
+.tplJobList .tplCo .tplBtnFavOff,
+.tplJobList .tplCo .tplBtnFavOn,
+td.tplCo .tplBtnFavOff,
+td.tplCo .tplBtnFavOn,
+.tplCo .dev-favor {
+  position: static !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin-left: 4px !important;
+}
+
+.job-filter-rating-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2.5px !important;
+  padding: 1.5px 6px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.2px !important;
+  border-radius: 4px !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  vertical-align: middle !important;
+  user-select: none !important;
+  transition: all 0.15s ease-in-out !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.job-filter-rating-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.3px !important;
+  margin-right: 1px !important;
+  opacity: 0.9 !important;
+}
+
+.job-filter-rating-star {
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.job-filter-rating-score {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* 잡플래닛 전용 테마 (초록색) */
+.job-filter-rating-jobplanet {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+.job-filter-rating-jobplanet:hover {
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 블라인드 전용 테마 (빨간색) */
+.job-filter-rating-blind {
+  background-color: #fef2f2 !important;
+  color: #dc2626 !important;
+  border: 1px solid #fecaca !important;
+}
+
+.job-filter-rating-blind:hover {
+  background-color: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 평점 등급별 보조 색상 테마 */
+.job-filter-rating-high {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+.job-filter-rating-medium {
+  background-color: #fffbeb !important;
+  color: #b45309 !important;
+  border: 1px solid #fde68a !important;
+}
+
+.job-filter-rating-low {
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+  border: 1px solid #fecaca !important;
+}
+
+/* 잡코리아 상세 페이지(/Recruit/GI_Read/*) 회사명 및 평점 뱃지 정렬 */
+[data-sentry-component="CompanyName"],
+.artReadJob .coInfo {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+[data-sentry-component="CompanyName"] a {
+  display: inline-flex !important;
+  align-items: center !important;
+  text-decoration: none !important;
+}
+
+[data-sentry-component="CompanyName"] h2 {
+  display: inline-block !important;
+  margin: 0 !important;
+}
+
+/* 잡코리아 상세 페이지 액션 버튼 툴바 (#menu-buttons 내부 및 레거시 헤더) */
+#menu-buttons .job-filter-btn-group,
+[data-sentry-component="MenuButtons"] .job-filter-btn-group {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-right: 12px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 10 !important;
+  align-self: center !important;
+}
+
+.artReadJob .job-filter-btn-group-detail {
+  position: absolute !important;
+  top: 12px !important;
+  right: 12px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 100 !important;
+}
+
+/* 잡코리아 TOP 100(인기 순위) 공고 카드 및 평점 뱃지 정렬 */
+ol.rankList > li .coTit,
+li.dmpItem .coTit {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+
+ol.rankList > li .coTit .job-filter-ratings-wrap,
+li.dmpItem .coTit .job-filter-ratings-wrap {
+  margin-left: 2px !important;
+}
+
+ol.rankList > li .devFavor,
+li.dmpItem .devFavor {
+  position: static !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* 잡코리아 AI 추천 목록(.listItem) 회사명 및 평점 뱃지 정렬 */
+li.listItem {
+  position: relative !important;
+}
+
+li.listItem .recruit-company .headers {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+
+li.listItem .recruit-company .headers .job-filter-ratings-wrap {
+  margin-left: 2px !important;
+}
+
+li.listItem .dev-btn-favor {
+  position: static !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+/* 리멤버(Remember) 큐레이션 공고 카드 인라인 [공고숨김 / 회사차단] 툴바 위치 최적화 */
+li[class*="sc-3c9cd5df-0"] .job-filter-btn-group {
+  top: 6px !important;
+  right: 6px !important;
+}
+
+/* 리멤버(Remember) 공고 카드 및 맞춤 큐레이션 평점 뱃지 인라인 정렬 */
+div[class*="sc-3c9cd5df-7"],
+div[class*="sc-d2fb7cfc-7"],
+p[class*="sc-18344c98-6"] {
+  display: inline !important;
+  vertical-align: middle !important;
+}
+
+/* 리멤버(Remember) '내 직무 인기 공고'(sc-289d3ccd-0) 카드 인라인 [공고숨김 / 회사차단] 툴바 위치 최적화 */
+div[class*="sc-289d3ccd-0"] .job-filter-btn-group {
+  top: 8px !important;
+  right: 38px !important;
+  z-index: 100 !important;
+}
+
+/* 리멤버(Remember) '내 직무 인기 공고' 회사명 및 평점 뱃지 가로 정렬 최적화 */
+p[class*="sc-289d3ccd-4"],
+div[class*="sc-289d3ccd-4"] {
+  flex-grow: 0 !important;
+  flex-basis: auto !important;
+  max-width: calc(100% - 110px) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+div[class*="sc-289d3ccd-0"] .job-filter-ratings-wrap {
+  flex-shrink: 0 !important;
+  margin-left: 4px !important;
+}
+
+/* 점핏(Jumpit) 공고 카드 회사명 행 및 평점 뱃지 정렬 */
+div[class*="sc-15ba67b8-2"],
+.bhnakf,
+.jkmBOM {
+  display: inline-flex !important;
+  align-items: center !important;
+  width: auto !important;
+  max-width: calc(100% - 175px) !important;
+  vertical-align: middle !important;
+  overflow: visible !important;
+}
+
+div[class*="sc-15ba67b8-2"] > span:first-child,
+.bhnakf > span:first-child,
+.jkmBOM > span:first-child {
+  width: auto !important;
+  display: inline-block !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+div[class*="sc-15ba67b8-0"] .job-filter-ratings-wrap,
+div[class*="sc-15ba67b8-2"] .job-filter-ratings-wrap,
+.bhnakf .job-filter-ratings-wrap,
+.jkmBOM .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  flex-shrink: 0 !important;
+  margin-left: 6px !important;
+}
+
+/* 점핏 상세 페이지 헤더 평점 뱃지 정렬 */
+.sc-80824a9d-0 a.name,
+div[class*="sc-80824a9d-0"] a.name {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+}
+
+div[class*="sc-80824a9d-0"] .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  vertical-align: middle !important;
+  margin-left: 8px !important;
+}
+
+
+

@@ -1,2 +1,262 @@
-# job-blockingV2
-구인구직 필터링 extension
+# Job Blocking V2 (채용 사이트 공고 필터링)
+
+<p align="left">
+  <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Manifest V3" />
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Vitest-100%25_Passed-6E9F18?style=flat-square&logo=vitest&logoColor=white" alt="Vitest" />
+  <img src="https://img.shields.io/badge/Playwright-E2E_Passed-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright" />
+  <img src="https://img.shields.io/badge/Privacy-Zero_Data_Collection-success?style=flat-square" alt="Privacy" />
+</p>
+
+채용 플랫폼(원티드, 사람인, 잡코리아, 리멤버, 점핏 등)에서 원하지 않는 기업 및 불필요한 추천/스폰서 광고 공고를 숨기거나 흐리게(블러) 처리해 주는 고성능 크롬 확장 프로그램(Manifest V3)입니다.
+
+---
+
+## 🌐 지원 채용 플랫폼 요약 (Supported Platforms)
+
+| 채용 플랫폼 | 지원 페이지 범위 | 공고 숨김 / 회사 차단 | 기업 평점 뱃지 (잡플래닛·블라인드) | 광고/프로모션 자동 숨김 | 무한 스크롤 / 자동 리필 | 상세페이지 스마트 이탈 가드 |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **원티드 (Wanted)** | 채용목록(`/wdlist/*`), 상세페이지(`/wd/*`), 큐레이션 캐러셀 | ✅ | ✅ (듀얼 뱃지) | ✅ (적극 채용 슬라이더) | ✅ (SPA 최적화) | ✅ |
+| **사람인 (Saramin)** | 검색목록, 상세페이지 릴레이 뷰(`.jview`) | ✅ | ✅ (듀얼 뱃지) | ✅ (AI검색·스토어·추천) | ✅ (Auto-Refill 지원) | ✅ |
+| **잡코리아 (JobKorea)** | 채용목록, 인기 TOP 100, AI추천, 상세페이지 | ✅ | ✅ (듀얼 뱃지) | ✅ (TOP 헤드라인·추천) | ✅ (POST 무한 스크롤) | ✅ (뒤로가기 / 탭 종료) |
+| **리멤버 (Remember)** | 채용목록, 인기/큐레이션 공고, 상세페이지 | ✅ | ✅ (듀얼 뱃지) | ✅ (프리미엄기업·광고배너) | ✅ (SPA 최적화) | ✅ (뒤로가기 / 탭 종료) |
+| **점핏 (Jumpit)** | 채용목록(`/positions`), 상세페이지(`/position/*`) | ✅ | ✅ (듀얼 뱃지) | ✅ (사이드 윙·프로모션) | ✅ (SPA 최적화) | ✅ (뒤로가기 / 탭 종료) |
+
+---
+
+## ✨ 핵심 기능 (Features)
+
+- **선택적 차단 및 중복 차단 방지 (Selective Blocking & Smart Deduplication)**:
+  - **[공고숨김]**: 특정 공고만 숨김 처리(`type: 'job'`)하며, 블러 모드 설정 여부와 관계없이 사용자의 명시적 숨김 의도에 따라 항상 **완전 숨김(`hide`)** 적용. 동일 회사의 다른 포지션 공고는 정상적으로 탐색 가능
+  - **[회사차단]**: 해당 기업의 모든 채용 공고를 일괄 차단(`type: 'company'`). 회사명 정규화(`normalizeCompanyName`)를 통해 `(주)`, `주식회사`, 특수문자, 공백 등 표기 변형이 달라도 동일 기업으로 완벽히 인식하여 차단
+  - **스마트 중복 차단 방지 (Multi-layer Deduplication Gate)**:
+    - **중복 회사 차단 방지**: 이미 `(주)카카오`가 등록된 상태에서 `카카오` 또는 `주식회사 카카오`를 추가 차단 시도하더라도 중복 등록을 원천 차단하고 더 간결한 공식 명칭(`카카오`)으로 패턴을 자동 최적화
+    - **중복 공고 차단 방지**: 리스트 페이지와 상세 페이지에서 동일 공고를 중복 차단하거나 `[공고숨김]` 버튼을 연타하더라도 단일 항목으로 유지되며, 기존 복합 키(`company:::title`)로 등록된 공고는 상세페이지 고유 식별자(`jobId`) 발견 시 자동으로 정밀 `jobId` 패턴으로 업그레이드
+  - **모던 글래스모피즘 캡슐 툴바 (Floating Pill Toolbar)**:
+    - 채용 사이트 본래의 UI를 침범하지 않도록 평상시에는 숨겨지며, 마우스 호버(`:hover`) 시에만 우측 상단에 정제된 플로팅 알약(Pill) 형태로 부드럽게 노출 (Hover Reveal)
+    - 미니멀 아이콘, 세그먼트 디바이더, 액션별 은은한 하이라이트(Amber/Red) 마이크로 인터랙션 적용
+    - 모든 UI 텍스트, 툴팁, SVG 규격 및 클래스명을 중앙 상수(`INLINE_BUTTON_CONFIG`)로 분리하여 하드코딩 완전 배제
+- **상세페이지 & 잡코리아 테이블 목록 & 원티드 공고 카드 정밀 격리 (Safe DOM Isolation)**:
+  - **원티드(Wanted) 목록(`/wdlist/*`) 및 상세 페이지(`/wd/*`) 완벽 지원**:
+    - **"🔥 적극 채용 중인 회사" 섹션 자동 숨김**: 채용 목록 최상단의 적극 채용 광고 슬라이더(`section.AdTargetList_*`)를 CSS 및 스크립트 이중 가드로 흔적 없이 자동 숨김 처리하여 순수 일반 공고만 노출
+    - **카드 메타데이터 정밀 파싱 & 중복 배제**: 원티드 최신 리액트 SPA DOM 구조에 맞추어 북마크 속성 및 본문 요소를 대조 파싱하며, 하위 요소 복수 탐색으로 인한 카드 중복 등록을 원천 배제
+    - **공고 숨김 시 그리드 자동 당겨오기(CSS Grid Reflow & Anti-Gap)**: 원티드 채용 목록의 4열 그리드 레이아웃(`ul.List_* > li.Card_*`)에서 공고 숨김 시 자식 카드뿐만 아니라 상위 `<li>` 그리드 셀 자체를 완전 은닉(`display: none !important`) 및 CSS `:has()` 가드로 처리하여 어색한 빈칸(공백) 없이 뒤의 공고 카드가 자연스럽게 앞으로 당겨와 채워지도록 보장
+    - **기업 평점 뱃지(잡플래닛 & 블라인드)**: 일반 공고 카드뿐만 아니라 테마/큐레이션 포지션 캐러셀 카드(`PositionGroupJobCard`) 및 홈/피드 미니 카드(`MiniJobCard`)의 기업명 바로 옆에도 초록색/빨간색 평점 뱃지를 자연스럽게 렌더링
+    - **테마/큐레이션 포지션 캐러셀 지원**: 북마크 버튼이 생략된 캐러셀 카드(`[data-attribute-id="position__click"]`)에서도 `data-*` 속성 및 구조 분석을 통해 회사명·공고명·Job ID를 정밀 파싱하고, 카드 숨김 시 캐러셀 아이템(`li`) 단위 은닉 지원
+    - **[공고숨김 / 회사차단] 듀얼 툴바**: 카드 호버 시 플로팅 알약 툴바 노출, 상세 페이지 헤더 인라인 툴바 노출
+  - **사람인 상세 페이지 및 무한 릴레이 뷰 지원**:
+    - **기업 평점 뱃지(잡플래닛 & 블라인드)**: 공고 상세 페이지 헤더(`.title_inner`)의 기업명 바로 옆에 잡플래닛/블라인드 평점 뱃지를 동일하게 렌더링하여 공고 본문 확인 중에도 기업 평점을 즉시 확인 가능
+    - **[공고숨김 / 회사차단] 듀얼 툴바 인라인 상시 노출**: 상세 페이지 우측 상단의 입사지원 버튼(`.btn_apply`) 및 스크랩 버튼과의 겹침/가려짐을 원천 방지하기 위해, 기업명 및 관심기업 영역(`.title_inner`) 내부에 정제된 인라인 플로팅 툴바로 상시 노출 (`job-filter-btn-group-detail`, `position: static`, `opacity: 1`)
+    - **루트 카드 완전 격리 은닉(Anti-Empty Page)**: 최상위 부모 컨테이너(`.wrap_jview`)가 오은닉되어 화면 좌측 전체가 하얗게 증발하거나 헤더만 잘려나가는 문제를 원천 방지하고, 개별 공고 카드(`.jview`) 단위로 깔끔하게 격리 은닉
+  - **잡코리아 채용목록(`/recruit/joblist`), 인기 TOP 100(`/top100/`), AI 추천(`/User/AI`), 상세 페이지(`/Recruit/GI_Read/*`) 완벽 지원**:
+    - **채용목록 테이블 행(`tr`), 인기 TOP 100 순위 카드(`ol.rankList > li`), AI 추천 공고 행(`li.listItem`) 정밀 앵커링**:
+      - 테이블 목록(`td.tplTit`), TOP 100 카드(`li.dmpItem`), AI 추천 공고 행(`li.listItem`)에 호버 시 부드러운 모던 알약 툴바 노출 (마우스 오버 시에만 표시되는 Hover Reveal)
+      - 관심기업(찜하기 하트) 버튼(`.dev-btn-favor`, `.devFavor`) 바로 뒤 평점 래퍼 주입으로 회사명 텍스트 및 하트 아이콘과의 겹침 완벽 방지
+      - `data-gno`, `data-source` JSON, `dmp-collection` 메타데이터 파싱으로 공고 식별자(Job ID: `gno`) 정밀 추출
+    - **"TOP 헤드라인 채용관" 및 프로모션 상품 배너 자동 숨김**: 채용목록 상단의 TOP 헤드라인 채용관 및 헤드라인 채용관 상품안내 배너(`#dev-TopHeadlineAGI`, `#HeadlineAGI`, `.listBannerWrap`, `.listTopHeadline`)를 CSS 및 스크립트로 흔적 없이 자동 차단
+    - **상세 페이지(`/Recruit/GI_Read/*`) 기업 평점 뱃지(잡플래닛 & 블라인드)**: 채용 상세 타이틀 영역의 기업명 바로 옆에 초록색 잡플래닛 / 빨간색 블라인드 평점 뱃지를 자동 렌더링 (`[data-sentry-component="CompanyName"] a` 기준 앵커링으로 `<a>` 태그 중첩 원천 방지)
+    - **상세 페이지 액션 버튼 툴바 상시 노출**: 스티키 타이틀 헤더 우측 액션 메뉴(`#menu-buttons`) 내부 찜하기(하트) 버튼 바로 옆에 [공고숨김 / 회사차단] 듀얼 툴바를 고정 배치하여 본문 확인 중 언제든 즉시 차단 가능
+    - **상세페이지 차단 네비게이션 정책 (Smart Back & Close Guard)**:
+      - 무한 스크롤 목록이 아닌 단일 공고 상세 페이지 특성을 반영하여, [공고숨김] 또는 [회사차단] 시 지능형 자동 이탈 수행
+      - **이전 히스토리가 존재하는 경우(`history.length > 1`)**: 즉시 브라우저 뒤로가기(`window.history.back()`)를 호출하여 이전 채용 목록으로 복귀
+      - **새 탭/새 창으로 열린 경우(`history.length <= 1`)**: 백그라운드 서비스 워커 메시지(`CLOSE_CURRENT_TAB`)를 통해 현재 탭을 깔끔하게 자동 종료(`chrome.tabs.remove`)하여 원래 작업 탭으로 포커스 자동 전환
+  - **리멤버(Remember) 채용 공고(`/job/postings`) 및 상세 페이지(`/job/posting/*`) 완벽 지원**:
+    - **"프리미엄 대표기업" 섹션 자동 숨김**: 채용 목록 상단의 프리미엄 대표기업 슬라이더(`#companyJobBoard`, `a[href*="/job/board/premium-top-companies"]`)를 CSS 및 스크립트로 흔적 없이 자동 차단
+    - **맨 위 광고 캐러셀 배너 자동 숨김**: 최상단의 대형 광고 슬라이더(`section.sc-79e4e802-0`, `img[alt*="광고 배너"]`, `a[href*="job_board_top_banner"]`)를 완전 은닉하여 방해 없이 공고 탐색 가능
+    - **"내 직무 인기 공고", "적극 채용 중인 공고", "주목 받을 수 있는 기회", "커리어 맞춤 큐레이션" 가로 캐러셀 공고 완벽 지원**:
+      - 메인 페이지의 주요 큐레이션 및 인기 섹션 카드(`div[class*="sc-289d3ccd-0"]`, `li[class*="sc-3c9cd5df-0"]`)를 정확히 수집 및 파싱 (`(주)쏘카`, `(주)두산`, `(주)포티투닷`, `쿠팡(주)` 등)
+      - 회사 차단, 키워드 차단, 단일 공고 숨김 적용 시 카드 컨테이너(`div`/`li`)가 즉시 완전 은닉(`display: none !important`)되어 빈 여백 없이 뒤의 카드가 매끄럽게 당겨오는 Flex/Grid Reflow 보장
+      - 인기/큐레이션 카드 호버 시 북마크 버튼과 겹침 없는 `[공고숨김 / 회사차단]` 듀얼 툴바 플로팅 노출 및 기업명 바로 옆 잡플래닛/블라인드 평점 뱃지 인라인 배치
+    - **공고 숨김 시 그리드 자동 당겨오기 (CSS Grid Reflow & Anti-Gap)**: 리멤버 채용 목록의 그리드 레이아웃(`ul > li`)에서 공고 숨김 시 상위 `<li>` 그리드 셀 자체를 완전 은닉(`display: none !important`)하여 빈칸 없이 뒤의 공고 카드가 자연스럽게 앞으로 당겨와 채워지도록 보장
+    - **기업 평점 뱃지(잡플래닛 & 블라인드)**: 공고 카드의 기업명 바로 옆에 초록색/빨간색 평점 뱃지 자동 렌더링
+    - **[공고숨김 / 회사차단] 듀얼 툴바**: 카드 호버 시 플로팅 알약 툴바 노출, 상세 페이지 헤더 인라인 툴바 노출
+    - **상세 페이지 스마트 네비게이션 정책**: 뒤로가기(`history.length > 1`) 또는 탭 자동 닫기(`CLOSE_CURRENT_TAB`)
+  - **점핏(Jumpit) 채용 목록(`/positions?*`) 및 상세 페이지(`/position/*`) 완벽 지원**:
+    - **원티드와 유사한 모던 SPA 그리드 최적화**: 원티드와 유사한 최신 Next.js SPA 그리드 구조에 맞추어 카드 메타데이터(회사명, 포지션 제목, D-Day 마감일, Job ID)를 정밀 파싱
+    - **공고 숨김 시 그리드 자동 당겨오기 (CSS Flex/Grid Reflow & Anti-Gap)**: 점핏 채용 목록의 4열 그리드 레이아웃에서 공고 숨김 시 카드 요소뿐만 아니라 상위 컨테이너 셀 자체를 완전 은닉(`display: none !important`)하여 빈 여백 없이 뒤의 공고 카드가 자연스럽게 앞으로 당겨와 정렬
+    - **프로모션 및 사이드 윙 배너 자동 숨김**: 사이드 윙 배너(`aside.sc-3ef60426-1`), 포지션 상단 프로모션 배너(`POSITIONS_BANNER`), 이벤트 배너 등을 CSS 및 스크립트로 흔적 없이 자동 차단
+    - **기업 평점 뱃지(잡플래닛 & 블라인드)**: 카드 기업명 및 상세 페이지 헤더 기업명 옆에 초록색 잡플래닛 / 빨간색 블라인드 평점 뱃지 자동 렌더링
+    - **[공고숨김 / 회사차단] 듀얼 툴바**: 카드 호버 시 플로팅 알약 툴바 노출, 상세 페이지 헤더 인라인 툴바 노출
+    - **상세 페이지 스마트 네비게이션 정책**: 뒤로가기(`history.length > 1`) 또는 탭 자동 닫기(`CLOSE_CURRENT_TAB`)
+  - 개별 공고 헤더 및 행에 [공고숨김] / [회사차단] 버튼 제공 및 마감일시 자동 파싱
+  - 첫 번째 메인 공고나 임의의 공고를 차단하더라도 페이지 전체가 날아가지 않고, 차단된 공고만 숨겨진 뒤 다음 공고가 자연스럽게 이어져 노출
+
+- **동적 필터 및 정렬 변경 감지 (Filter & Sort Sync)**:
+  - 등록일순, 관련도순, 직무 탭 등 사이트 내 필터/정렬 변경 시(SPA History 및 AJAX) 실시간 자동 재스캔
+- **페이지네이션 ➔ 무한 스크롤 개조 & 안정성 강화 (Auto-Refill & Loop Guard)**:
+  - 사람인/잡코리아 등의 페이지 번호 목록을 무한 스크롤로 자동 변환
+  - **사람인 실서비스 해시 페이지네이션(`href="#recruit_info"`) 대응**: 단순 해시 반환으로 인한 1페이지 무한 반복 페치를 방지하고, 검색 페이지 표준 쿼리 파라미터(`recruitPage`)를 정확히 산출하여 다음 페이지 로드
+  - **잡코리아 비동기 POST 엔드포인트(`/Recruit/Home/_GI_List/`) 무한 스크롤 지원**: 단순 GET 쿼리로 페이징되지 않는 잡코리아 고유 스펙에 맞추어 `getNextPageRequest`를 통해 표준 POST 파라미터(`page`, `pagesize`, `order`, `tabindex`)로 다음 페이지를 연속 페치하고 테이블(`tbody`)에 자동 연결
+  - **공고 중복 검사 및 무한 루프 차단**: 이미 페이지에 존재하는 공고 식별 키(`jobId`: `data-gno` 또는 `company:::title`)를 대조하여 중복 공고 추가를 배제하며, 신규 공고가 없을 시 탐색을 즉시 종료
+  - **네트워크 타임아웃 및 스피너 자동 정리**: 10초 타임아웃(`AbortController`)과 `finally` 가드를 적용하여 네트워크 지연이나 WAF 응답 지연 시에도 로딩 스피너가 무한히 도는 현상 방지
+  - **자동 채우기(Auto-Refill)**: 1페이지의 공고가 대량 차단되어 텅 비는 경우, 백그라운드에서 다음 페이지 공고를 즉시 긁어와 채워줌 (최대 5페이지 연속 탐색)
+- **불필요한 AI 검색 배너 및 추천/스토어/헤드라인 채용관/프리미엄 대표기업 프로모션 자동 숨김 (Ad & Banner Clean)**:
+  - 원티드: "🔥 적극 채용 중인 회사" 광고 슬라이더 (`section[class*="AdTargetList_"]`) 자동 숨김
+  - 사람인: 검색 상단 AI 커리어 배너 (`.area_ai_search`), 맞춤 추천 공고 캐러셀 (`section.type_searchup`), 스토어 프로모션 (`.wrap_store`) 자동 숨김
+  - 잡코리아: TOP 헤드라인 채용관 및 헤드라인 채용관 (`#dev-TopHeadlineAGI`, `#HeadlineAGI`, `.listBannerWrap`, `.listTopHeadline`), 상단 퍼포먼스 추천공고 섹션 (`.job-recommendation`, `div.job-recommendation`), 스마트 배너 (`#dev-BNewsAGI`) 자동 숨김
+  - 리멤버: "프리미엄 대표기업" 섹션 (`#companyJobBoard`), 맨 위 광고 배너 캐러셀 (`section[class*="sc-79e4e802-0"]`) 자동 숨김
+  - 점핏: 사이드 윙 배너 (`aside.sc-3ef60426-1`), 상단 프로모션 배너 (`POSITIONS_BANNER`), 이벤트 배너 자동 숨김
+  - CSS 기반 즉시 차단(깜빡임 FOUC 방지) 및 Content Script 어댑터 이중 필터링 적용
+- **팝업 통계 누적 기본 집계 및 현재 페이지 실시간 집계 듀얼 모드 (Popup Accumulative & Page Stats)**:
+  - 팝업 창을 열었을 때 사용자가 등록한 **전체 차단 목록의 누적 건수([전체 차단], [차단 회사], [숨긴 공고], [키워드])**를 기본으로 즉시 집계하여 표시
+  - 상단 세그먼트 탭을 통해 **[전체 등록]**과 **[현재 페이지]** 모드를 간편하게 전환 지원
+  - 현재 열린 탭이 채용 사이트일 때는 녹색 인디케이터가 표시되며, 현재 화면에서 필터링된 [차단된 공고], [차단 회사], [숨긴 공고], [광고 공고] 실시간 통계 조회 지원 (원티드 "🔥 적극 채용 중인 회사", 리멤버 프리미엄 대표기업 및 상단 광고 배너 등 숨김 광고 배너 수치 실시간 연동)
+  - 채용 사이트 방문 중 팝업에서 빠른 회사 차단 등록 시 현재 방문 플랫폼(원티드, 사람인, 잡코리아, 리멤버, 점핏)으로 자동 식별 태깅 및 콘텐트 스크립트 실시간 메시지 폴백 통신으로 즉각 재필터링 및 통계 갱신
+
+- **차단 목록 상세 관리 및 다차원 필터 탭 (Options Category & Platform Filter Tabs)**:
+  - 전용 옵션 페이지(`Options`)에서 차단 목록을 **유형별([전체] / [회사] / [공고] / [키워드])** 및 **플랫폼별([전체 플랫폼] / [원티드] / [사람인] / [잡코리아] / [리멤버] / [점핏] / [직접등록])** 2단 탭으로 분리하여 원하는 대상만 정밀 조회 가능
+  - 각 차단 항목 카드에 어디서 차단했는지 출처를 한눈에 파악할 수 있는 **플랫폼 식별 뱃지(원티드, 사람인, 잡코리아, 리멤버, 점핏, 직접등록)** 제공
+  - 각 탭 버튼에 실시간 차단 건수 카운트 뱃지 제공 및 [유형 탭] + [플랫폼 탭] + [실시간 검색어] 간 3중 복합 필터링 지원
+  - 보관 기한(30일) 지난 만료 공고 원클릭 자동 정리, JSON 백업 및 복원 기능 제공
+
+- **잡플래닛(초록색) 및 블라인드(빨간색) 듀얼 기업 평점 연동 (Dual Company Rating Badges: Jobplanet & Blind)**:
+  - **기업명 옆 실시간 듀얼 평점 뱃지 배치**: 원티드, 사람인, 잡코리아 등 모든 지원 사이트의 채용 공고 기업명 바로 옆 래퍼(`.job-filter-ratings-wrap`)에 잡플래닛과 블라인드 평점을 나란히 표시 (잡코리아의 경우 회사명 옆 찜하기/하트 버튼 뒤에 평점 래퍼를 주입하여 텍스트 겹침 원천 방지)
+  - **브랜드별 시각적 컬러 테마**:
+    - **잡플래닛**: 초록색 평점 뱃지 (텍스트 `#047857`, 배경 `#ecfdf5`, 테두리 `#a7f3d0`)
+    - **블라인드**: 빨간색 평점 뱃지 (텍스트 `#dc2626`, 배경 `#fef2f2`, 테두리 `#fecaca`)
+  - **상세 안내 호버(Hover) 툴팁**: 마우스 호버 시 평점 정보와 함께 제외 사유 명시
+    - 예: `'{회사명}' 블라인드 평점 3.5 / 5.0 (클릭 시 이동 · 검색 결과 미존재, 동명 기업, 평점 미등록 시 표시 제외)`
+  - **단일 기업 매칭 검증 및 동명 기업 배제 원칙 (Anti-Ambiguity)**:
+    - 회사명을 검색하여 단일 기업이 유효한 평점을 보유할 때만 배치
+    - 검색 결과 미존재, 평점 미등록, 또는 동일 상호(동명)의 기업이 2개 이상 검색되어 특정할 수 없는 경우 오정보 노출 방지를 위해 배치 제외 (`배치x`)
+  - **봇 탐지 우회 및 안전한 네트워크 요청 아키텍처**:
+    - **잡플래닛**: Next.js RSC (`RSC: 1`) 스트림 파서로 Cloudflare 403 차단 우회
+    - **블라인드**: 상세 페이지 SSR JSON-LD (`EmployerAggregateRating`) 및 통합 검색 카드 이중 파싱
+    - **동시성 풀(Concurrency Pool) & 스로틀링**: 플랫폼별 최대 3개 동시 워커 풀 및 250ms 지연을 적용하여 대량 공고 로드 시 WAF 차단 없이 수초 내에 신속히 평점을 일괄 로드
+    - **동시성 중복 제거(In-flight Deduplication)**: 동일한 회사에 대한 비동기 요청을 단일 네트워크 호출로 병합
+    - **2계층 스마트 캐시(Memory + Local Storage)**: 정상 평점 7일, 미존재/동명기업 1일, 일시적 네트워크 에러 5분 TTL 분리 캐싱으로 반복 네트워크 호출 원천 차단 및 장애 신속 자동 복구
+  - **독립적 제어 UX**: 뱃지 클릭 시 공고 카드 이동 없이 해당 플랫폼 기업 리뷰 페이지로 이동하며, 팝업 창에서 잡플래닛/블라인드 평점을 각각 개별 원클릭 ON/OFF 지원
+- **공고 마감시각 기준 스마트 만료(TTL) 및 자동 청소 (Smart Expiration & Auto-Purge)**:
+  - **마감시각 + 30일 만료 계산**: 공고 숨김 시 해당 카드의 마감일시(`~ MM/DD`, `YYYY-MM-DD`, `D-Day`, `오늘/내일마감` 등)를 자동 파싱하여 **[공고 마감시각 + 30일]**로 보관 만료 타임스탬프(`expiresAt`) 계산 (상시/수시 채용인 경우 등록일 + 30일)
+  - **스토리지 쿼터 방어 및 자동 청소(Lazy Auto-Purge)**: 이미 마감되어 다시 볼 일 없는 공고가 크롬 동기화 스토리지(100KB 쿼터)를 불필요하게 차지하지 않도록, 스토리지 조회 시 만료된 공고를 백그라운드에서 자동 필터링 및 영구 제거
+  - **옵션 관리 지원**: 차단 목록에서 각 공고의 마감일 및 만료 예정일 배지 노출, `[🧹 만료 공고 정리]` 원클릭 수동 청소 지원
+- **사용자 소통 및 리뷰 유도 경험 (Feedback & Community Experience)**:
+  - **Google Forms 원클릭 피드백 창구**: 별도 백엔드 서버 구축 없이 팝업 및 옵션 페이지 푸터의 `[💬 문의/피드백]` 링크를 통해 사용자 건의사항, 버그 제보, 신규 채용 사이트 요청을 실시간으로 수렴
+  - **크롬 웹스토어 리뷰 유도 배너 (Rating Review Prompt Banner)**:
+    - 팝업 창 상단에 사용자 친화적 리뷰 배너(`Job Blocking V2가 도움이 되셨나요? 별점 5점과 리뷰를 남겨주세요! ⭐`) 제공
+    - `[⭐ 리뷰 쓰기]` 클릭 시 웹스토어 리뷰 페이지로 즉시 연결되며, `[다시 보지 않기]` 클릭 시 영구 숨김 플래그가 `chrome.storage.sync`에 저장되어 재노출 방지
+  - **안심 로컬 개인정보 보호 (Privacy-First Architecture)**: 사용자 계정, 이력서, 브라우징 히스토리 등 일체의 개인정보(PII)를 수집하거나 전송하지 않으며, 모든 설정 및 차단 데이터는 사용자의 로컬 브라우저에만 보관 ([개인정보처리방침](./PRIVACY_POLICY.md))
+
+---
+
+## 🛠️ 기술 스택 (Tech Stack)
+
+- **언어 & 프레임워크**: TypeScript, React 18, Vite 6
+- **확장 프로그램 번들러**: `@crxjs/vite-plugin` (Manifest V3 단일 파이프라인 번들링 & HMR 지원)
+- **단위 테스트 (Unit Test)**: Vitest + happy-dom
+- **E2E 테스트 (End-to-End Test)**: Playwright (Chromium Extension 로드 기반 테스트)
+
+---
+
+## 📂 프로젝트 구조 (Modular Architecture)
+
+```
+public/
+└── icons/                     # 확장 프로그램 아이콘 (16, 32, 48, 128px)
+src/
+├── manifest.json              # Chrome Manifest V3 설정
+├── constants/                 # 설정값, DOM 셀렉터, 뱃지, UI 메시지 중앙 집중 상수
+│   └── index.ts
+├── types/                     # 공통 데이터 모델 및 메시지 프로토콜
+│   └── index.ts
+├── core/                      # 순수 비즈니스 로직
+│   ├── filter-engine.ts       # 정규화, 기업명/키워드 매칭, DOM 블러/숨김 판정
+│   ├── infinite-scroll.ts     # 페이지네이션 무한 스크롤 변환 및 빈 페이지 방지 자동 채우기(Auto-Refill)
+│   ├── jobplanet.ts           # 잡플래닛 RSC 스트림 파서, 봇 우회 요청 큐, 평점 캐시
+│   ├── blind.ts               # 팀블라인드 JSON-LD/검색 파서, 요청 큐 및 평점 캐시
+│   └── storage.ts             # chrome.storage.sync / local 추상화 및 폴백
+├── utils/                     # 공통 유틸리티
+│   ├── text.ts                # 회사명 정규화(normalizeCompanyName)
+│   └── date.ts                # 공고 마감일시 파싱 및 만료시간 계산
+├── adapters/                  # 플랫폼별 고유 DOM 셀렉터 및 파서 (어댑터 패턴)
+│   ├── base.ts                # BaseSiteAdapter 추상 클래스 ([차단] 인라인 버튼 주입)
+│   ├── wanted.ts              # 원티드(Wanted) 어댑터
+│   ├── jumpit.ts              # 점핏(Jumpit) 어댑터
+│   ├── saramin.ts             # 사람인(Saramin) 어댑터
+│   ├── jobkorea.ts            # 잡코리아(JobKorea) 어댑터
+│   ├── remember.ts            # 리멤버(Remember) 어댑터
+│   └── index.ts               # AdapterRegistry (신규 사이트 손쉬운 확장)
+├── content/                   # 채용 사이트에 삽입되는 Content Script
+│   ├── index.ts               # MutationObserver 무한 스크롤 감지 및 실시간 필터링
+│   └── style.css              # 블러/숨김 효과 및 인라인 [차단] 버튼 UI 스타일
+├── background/                # Background Service Worker
+│   └── index.ts               # 백그라운드 서비스 워커 (설정 및 툴바 뱃지 제어)
+
+├── popup/                     # 브라우저 툴바 팝업 UI
+│   ├── index.html
+│   ├── main.tsx
+│   ├── Popup.tsx              # 현재 탭 차단 현황 통계, 빠른 차단, 모드 토글
+│   └── popup.css
+└── options/                   # 차단 목록 상세 관리 페이지
+    ├── index.html
+    ├── main.tsx
+    ├── Options.tsx            # 차단 목록 검색/삭제, JSON 백업 및 복원
+    └── options.css
+```
+
+---
+
+## 🚀 개발 및 빌드 명령어
+
+### 1. 의존성 설치
+```bash
+npm install
+```
+
+### 2. 개발 모드 (HMR 지원)
+```bash
+npm run dev
+```
+
+### 3. 프로덕션 빌드
+```bash
+npm run build
+```
+- 빌드 결과물은 `dist/` 폴더에 생성됩니다.
+- Chrome 브라우저의 `chrome://extensions` 접속 ➔ **[개발자 모드]** 켬 ➔ **[압축해제된 확장 프로그램을 로드합니다]** 클릭 후 프로젝트의 `dist` 폴더를 선택하면 브라우저에 바로 로드됩니다.
+
+### 4. 채용 사이트 HTML 샘플 안전 다운로드
+```bash
+npm run fetch:sample -- "<URL>" [저장파일명] [타임아웃(초)]
+```
+- PowerShell 5.1의 `mshtml` 엔진 무한 행잉(Hang) 및 봇 차단을 우회하여 10초 타임아웃 보장 하에 대상 사이트의 HTML을 안전하게 수집합니다.
+
+### 5. TypeScript 코드 조각 안전 평가 (Safe Eval)
+```bash
+npm run eval:ts -- "<단일행_TS_코드>"
+```
+- REPL 대화형 프롬프트 대기 락을 방지하고 `stdin` 차단 및 10초 타임아웃 보장 하에 TypeScript 코드를 안전하게 실행합니다.
+
+---
+
+## 🧪 테스트 실행 가이드
+
+프로젝트 품질 관리 기준에 따라 모든 단위 테스트와 E2E 테스트가 100% 통과해야 합니다.
+
+### 단위 테스트 (Unit Tests)
+```bash
+npm run test
+```
+
+### E2E 테스트 (Playwright)
+```bash
+npm run test:e2e
+```
+
+---
+
+## 🔒 개인정보처리방침 (Privacy Policy)
+
+본 확장 프로그램은 사용자의 어떠한 개인 식별 정보(PII)나 탐색 기록도 수집·저장·전송하지 않습니다. 모든 차단 데이터 및 설정값은 사용자 기기의 브라우저 로컬 저장소(`chrome.storage.sync` / `local`)에만 안전하게 보관됩니다.
+상세한 내용은 [PRIVACY_POLICY.md](./PRIVACY_POLICY.md) 문서를 참고하시기 바랍니다.
+
+---
+
+## 💬 문의 및 피드백 (Support & Feedback)
+
+- **온라인 문의 및 버그 제보**: [Google Forms 온라인 접수](https://docs.google.com/forms/d/e/1FAIpQLSc8dy59w4vzCQZ5oWlTtMY8DEEeFbX5ktvS4I7ZOOlLwWZcKQ/viewform)
+- **GitHub 저장소 및 이슈 제보**: [nicebyy/job-blockingV2](https://github.com/nicebyy/job-blockingV2)
+- **크롬 웹스토어 리뷰**: 확장 프로그램 사용 후 유용하셨다면 웹스토어에 별점 5점과 따뜻한 리뷰를 남겨주세요! ⭐
+
