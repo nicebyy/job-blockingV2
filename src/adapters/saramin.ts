@@ -61,12 +61,27 @@ export class SaraminAdapter extends BaseSiteAdapter {
   public override getCardListContainer(doc: Document | HTMLElement = document): HTMLElement | null {
     const container = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.LIST_CONTAINER);
     if (container) {
+      if (
+        container.classList.contains('list_product') ||
+        container.classList.contains('wrap_list_banner') ||
+        container.classList.contains('banner_list')
+      ) {
+        return null;
+      }
       const innerContent = container.querySelector<HTMLElement>('.content');
       if (innerContent) return innerContent;
       return container;
     }
-    const firstCard = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.JOB_CARDS);
-    return firstCard?.parentElement || null;
+    const firstCard = doc.querySelector<HTMLElement>(
+      '.item_recruit, .list_item, .recruit_list .row'
+    );
+    if (
+      firstCard &&
+      !firstCard.closest('.list_product, .wrap_list_banner, .banner_list')
+    ) {
+      return firstCard.parentElement;
+    }
+    return null;
   }
 
   public override getPaginationElement(doc: Document | HTMLElement = document): HTMLElement | null {
@@ -103,6 +118,11 @@ export class SaraminAdapter extends BaseSiteAdapter {
       (rawHref.includes('page=') || rawHref.includes('recruitPage='))
     ) {
       return (pageLink as HTMLAnchorElement).href;
+    }
+
+    // 페이지네이션 요소가 없는 페이지에서는 URL fallback을 수행하지 않음 (정적/단일 페이지 보호)
+    if (!this.getPaginationElement(doc)) {
+      return null;
     }
 
     // 2. 현재 URL 기준 query parameter 갱신 (사람인 검색은 recruitPage, 일반 목록은 page 사용)

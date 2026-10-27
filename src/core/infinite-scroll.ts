@@ -39,9 +39,11 @@ export class InfiniteScrollManager {
 
     // 기존 페이지네이션 UI 숨기기
     const pagination = this.adapter.getPaginationElement?.(document);
-    if (pagination) {
-      pagination.style.display = 'none';
+    if (!pagination) {
+      // 페이지네이션 요소가 없는 페이지(정적/단일 페이지)에서는 무한 스크롤 비활성화
+      return false;
     }
+    pagination.style.display = 'none';
 
     // 센티넬 및 로딩 인디케이터 생성
     this.setupSentinel(container);

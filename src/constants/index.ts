@@ -114,7 +114,7 @@ export const SARAMIN_SELECTORS = {
   JOB_CARDS:
     '.item_recruit, .list_item, .list_product .item, div[class*="BoxAd_wrap"], .recruit_list .row',
   LIST_CONTAINER:
-    '#default_list_wrap .list_body, #default_list_wrap, .list_recruiting .list_body, .common_recruilt_list, #recruit_info_list .content, #recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
+    '#default_list_wrap .list_body, #default_list_wrap, .list_recruiting .list_body, .recruit_list_renew .list_body, .common_recruilt_list, #recruit_info_list .content, #recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
   PAGINATION: '.pagination, .page_box, .PageBox',
   COMPANY_NAME:
     '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a, .company_nm .str_tit, .corp, span.corp, a.company:not(.company_popup)',
@@ -134,9 +134,9 @@ export const SARAMIN_SELECTORS = {
   DETAIL_TITLE_INNER: '.title_inner, .wrap_corp_info, .area_corp',
 
 
-  // 프로모션 및 광고 배너(AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너, 네이버 파워링크)
+  // 프로모션 및 광고 배너(스폰서 상품 공고 배너, AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너, 네이버 파워링크, Nest 배너 등)
   PROMOTION_BANNERS:
-    '#powerLink, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, #section_contents, section[aria-label="추천공고"], .list_curation_wrap',
+    '#powerLink, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, #section_contents, section[aria-label="추천공고"], .list_curation_wrap, .wrap_list_banner, .banner_list, .list_product, .wrap_nest, .nest-standby-banner, .recruit_line_banner, .wrap_banner_line, .powerlink',
 } as const;
 
 /**

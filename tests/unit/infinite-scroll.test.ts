@@ -46,6 +46,25 @@ describe('InfiniteScrollManager 단위 테스트', () => {
     expect(sentinel).not.toBeNull();
   });
 
+  it('페이지네이션 요소가 없는 정적/단일 페이지에서는 초기화되지 않아야 한다', () => {
+    document.body.innerHTML = `
+      <div id="recruit_info_list">
+        <div class="content_wrap">
+          <div class="item_recruit">단일 페이지 공고</div>
+        </div>
+      </div>
+    `;
+
+    const manager = new InfiniteScrollManager({
+      adapter: new SaraminAdapter(),
+      onCardsAppended: vi.fn(),
+    });
+
+    const initialized = manager.init();
+    expect(initialized).toBe(false);
+    expect(document.getElementById(INFINITE_SCROLL_CONFIG.SENTINEL_ID)).toBeNull();
+  });
+
   it('다음 페이지 공고를 fetch하여 컨테이너에 추가하고 콜백을 호출해야 한다', async () => {
     document.body.innerHTML = `
       <div id="recruit_info_list">

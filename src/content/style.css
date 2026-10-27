@@ -76,6 +76,16 @@ section.wrap_store,
 #section_contents,
 section[aria-label="추천공고"],
 .list_curation_wrap,
+.wrap_list_banner,
+.banner_list,
+.list_product,
+.wrap_nest,
+.nest-standby-banner,
+.recruit_line_banner,
+.wrap_banner_line,
+.powerlink,
+#powerLink,
+.wrap_recommend,
 .job-recommendation,
 div.job-recommendation,
 .area-recommend-job,
@@ -292,6 +302,24 @@ td.tplCo .job-filter-ratings-wrap,
   gap: 3px !important;
   margin-left: 0 !important;
   margin-top: 4px !important;
+}
+
+/* 사람인 일반 공고 행(.list_item) 및 검색 결과(.item_recruit) 내 평점 뱃지 정렬 */
+.list_item .company_nm .job-filter-ratings-wrap,
+.item_recruit .area_corp .job-filter-ratings-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 3px !important;
+  margin-left: 0 !important;
+  margin-top: 4px !important;
+}
+
+/* 사람인 그리드 상품 카드(.list_product .item) 내 평점 뱃지 정렬 */
+.list_product .item .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  gap: 3px !important;
+  margin-left: 4px !important;
+  vertical-align: middle !important;
 }
 
 /* 잡코리아 관심기업(찜하기) 하트 버튼 겹침 방지 및 안정적 인라인 배치 */
