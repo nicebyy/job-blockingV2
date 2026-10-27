@@ -176,19 +176,21 @@ export const SARAMIN_SELECTORS = {
  */
 export const JOBKOREA_SELECTORS = {
   JOB_CARDS:
-    'li.listItem, li[class*="listItem"], .tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, ol.rankList > li, li.dmpItem, .rankList > li, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
+    'li.listItem, li[class*="listItem"], div[data-component-type="CARD_JOB_BASIC"], div[data-sentry-component="CardJobBasic"], .tplList table tbody tr[data-gno], .tplList.tplJobList table tbody tr, ol.rankList > li, li.dmpItem, .rankList > li, .job-recommendation-item, .list-post, .dev_gwork, .recruit-info, li[class*="list-item"]',
   LIST_CONTAINER:
     'ul:has(> li.listItem), ol.rankList, .rankListArea, .tplList.tplJobList table tbody, #dev-gi-list .tplJobList table tbody, .tplList table tbody, .lists-cnt, .lists-wrap, .list-default',
   PAGINATION: '#dvGIPaging .tplPagination, .tplPagination, .page-box, .pagination',
   COMPANY_NAME:
-    '.recruit-company .headers .name a, .recruit-company .headers .name, .recruit-company .name a, .recruit-company .name, .coTit a.coLink, .coTit a, .coLink, td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp',
+    '[data-component-type="CARD_JOB_BASIC"] span.truncate, [data-sentry-component="CardJobBasic"] span.truncate, .recruit-company .headers .name a, .recruit-company .headers .name, .recruit-company .name a, .recruit-company .name, .coTit a.coLink, .coTit a, .coLink, td.tplCo a, .tplCo a, .company-name a, .company-name, .post-list-corp a, .corp-name a, .name, a[class*="corp"], .post-list-corp, span.truncate',
   POSITION_TITLE:
-    '.recruit-content .headers .title, .recruit-content .title, a.title.giread, a.giread, .info .tit a.link, .info .tit a, .tit a.dev-recruit-link, td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title',
+    '[data-component-type="CARD_JOB_BASIC"] .flex.justify-between > span, [data-sentry-component="CardJobBasic"] .flex.justify-between > span, .recruit-content .headers .title, .recruit-content .title, a.title.giread, a.giread, .info .tit a.link, .info .tit a, .tit a.dev-recruit-link, td.tplTit strong a, td.tplTit a.link, .tplTit .titBx strong a, .title a, .job-recommendation-details .title a, .post-list-info a.title, a.tit, .post-title, span[class*="text-[17px]"]',
   BUTTON_HOST_CELL: '.titBx, td.tplTit .titBx, td.tplTit',
   AD_BADGE: '.badge-ad, .badge-special, .tag-ad',
   AD_CLASS: 'special-post, job-recommendation-item',
-  CLOSING_DATE: '.side .day, td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
-  FAVORITE_BUTTON: '.dev-btn-favor, .devFavor, .tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
+  CLOSING_DATE:
+    '[data-component-type="CARD_JOB_BASIC"] .overflow-hidden > span:last-child, [data-sentry-component="CardJobBasic"] .overflow-hidden > span:last-child, .side .day, td.odd .date, .odd .date, .deadline, .date, .option .date, .post-list-info .date',
+  FAVORITE_BUTTON:
+    'button.button-scrap, .button-scrap, .dev-btn-favor, .devFavor, .tplBtnFavOff, .tplBtnFavOn, .dev-favor, .favorite-button',
   PROMOTION_BANNERS:
     '#dev-TopHeadlineAGI, #TopHeadlineAGI, #dev-HeadlineAGI, #HeadlineAGI, .listTopHeadline, .listHeadline, .listBannerWrap, .job-recommendation, div.job-recommendation, .area-recommend-job, .dev-banner, #dev-BNewsAGI, [data-section-alias="CPC_SMARTFIT_HOME_PC"], [data-section-alias="CPT_FIRSTVVIP_PC"], [data-section-alias="CPT_VIP_PC"], [data-section-alias="CPT_EXCELLENT_PC"]',
   MAIN_AD_SECTION_ALIASES: [

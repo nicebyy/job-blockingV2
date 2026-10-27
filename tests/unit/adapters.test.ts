@@ -1686,6 +1686,157 @@ describe('Site Adapters 단위 테스트', () => {
       expect(sec2?.getAttribute('data-job-filtered')).toBe('true');
     });
 
+    it('잡코리아 메인 페이지의 큐레이션 및 추천 공고 카드(CardJobBasic)를 정확히 수집·파싱하고 인라인 툴바와 기업 평점 뱃지가 주입되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="grid grid-col-4 gap-[20px]">
+          <!-- 큐레이션 JOB 카드 1 -->
+          <div>
+            <div data-component-type="CARD_JOB_BASIC" class="relative h-full w-full min-w-[305px]" data-sentry-component="CardJobBasic">
+              <a href="/Recruit/GI_Read/50117195?sc=729&amp;traceId=abc&amp;sn=103" rel="noopener noreferrer" target="_blank" data-sentry-element="BaseAnchor">
+                <div class="h-full rounded-[10px] border-[#e6e8ea] border-[1px] bg-[#ffffff] p-[16px]">
+                  <div class="flex h-full flex-col justify-between gap-0">
+                    <div class="flex flex-col gap-[2px]">
+                      <div class="flex justify-between">
+                        <span class="w-full min-w-0 font-semibold text-[#1a1a1e] text-[17px] leading-[25px]">
+                          [NHN Cloud] 프레임워크 개발
+                        </span>
+                        <div style="width:32px;height:32px"></div>
+                      </div>
+                      <div class="flex items-center gap-[8px] overflow-hidden">
+                        <span style="flex-shrink:1" class="truncate font-normal text-[#1a1a1e] text-[15px] leading-[22px]">
+                          엔에이치엔클라우드(주)
+                        </span>
+                        <span style="flex-shrink:0" class="font-semibold text-[#f37676] text-[11px] leading-[15px]">
+                          D-4
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex gap-[4px]">
+                      <div class="tag"><span class="text-[11px] font-semibold">경력 5년↑</span></div>
+                    </div>
+                  </div>
+                </div>
+              </a>
+              <div style="position:absolute;top:16px;right:16px">
+                <button type="button" class="button-scrap flex items-center">
+                  <i class="icon icon--system-scrap"></i>
+                  <span class="sr-only">스크랩</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 지원자가 많아요 카드 2 -->
+          <div>
+            <div data-component-type="CARD_JOB_BASIC" class="relative h-full w-full min-w-[305px]" data-sentry-component="CardJobBasic">
+              <a href="/Recruit/GI_Read/50185207?sc=729" target="_blank">
+                <div class="h-full">
+                  <div class="flex flex-col">
+                    <div class="flex justify-between">
+                      <span class="font-semibold text-[17px]">
+                        수도권 / SI,SM 프로젝트 인력 구함
+                      </span>
+                    </div>
+                    <div class="flex items-center overflow-hidden">
+                      <span class="truncate font-normal">
+                        (주)아이티크리스탈
+                      </span>
+                      <span>D-23</span>
+                    </div>
+                  </div>
+                </div>
+              </a>
+              <div style="position:absolute;top:16px;right:16px">
+                <button type="button" class="button-scrap"><span class="sr-only">스크랩</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 1. 공고 카드 수집 검증
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(2);
+
+      // 2. 첫 번째 카드 파싱 검증
+      const firstCard = cards[0];
+      const firstInfo = adapter.parseCard(firstCard);
+      expect(firstInfo).not.toBeNull();
+      expect(firstInfo?.companyName).toBe('엔에이치엔클라우드(주)');
+      expect(firstInfo?.title).toBe('[NHN Cloud] 프레임워크 개발');
+      expect(firstInfo?.jobId).toBe('50117195');
+      expect(firstInfo?.closingDate).toBe('D-4');
+      expect(firstInfo?.isAd).toBe(false);
+
+      // 3. 두 번째 카드 파싱 검증
+      const secondCard = cards[1];
+      const secondInfo = adapter.parseCard(secondCard);
+      expect(secondInfo).not.toBeNull();
+      expect(secondInfo?.companyName).toBe('(주)아이티크리스탈');
+      expect(secondInfo?.title).toBe('수도권 / SI,SM 프로젝트 인력 구함');
+      expect(secondInfo?.jobId).toBe('50185207');
+      expect(secondInfo?.closingDate).toBe('D-23');
+
+      // 4. 회사명 및 뱃지 앵커 요소 검증
+      const companyEl = adapter.getCompanyElement(firstCard);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent?.trim()).toBe('엔에이치엔클라우드(주)');
+
+      const anchorEl = adapter.getRatingBadgeAnchorElement(firstCard);
+      expect(anchorEl).not.toBeNull();
+      expect(anchorEl).toBe(companyEl);
+
+      // 5. 잡플래닛 및 블라인드 평점 뱃지 주입 검증
+      adapter.injectRatingBadge(firstInfo!, {
+        platform: 'jobplanet',
+        companyName: '엔에이치엔클라우드(주)',
+        rating: 3.7,
+        companyId: '12345',
+        reviewCount: 88,
+        status: 'found',
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(firstInfo!, {
+        platform: 'blind',
+        companyName: '엔에이치엔클라우드(주)',
+        rating: 4.0,
+        reviewCount: 42,
+        status: 'found',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = firstCard.querySelector('.job-filter-ratings-wrap');
+      expect(wrap).not.toBeNull();
+      expect(wrap?.querySelector('.job-filter-rating-jobplanet')).not.toBeNull();
+      expect(wrap?.querySelector('.job-filter-rating-blind')).not.toBeNull();
+      expect(wrap?.textContent).toContain('3.7');
+      expect(wrap?.textContent).toContain('4.0');
+
+      // 6. 인라인 툴바([공고숨김] / [회사차단]) 주입 검증
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(firstInfo!, { onBlockCompany, onBlockJob });
+
+      const btnGroup = firstCard.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+
+      const hideJobBtn = firstCard.querySelector<HTMLButtonElement>('.job-filter-btn-job');
+      const blockCompanyBtn = firstCard.querySelector<HTMLButtonElement>('.job-filter-btn-company');
+
+      expect(hideJobBtn).not.toBeNull();
+      expect(blockCompanyBtn).not.toBeNull();
+      expect(blockCompanyBtn?.title).toContain('엔에이치엔클라우드(주)');
+
+      hideJobBtn?.click();
+      expect(onBlockJob).toHaveBeenCalledWith(firstInfo);
+
+      blockCompanyBtn?.click();
+      expect(onBlockCompany).toHaveBeenCalledWith('엔에이치엔클라우드(주)');
+    });
+
     it('잡코리아 인기 TOP 100(ol.rankList > li.dmpItem) 공고 카드를 정확히 수집 및 파싱하고 평점 뱃지와 인라인 툴바가 올바르게 주입되어야 한다', () => {
       const container = document.createElement('div');
       container.innerHTML = `
