@@ -241,5 +241,117 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
 
     await popupPage.close();
   });
+
+  test('잡코리아 채용목록에서 [공고숨김/회사차단] 툴바는 마우스를 올린 행에만 보여야 한다', async ({
+    page,
+  }) => {
+    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/jobkorea_joblist.html');
+    const fixtureHtml = fs.readFileSync(fixturePath, 'utf8');
+
+    await page.route('https://www.jobkorea.co.kr/recruit/joblist*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html; charset=utf-8',
+        body: fixtureHtml,
+      });
+    });
+
+    await page.goto('https://www.jobkorea.co.kr/recruit/joblist?menucode=local&localorder=1', {
+      waitUntil: 'domcontentloaded',
+    });
+
+    // 확장 주입 완료 대기
+    const toolbar = page.locator('.job-filter-btn-group');
+    await expect(toolbar.first()).toBeAttached({ timeout: 15_000 });
+
+    const rowCount = await page.locator('tr.devloopArea').count();
+    expect(rowCount).toBeGreaterThan(0);
+
+    // [회귀 재현 조건] 로그인 세션·배너로 #content 내부에 기업 링크가 존재하는 상황을 만든다.
+    // 과거에는 이 링크 때문에 구조 셀렉터가 목록 래퍼(#content)에 매칭되어 전 행 툴바가
+    // 상시 노출 + 정적 배치로 흘러내렸다.
+    await page.evaluate(() => {
+      const content = document.querySelector('#content');
+      if (!content) return;
+      const banner = document.createElement('div');
+      banner.className = 'list-banner';
+      banner.innerHTML =
+        '<a href="https://www.jobkorea.co.kr/company/12345">기업정보</a>';
+      content.insertBefore(banner, content.firstChild);
+    });
+    // DOM 변경 후 확장의 재스캔(디바운스)이 돌도록 잠시 대기
+    await page.waitForTimeout(1200);
+
+    // 1) 어떤 행에도 마우스를 올리지 않은 상태에서는 모든 툴바가 숨겨져 있어야 한다.
+    const hidden = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.job-filter-btn-group')).map((el) => {
+        const cs = getComputedStyle(el);
+        return { opacity: Number(cs.opacity), position: cs.position };
+      })
+    );
+    expect(hidden.length).toBeGreaterThan(0);
+    const visibleWithoutHover = hidden.filter((s) => s.opacity > 0.01);
+    expect(
+      visibleWithoutHover.length,
+      `호버하지 않았는데 툴바 ${visibleWithoutHover.length}개가 노출됨 (전 행 상시 노출 회귀)`
+    ).toBe(0);
+
+    // 2) 정적 배치로 흘러내리지 않아야 한다 (절대 배치 유지)
+    const staticPlaced = hidden.filter((s) => s.position === 'static');
+    expect(
+      staticPlaced.length,
+      `툴바 ${staticPlaced.length}개가 position: static 으로 목록 흐름에 끼어듦`
+    ).toBe(0);
+
+    // 3) 특정 행에 호버하면 그 행의 툴바만 노출되어야 한다.
+    await page.locator('tr.devloopArea').nth(2).hover();
+    await page.waitForTimeout(400);
+
+    const afterHover = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.job-filter-btn-group')).map(
+        (el) => Number(getComputedStyle(el).opacity)
+      )
+    );
+    const visibleAfterHover = afterHover.filter((o) => o > 0.01).length;
+    expect(
+      visibleAfterHover,
+      `한 행에만 호버했는데 툴바 ${visibleAfterHover}개가 노출됨`
+    ).toBeLessThanOrEqual(2);
+    expect(visibleAfterHover).toBeGreaterThanOrEqual(1);
+
+    // 4) 툴바가 제목 텍스트를 덮지 않아야 한다 (자연스러운 위치)
+    const overlapsText = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('tr.devloopArea'));
+      let hits = 0;
+      for (const row of rows) {
+        const group = row.querySelector('.job-filter-btn-group');
+        if (!group) continue;
+        const gr = group.getBoundingClientRect();
+        if (gr.width === 0 || gr.height === 0) continue;
+        const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+        let node: Node | null;
+        while ((node = walker.nextNode())) {
+          const text = (node.nodeValue || '').trim();
+          if (!text) continue;
+          const parent = node.parentElement;
+          if (!parent || group.contains(parent)) continue;
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          for (const rect of Array.from(range.getClientRects())) {
+            if (rect.width < 2 || rect.height < 2) continue;
+            const overlaps = !(
+              rect.right <= gr.left ||
+              gr.right <= rect.left ||
+              rect.bottom <= gr.top ||
+              gr.bottom <= rect.top
+            );
+            if (overlaps) hits++;
+          }
+        }
+      }
+      return hits;
+    });
+    expect(overlapsText, '툴바가 공고 제목/설명 텍스트를 덮고 있음').toBe(0);
+  });
 });
 
