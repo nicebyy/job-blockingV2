@@ -5,7 +5,7 @@ export const APP_INFO = {
   NAME: 'Job Blocking V2',
   FULL_NAME: 'Job Blocking V2 - 채용 사이트 공고 필터링',
   DESCRIPTION: '원티드, 사람인, 잡코리아, 리멤버, 점핏 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
-  VERSION: '0.2.2',
+  VERSION: '0.2.3',
 } as const;
 
 /**
