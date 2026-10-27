@@ -464,10 +464,19 @@ export class ContentController {
   private async attachJobplanetRating(cardInfo: JobCardInfo): Promise<void> {
     if (!this.adapter || !cardInfo.cardElement || !cardInfo.companyName) return;
 
-    // 이미 주입되어 있거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
+    // 카드의 대상 회사가 변경된 경우 캐시 플래그 초기화 (가상 스크롤 / 카드 재활용 대응)
+    const currentComp = cardInfo.cardElement.getAttribute('data-rating-company');
+    if (currentComp !== cardInfo.companyName) {
+      cardInfo.cardElement.setAttribute('data-rating-company', cardInfo.companyName);
+      cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
+      cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
+    }
+
+    // 이미 주입되어 있거나 이미 비동기 요청이 진행 중/완료된 경우 중복 요청 방지
     if (
       cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`) ||
-      cardInfo.cardElement.getAttribute('data-jp-rating-in-flight') === 'true'
+      cardInfo.cardElement.getAttribute('data-jp-rating-in-flight') === 'true' ||
+      cardInfo.cardElement.getAttribute('data-jp-rating-requested') === 'true'
     ) {
       return;
     }
@@ -483,6 +492,7 @@ export class ContentController {
       // 에러 발생 시 무시
     } finally {
       cardInfo.cardElement.removeAttribute('data-jp-rating-in-flight');
+      cardInfo.cardElement.setAttribute('data-jp-rating-requested', 'true');
     }
   }
 
@@ -511,10 +521,18 @@ export class ContentController {
   private async attachBlindRating(cardInfo: JobCardInfo): Promise<void> {
     if (!this.adapter || !cardInfo.cardElement || !cardInfo.companyName) return;
 
-    // 이미 주입되어 있거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
+    const currentComp = cardInfo.cardElement.getAttribute('data-rating-company');
+    if (currentComp !== cardInfo.companyName) {
+      cardInfo.cardElement.setAttribute('data-rating-company', cardInfo.companyName);
+      cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
+      cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
+    }
+
+    // 이미 주입되어 있거나 이미 비동기 요청이 진행 중/완료된 경우 중복 요청 방지
     if (
       cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`) ||
-      cardInfo.cardElement.getAttribute('data-blind-rating-in-flight') === 'true'
+      cardInfo.cardElement.getAttribute('data-blind-rating-in-flight') === 'true' ||
+      cardInfo.cardElement.getAttribute('data-blind-rating-requested') === 'true'
     ) {
       return;
     }
@@ -530,6 +548,7 @@ export class ContentController {
       // 에러 발생 시 무시
     } finally {
       cardInfo.cardElement.removeAttribute('data-blind-rating-in-flight');
+      cardInfo.cardElement.setAttribute('data-blind-rating-requested', 'true');
     }
   }
 

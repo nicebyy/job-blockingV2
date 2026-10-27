@@ -505,6 +505,101 @@ describe('Site Adapters 단위 테스트', () => {
       expect(ratingWrap?.textContent).toContain('4.3');
     });
 
+    it('원티드 채용 목록 실 브라우저 픽스처(wanted_wdlist.html)의 카드에서 getRatingBadgeAnchorElement가 회사명을 정확히 반환하고 평점 뱃지가 옆에 주입되어야 한다', () => {
+      const fixturePath = path.resolve(__dirname, '../fixtures/wanted_wdlist.html');
+      const fixtureHtml = fs.readFileSync(fixturePath, 'utf-8');
+      const container = document.createElement('div');
+      container.innerHTML = fixtureHtml;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBeGreaterThan(0);
+
+      const firstCard = cards[0];
+      const cardInfo = adapter.parseCard(firstCard)!;
+      expect(cardInfo).not.toBeNull();
+      expect(cardInfo.companyName).toBe('매드업');
+
+      const anchorEl = adapter.getRatingBadgeAnchorElement(firstCard);
+      expect(anchorEl).not.toBeNull();
+      expect(anchorEl?.textContent?.trim()).toBe('매드업');
+
+      // 평점 뱃지 주입
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        companyName: '매드업',
+        rating: 3.2,
+        status: 'found',
+        companyId: '198924',
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        companyName: '매드업',
+        rating: 3.3,
+        status: 'found',
+        companyUrl: 'https://www.teamblind.com/kr/company/%EB%A7%A4%EB%93%9C%EC%97%85',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = firstCard.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(wrap).not.toBeNull();
+      expect(anchorEl?.nextElementSibling).toBe(wrap);
+
+      const jpBadge = wrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`);
+      const blindBadge = wrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`);
+      expect(jpBadge).not.toBeNull();
+      expect(blindBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('3.2');
+      expect(blindBadge?.textContent).toContain('3.3');
+
+      // 뱃지 주입 후에도 getCompanyElement가 순수 회사명을 유지해야 함
+      const recheckedCompanyEl = adapter.getCompanyElement(firstCard);
+      expect(recheckedCompanyEl?.textContent?.trim()).toBe('매드업');
+    });
+
+    it('원티드 MiniJobCard에 평점 뱃지 주입 후에도 getCompanyElement와 getRatingBadgeAnchorElement가 실제 회사명 요소를 일관되게 반환해야 한다', () => {
+      const miniCard = document.createElement('a');
+      miniCard.className = 'MiniJobCard_MiniJobCard__E1SH1';
+      miniCard.href = '/wd/366201';
+      miniCard.innerHTML = `
+        <div class="MiniJobCard_MiniJobCard__image__q80aY">
+          <img src="test.png" alt="가상자산거래소 PM" />
+        </div>
+        <header>
+          <span class="MiniJobCard_MiniJobCard__positionTitle__jay_D montage-isl78f">가상자산거래소 PM (Product Manager)</span>
+          <span class="montage-29ldoy">디지털엑스</span>
+          <span class="montage-29ldoy">서울 강남구 · 경력 5-11년</span>
+        </header>
+      `;
+
+      const cardInfo = adapter.parseCard(miniCard)!;
+      expect(cardInfo).not.toBeNull();
+      expect(cardInfo.companyName).toBe('디지털엑스');
+
+      const anchorEl = adapter.getRatingBadgeAnchorElement(miniCard);
+      expect(anchorEl).not.toBeNull();
+      expect(anchorEl?.textContent?.trim()).toBe('디지털엑스');
+
+      // 뱃지 주입
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        companyName: '디지털엑스',
+        rating: 4.2,
+        status: 'found',
+        companyId: '21',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = miniCard.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(wrap).not.toBeNull();
+      expect(anchorEl?.nextElementSibling).toBe(wrap);
+
+      // 재조회 시에도 anchor 및 companyEl이 wrap이 아닌 회사명 요소를 반환하는지 확인
+      expect(adapter.getCompanyElement(miniCard)?.textContent?.trim()).toBe('디지털엑스');
+      expect(adapter.getRatingBadgeAnchorElement(miniCard)?.textContent?.trim()).toBe('디지털엑스');
+    });
+
     it('원티드 상세 페이지 URL 판별(isDetailPage)이 올바르게 동작해야 한다', () => {
       expect(adapter.isDetailPage('https://www.wanted.co.kr/wd/326613')).toBe(true);
       expect(adapter.isDetailPage('https://www.wanted.co.kr/wd/12345?query=frontend')).toBe(true);

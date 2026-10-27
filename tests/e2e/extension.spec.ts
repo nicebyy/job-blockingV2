@@ -101,6 +101,42 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     expect(insideImgBox).toBe(0);
   });
 
+  test('원티드(Wanted) 채용 목록 페이지에서 잡플래닛 및 블라인드 평점 뱃지가 공고 카드 회사명 옆에 동일 행(가로 인라인)으로 정상 주입되어야 한다', async ({
+    page,
+  }) => {
+    const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/wanted_wdlist.html');
+    const fixtureHtml = fs.readFileSync(fixturePath, 'utf8');
+
+    await page.route('https://www.wanted.co.kr/wdlist/518/872', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html; charset=utf-8',
+        body: fixtureHtml,
+      });
+    });
+
+    await page.goto('https://www.wanted.co.kr/wdlist/518/872', {
+      waitUntil: 'domcontentloaded',
+    });
+
+    await page.waitForTimeout(3000);
+
+    const badges = await page.locator('.job-filter-rating-badge').all();
+    expect(badges.length).toBeGreaterThan(0);
+
+    // 첫 번째 카드(매드업)의 회사명 및 평점 뱃지 가시성 및 가로 인라인 정렬 확인
+    const madupCard = page.locator('li:has-text("매드업")').first();
+    const wrap = madupCard.locator('.job-filter-ratings-wrap');
+    await expect(wrap).toBeVisible();
+
+    // 회사명 요소와 평점 뱃지가 동일 행(같은 Y좌표 라인)에 배치되었는지 검증
+    const compBox = await madupCard.locator('span[class*="CompanyNameWithLocationPeriod__company"]').boundingBox();
+    const wrapBox = await wrap.boundingBox();
+    expect(compBox).not.toBeNull();
+    expect(wrapBox).not.toBeNull();
+    expect(Math.abs(compBox!.y - wrapBox!.y)).toBeLessThan(6);
+  });
+
   test('팝업 창에서 환경 설정(블러/숨김 모드, 광고 숨김, 무한 스크롤, 평점 토글)을 정상적으로 변경하고 저장할 수 있어야 한다', async ({
     page,
     extensionId,
