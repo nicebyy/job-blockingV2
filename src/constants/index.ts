@@ -111,13 +111,16 @@ export const INFINITE_SCROLL_CONFIG = {
  * 사람인(Saramin) DOM 셀렉터 상수
  */
 export const SARAMIN_SELECTORS = {
-  JOB_CARDS: '.item_recruit, .list_item, div[class*="BoxAd_wrap"], .recruit_list .row',
-  LIST_CONTAINER: '#recruit_info_list .content, #recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
-  PAGINATION: '.pagination, .page_box',
+  JOB_CARDS:
+    '.item_recruit, .list_item, .list_product .item, div[class*="BoxAd_wrap"], .recruit_list .row',
+  LIST_CONTAINER:
+    '#default_list_wrap .list_body, #default_list_wrap, .list_recruiting .list_body, .common_recruilt_list, #recruit_info_list .content, #recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
+  PAGINATION: '.pagination, .page_box, .PageBox',
   COMPANY_NAME:
-    '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, a.company:not(.company_popup)',
+    '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a, .company_nm .str_tit, .corp, span.corp, a.company:not(.company_popup)',
 
-  POSITION_TITLE: '.area_job .job_tit a, .job_tit a, .job_tit, .area_job .job_tit',
+  POSITION_TITLE:
+    '.area_job .job_tit a, .job_tit a.str_tit, .job_tit a, .area_job .job_tit, strong.tit, .tit, .job_tit',
   AD_BADGE: '.badge_plus, .badge_recommend, .tag_ad, .ad_tag',
   AD_CLASS: 'plus_ad',
   CLOSING_DATE: '.area_job .date, .item_recruit .date, .date, .info_period .date, .jv_summary .date, .info_period .txt',
@@ -131,8 +134,9 @@ export const SARAMIN_SELECTORS = {
   DETAIL_TITLE_INNER: '.title_inner, .wrap_corp_info, .area_corp',
 
 
-  // 프로모션 및 광고 배너(AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너)
-  PROMOTION_BANNERS: '.area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, #section_contents, section[aria-label="추천공고"], .list_curation_wrap',
+  // 프로모션 및 광고 배너(AI 검색 배너, 개인 맞춤 추천 공고, 스토어 프로모션 배너, 네이버 파워링크)
+  PROMOTION_BANNERS:
+    '#powerLink, .wrap_recommend, .area_ai_search, section.type_searchup, section.keyword_up_logo_area, .wrap_searchup, section.wrap_store, .wrap_store, #store_product, #section_contents, section[aria-label="추천공고"], .list_curation_wrap',
 } as const;
 
 /**

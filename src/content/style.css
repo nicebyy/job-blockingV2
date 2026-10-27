@@ -1,6 +1,9 @@
 /* 공고 카드 요소들의 포지셔닝 컨텍스트 보장 (버튼 툴바가 부모가 아닌 개별 카드 내에 정확히 앵커되도록 설정) */
 .job-filter-card-host,
 .item_recruit,
+.list_item,
+.list_product .item,
+.list_product > li,
 .list-post,
 [data-cy="job-card"],
 li[class*="Card_"],
@@ -135,6 +138,9 @@ div[class*="POSITION_VIEW_WING_BANNER"] {
 /* 카드 호버 시 및 그룹 자체 호버/포커스 시 부드럽게 노출 (Hover Reveal) */
 .job-filter-card-host:hover .job-filter-btn-group,
 .item_recruit:hover .job-filter-btn-group,
+.list_item:hover .job-filter-btn-group,
+.list_product .item:hover .job-filter-btn-group,
+.list_product > li:hover .job-filter-btn-group,
 [data-cy="job-card"]:hover .job-filter-btn-group,
 .list-post:hover .job-filter-btn-group,
 .jview:hover .job-filter-btn-group,
