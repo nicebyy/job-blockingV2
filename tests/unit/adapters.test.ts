@@ -127,7 +127,9 @@ describe('Site Adapters 단위 테스트', () => {
       expect(firstInfo?.companyName).toBe('매드업');
       expect(firstInfo?.title).toBe('[AI 마케팅 개발실] Forward Deployed Engineer (FDE)');
       expect(firstInfo?.jobId).toBe('394698');
-      expect(firstInfo?.closingDate).toContain('서울 서초구');
+      // 원티드 목록 카드에는 마감일이 없다("서울 서초구 · 경력 4-8년"은 지역/경력 정보).
+      // 과거에 이를 마감일로 오인해 TTL 자동 정리가 무력화되었으므로 undefined 를 기대한다.
+      expect(firstInfo?.closingDate).toBeUndefined();
       expect(firstInfo?.isAd).toBe(false);
 
       // 두 번째 카드 정보 검증 (미소)
