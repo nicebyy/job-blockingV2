@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FilterSettings, DEFAULT_SETTINGS, FilterStats, TotalBlockStats, JobPlatform } from '../types';
 import { StorageManager } from '../core/storage';
-import { FILTER_CONFIG, UI_MESSAGES, POPUP_STATS_CONFIG, PopupStatsMode, SITE_DOMAINS } from '../constants';
+import { FILTER_CONFIG, UI_MESSAGES, POPUP_STATS_CONFIG, PopupStatsMode, SITE_DOMAINS, SUPPORT_CONFIG } from '../constants';
 
 export const Popup: React.FC = () => {
   const [settings, setSettings] = useState<FilterSettings>(DEFAULT_SETTINGS);
@@ -22,6 +22,7 @@ export const Popup: React.FC = () => {
   const [currentPlatform, setCurrentPlatform] = useState<JobPlatform>('custom');
   const [newCompany, setNewCompany] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
+  const [showRatingBanner, setShowRatingBanner] = useState<boolean>(false);
 
   // 1. 전체 등록 누적 차단 통계 로드
   const loadTotalStats = async () => {
@@ -111,6 +112,11 @@ export const Popup: React.FC = () => {
 
     // 3. 현재 활성 탭 통계 요청 (채용 사이트 방문 시 실시간 통계 보조 제공)
     loadPageStats();
+
+    // 4. 리뷰 유도 배너 숨김 여부 로드
+    StorageManager.isRatingBannerDismissed().then((dismissed) => {
+      setShowRatingBanner(!dismissed);
+    });
   }, []);
 
   const handleToggleMode = async () => {
@@ -200,6 +206,24 @@ export const Popup: React.FC = () => {
     if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
       chrome.runtime.openOptionsPage();
     }
+  };
+
+  const handleOpenStoreReview = () => {
+    const extId = typeof chrome !== 'undefined' && chrome.runtime?.id ? chrome.runtime.id : '';
+    window.open(SUPPORT_CONFIG.CHROME_STORE_REVIEW_URL(extId), '_blank');
+  };
+
+  const handleOpenFeedback = () => {
+    window.open(SUPPORT_CONFIG.FEEDBACK_URL, '_blank');
+  };
+
+  const handleOpenPrivacyPolicy = () => {
+    window.open(SUPPORT_CONFIG.PRIVACY_POLICY_URL, '_blank');
+  };
+
+  const handleDismissRatingBanner = async () => {
+    setShowRatingBanner(false);
+    await StorageManager.dismissRatingBanner();
   };
 
   return (
@@ -370,10 +394,51 @@ export const Popup: React.FC = () => {
         )}
       </div>
 
+      {showRatingBanner && (
+        <div className="rating-banner">
+          <div className="rating-banner-header">
+            <span className="rating-banner-title">{SUPPORT_CONFIG.LABELS.RATING_BANNER_TITLE}</span>
+            <button
+              type="button"
+              className="rating-banner-close"
+              onClick={handleDismissRatingBanner}
+              title={SUPPORT_CONFIG.LABELS.RATING_BANNER_DISMISS}
+            >
+              ✕
+            </button>
+          </div>
+          <p className="rating-banner-desc">{SUPPORT_CONFIG.LABELS.RATING_BANNER_DESC}</p>
+          <div className="rating-banner-actions">
+            <button
+              type="button"
+              className="rating-banner-action-btn"
+              onClick={handleOpenStoreReview}
+            >
+              {SUPPORT_CONFIG.LABELS.RATING_BANNER_ACTION}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="footer">
-        <span className="manage-link" onClick={openOptionsPage}>
-          차단 목록 전체 관리 (Options)
-        </span>
+        <div className="footer-links">
+          <button type="button" className="footer-link-btn" onClick={handleOpenFeedback}>
+            💬 {SUPPORT_CONFIG.LABELS.FEEDBACK}
+          </button>
+          <span className="footer-dot">·</span>
+          <button type="button" className="footer-link-btn" onClick={handleOpenStoreReview}>
+            ⭐ {SUPPORT_CONFIG.LABELS.REVIEW}
+          </button>
+          <span className="footer-dot">·</span>
+          <button type="button" className="footer-link-btn" onClick={handleOpenPrivacyPolicy}>
+            🔒 {SUPPORT_CONFIG.LABELS.PRIVACY}
+          </button>
+        </div>
+        <div style={{ marginTop: '8px' }}>
+          <span className="manage-link" onClick={openOptionsPage}>
+            차단 목록 전체 관리 (Options)
+          </span>
+        </div>
       </div>
     </div>
   );

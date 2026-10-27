@@ -216,3 +216,18 @@ npm run test
 ```bash
 npm run test:e2e
 ```
+
+---
+
+## 🔒 개인정보처리방침 (Privacy Policy)
+
+본 확장 프로그램은 사용자의 어떠한 개인 식별 정보(PII)나 탐색 기록도 수집·저장·전송하지 않습니다. 모든 차단 데이터 및 설정값은 사용자 기기의 브라우저 로컬 저장소(`chrome.storage.sync` / `local`)에만 안전하게 보관됩니다.
+상세한 내용은 [PRIVACY_POLICY.md](./PRIVACY_POLICY.md) 문서를 참고하시기 바랍니다.
+
+---
+
+## 💬 문의 및 피드백 (Support & Feedback)
+
+- **온라인 문의 및 버그 제보**: [Google Forms 온라인 접수](https://docs.google.com/forms/d/e/1FAIpQLSc8dy59w4vzCQZ5oWlTtMY8DEEeFbX5ktvS4I7ZOOlLwWZcKQ/viewform)
+- **크롬 웹스토어 리뷰**: 확장 프로그램 사용 후 유용하셨다면 웹스토어에 별점 5점과 따뜻한 리뷰를 남겨주세요!
+

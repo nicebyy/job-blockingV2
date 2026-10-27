@@ -489,5 +489,32 @@ export const RATING_BADGE_CONFIG = {
     `'${companyName}' 평점 ${rating.toFixed(1)} / 5.0 (클릭 시 이동 · 검색 결과 미존재, 동명 기업, 평점 미등록 시 표시 제외)`,
 } as const;
 
+/**
+ * 고객지원, 피드백 및 크롬 웹스토어 리뷰 설정 상수
+ */
+export const SUPPORT_CONFIG = {
+  FEEDBACK_URL:
+    'https://docs.google.com/forms/d/e/1FAIpQLSc8dy59w4vzCQZ5oWlTtMY8DEEeFbX5ktvS4I7ZOOlLwWZcKQ/viewform',
+  PRIVACY_POLICY_URL:
+    'https://github.com/nicebyy/job-blockingV2/blob/main/PRIVACY_POLICY.md',
+  CHROME_STORE_REVIEW_URL: (extensionId?: string) =>
+    extensionId
+      ? `https://chromewebstore.google.com/detail/${extensionId}/reviews`
+      : 'https://chromewebstore.google.com',
+  LABELS: {
+    FEEDBACK: '문의 / 피드백',
+    REVIEW: '리뷰 남기기',
+    PRIVACY: '개인정보처리방침',
+    RATING_BANNER_TITLE: 'Job Blocking V2가 도움이 되셨나요? ⭐',
+    RATING_BANNER_DESC: '크롬 웹스토어에 따뜻한 별점 5점과 리뷰를 남겨주시면 큰 힘이 됩니다!',
+    RATING_BANNER_ACTION: '⭐ 별점 5점 리뷰 남기기',
+    RATING_BANNER_DISMISS: '다음에 하기',
+  },
+  STORAGE_KEYS: {
+    DISMISS_RATING_BANNER: 'job_filter_dismiss_rating_banner',
+  },
+} as const;
+
+
 
 

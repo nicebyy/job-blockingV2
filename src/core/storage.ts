@@ -1,5 +1,5 @@
 import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings, JobPlatform } from '../types';
-import { STORAGE_KEYS } from '../constants';
+import { STORAGE_KEYS, SUPPORT_CONFIG } from '../constants';
 import { isJobExpired } from '../utils/date';
 import { normalizeCompanyName } from '../utils/text';
 
@@ -310,4 +310,40 @@ export class StorageManager {
     const filtered = list.filter((item) => item.id !== id);
     await this.saveBlockList(filtered);
   }
+
+  /**
+   * 리뷰 유도 배너 숨김 여부 확인
+   */
+  public static async isRatingBannerDismissed(): Promise<boolean> {
+    if (!this.isChromeStorageAvailable()) {
+      return Boolean(this.memoryFallback[SUPPORT_CONFIG.STORAGE_KEYS.DISMISS_RATING_BANNER]);
+    }
+    try {
+      if (chrome.storage.local) {
+        const res = await chrome.storage.local.get(SUPPORT_CONFIG.STORAGE_KEYS.DISMISS_RATING_BANNER);
+        return Boolean(res[SUPPORT_CONFIG.STORAGE_KEYS.DISMISS_RATING_BANNER]);
+      }
+    } catch {
+      // fallback
+    }
+    return Boolean(this.memoryFallback[SUPPORT_CONFIG.STORAGE_KEYS.DISMISS_RATING_BANNER]);
+  }
+
+  /**
+   * 리뷰 유도 배너 숨김 처리 (더 이상 표시하지 않음)
+   */
+  public static async dismissRatingBanner(): Promise<void> {
+    if (!this.isChromeStorageAvailable()) {
+      this.memoryFallback[SUPPORT_CONFIG.STORAGE_KEYS.DISMISS_RATING_BANNER] = true;
+      return;
+    }
+    try {
+      if (chrome.storage.local) {
+        await chrome.storage.local.set({ [SUPPORT_CONFIG.STORAGE_KEYS.DISMISS_RATING_BANNER]: true });
+      }
+    } catch {
+      this.memoryFallback[SUPPORT_CONFIG.STORAGE_KEYS.DISMISS_RATING_BANNER] = true;
+    }
+  }
 }
+

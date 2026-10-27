@@ -3,7 +3,7 @@ import { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { Popup } from '../../src/popup/Popup';
 import { StorageManager } from '../../src/core/storage';
-import { POPUP_STATS_CONFIG } from '../../src/constants';
+import { POPUP_STATS_CONFIG, SUPPORT_CONFIG } from '../../src/constants';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -430,5 +430,70 @@ describe('Popup 팝업 페이지 단위 테스트', () => {
       expect.any(Function)
     );
   });
+
+  it('리뷰 유도 배너가 노출되고 닫기 버튼 클릭 시 숨김 처리되며 dismissRatingBanner가 호출되어야 한다', async () => {
+    // mock window.open
+    const originalOpen = window.open;
+    window.open = vi.fn();
+
+    await act(async () => {
+      root.render(<Popup />);
+    });
+
+    const banner = container.querySelector('.rating-banner');
+    expect(banner).not.toBeNull();
+    expect(banner?.textContent).toContain(SUPPORT_CONFIG.LABELS.RATING_BANNER_TITLE);
+
+    // 닫기 버튼 클릭
+    const closeBtn = container.querySelector<HTMLButtonElement>('.rating-banner-close');
+    expect(closeBtn).not.toBeNull();
+
+    await act(async () => {
+      closeBtn?.click();
+    });
+
+    // 닫기 후 배너가 DOM에서 사라졌는지 확인
+    expect(container.querySelector('.rating-banner')).toBeNull();
+
+    // 스토리지에 숨김 처리되었는지 확인
+    const dismissed = await StorageManager.isRatingBannerDismissed();
+    expect(dismissed).toBe(true);
+
+    window.open = originalOpen;
+  });
+
+  it('푸터의 문의/피드백, 리뷰 남기기, 개인정보처리방침 버튼 클릭 시 올바른 URL이 새 탭으로 열려야 한다', async () => {
+    const originalOpen = window.open;
+    const openMock = vi.fn();
+    window.open = openMock;
+
+    await act(async () => {
+      root.render(<Popup />);
+    });
+
+    const footerButtons = container.querySelectorAll<HTMLButtonElement>('.footer-link-btn');
+    expect(footerButtons.length).toBe(3);
+
+    // 1. 문의 / 피드백 클릭 (Google Forms)
+    await act(async () => {
+      footerButtons[0].click();
+    });
+    expect(openMock).toHaveBeenCalledWith(SUPPORT_CONFIG.FEEDBACK_URL, '_blank');
+
+    // 2. 리뷰 남기기 클릭 (Chrome Web Store)
+    await act(async () => {
+      footerButtons[1].click();
+    });
+    expect(openMock).toHaveBeenCalledWith(expect.stringContaining('chromewebstore.google.com'), '_blank');
+
+    // 3. 개인정보처리방침 클릭
+    await act(async () => {
+      footerButtons[2].click();
+    });
+    expect(openMock).toHaveBeenCalledWith(SUPPORT_CONFIG.PRIVACY_POLICY_URL, '_blank');
+
+    window.open = originalOpen;
+  });
 });
+
 

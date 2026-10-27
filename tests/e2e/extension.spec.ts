@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect } from './fixtures';
-import { UI_MESSAGES, POPUP_STATS_CONFIG } from '../../src/constants';
+import { UI_MESSAGES, POPUP_STATS_CONFIG, SUPPORT_CONFIG } from '../../src/constants';
 
 test.describe('크롬 확장 프로그램 E2E 테스트', () => {
   test('팝업 창(Popup UI)이 정상적으로 렌더링되어야 한다', async ({ page, extensionId }) => {
@@ -26,6 +26,12 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     await expect(page.locator('.section').first()).toContainText('무한 스크롤 & 자동 채우기');
     await expect(page.locator('.section').first()).toContainText('잡플래닛 평점 표시');
     await expect(page.locator('.section').first()).toContainText('블라인드 평점 표시');
+
+    // 리뷰 유도 배너 및 문의/개인정보처리방침 푸터 링크 확인
+    await expect(page.locator('.rating-banner')).toBeVisible();
+    await expect(page.locator('.rating-banner-title')).toContainText(SUPPORT_CONFIG.LABELS.RATING_BANNER_TITLE);
+    await expect(page.locator('.footer-links')).toContainText(SUPPORT_CONFIG.LABELS.FEEDBACK);
+    await expect(page.locator('.footer-links')).toContainText(SUPPORT_CONFIG.LABELS.PRIVACY);
   });
 
   test('옵션 페이지(Options UI)에서 회사를 차단 목록에 등록하고 삭제할 수 있어야 한다', async ({
@@ -54,6 +60,12 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
 
     // 삭제 후 빈 상태가 표시되는지 확인
     await expect(page.locator('.empty-state')).toContainText('등록된 차단 항목이 없습니다');
+
+    // 하단 리뷰 유도 카드 및 피드백/개인정보처리방침 링크 확인
+    await expect(page.locator('.options-review-card')).toBeVisible();
+    await expect(page.locator('.options-review-card')).toContainText(SUPPORT_CONFIG.LABELS.RATING_BANNER_TITLE);
+    await expect(page.locator('.options-footer-links')).toContainText(SUPPORT_CONFIG.LABELS.FEEDBACK);
+    await expect(page.locator('.options-footer-links')).toContainText(SUPPORT_CONFIG.LABELS.PRIVACY);
   });
 
   test('점핏(Jumpit) 페이지에서 잡플래닛 및 블라인드 평점 뱃지가 공고 카드 회사명 옆에 정상 주입되어야 한다', async ({

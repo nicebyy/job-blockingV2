@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { Options } from '../../src/options/Options';
 import { StorageManager } from '../../src/core/storage';
-import { OPTIONS_FILTER_CONFIG } from '../../src/constants';
+import { OPTIONS_FILTER_CONFIG, SUPPORT_CONFIG } from '../../src/constants';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -355,5 +355,42 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
     expect(filteredItems[0].textContent).not.toContain('잡코리아회사C');
     expect(filteredItems[0].textContent).not.toContain('사람인회사A');
   });
+
+  it('옵션 페이지 하단에 크롬 웹스토어 리뷰 버튼 및 피드백, 개인정보처리방침 링크가 올바르게 렌더링되어야 한다', async () => {
+    await act(async () => {
+      root.render(<Options />);
+    });
+
+    // 리뷰 유도 카드 렌더링 확인
+    const reviewCard = container.querySelector('.options-review-card');
+    expect(reviewCard).not.toBeNull();
+    expect(reviewCard?.textContent).toContain(SUPPORT_CONFIG.LABELS.RATING_BANNER_TITLE);
+
+    // 리뷰 버튼 클릭 시 창 열림 확인
+    const originalOpen = window.open;
+    const openMock = vi.fn();
+    window.open = openMock;
+
+    const reviewBtn = container.querySelector<HTMLButtonElement>('.btn-review');
+    expect(reviewBtn).not.toBeNull();
+
+    await act(async () => {
+      reviewBtn?.click();
+    });
+    expect(openMock).toHaveBeenCalledWith(expect.stringContaining('chromewebstore.google.com'), '_blank');
+
+    // 피드백 및 개인정보처리방침 링크 확인
+    const links = container.querySelectorAll<HTMLAnchorElement>('.options-footer-link');
+    expect(links.length).toBe(2);
+
+    expect(links[0].href).toBe(SUPPORT_CONFIG.FEEDBACK_URL);
+    expect(links[0].target).toBe('_blank');
+
+    expect(links[1].href).toBe(SUPPORT_CONFIG.PRIVACY_POLICY_URL);
+    expect(links[1].target).toBe('_blank');
+
+    window.open = originalOpen;
+  });
 });
+
 

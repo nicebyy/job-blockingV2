@@ -247,3 +247,104 @@ input:checked + .slider:before {
   text-decoration: underline;
   cursor: pointer;
 }
+
+.manage-link:hover {
+  color: #2563eb;
+}
+
+/* 평점 리뷰 유도 배너 */
+.rating-banner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.08);
+}
+
+.rating-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.rating-banner-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.rating-banner-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.rating-banner-close:hover {
+  color: #475569;
+}
+
+.rating-banner-desc {
+  font-size: 10.5px;
+  color: #047857;
+  line-height: 1.4;
+  margin: 0 0 8px 0;
+}
+
+.rating-banner-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rating-banner-action-btn {
+  background-color: #059669;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.rating-banner-action-btn:hover {
+  background-color: #047857;
+}
+
+/* 푸터 링크 */
+.footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.footer-link-btn {
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 10.5px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.footer-link-btn:hover {
+  color: #2563eb;
+  background-color: #f1f5f9;
+}
+
+.footer-dot {
+  color: #cbd5e1;
+  font-size: 10px;
+}
+

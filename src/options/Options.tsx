@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { BlockItem, BlockType } from '../types';
 import { StorageManager } from '../core/storage';
-import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType, PLATFORM_CONFIG, PlatformFilterType } from '../constants';
+import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType, PLATFORM_CONFIG, PlatformFilterType, SUPPORT_CONFIG } from '../constants';
 import { formatDate } from '../utils/date';
 
 export const Options: React.FC = () => {
@@ -352,6 +352,46 @@ export const Options: React.FC = () => {
               onChange={handleImport}
             />
           </label>
+        </div>
+
+        {/* 크롬 웹스토어 평점 리뷰 유도 & 피드백 및 개인정보처리방침 푸터 카드 */}
+        <div className="options-footer-section">
+          <div className="options-review-card">
+            <div className="options-review-text">
+              <strong>{SUPPORT_CONFIG.LABELS.RATING_BANNER_TITLE}</strong>
+              <p>{SUPPORT_CONFIG.LABELS.RATING_BANNER_DESC}</p>
+            </div>
+            <button
+              type="button"
+              className="btn-review"
+              onClick={() => {
+                const extId = typeof chrome !== 'undefined' && chrome.runtime?.id ? chrome.runtime.id : '';
+                window.open(SUPPORT_CONFIG.CHROME_STORE_REVIEW_URL(extId), '_blank');
+              }}
+            >
+              {SUPPORT_CONFIG.LABELS.RATING_BANNER_ACTION}
+            </button>
+          </div>
+
+          <div className="options-footer-links">
+            <a
+              href={SUPPORT_CONFIG.FEEDBACK_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="options-footer-link"
+            >
+              💬 {SUPPORT_CONFIG.LABELS.FEEDBACK} (Google Forms)
+            </a>
+            <span className="options-footer-dot">·</span>
+            <a
+              href={SUPPORT_CONFIG.PRIVACY_POLICY_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="options-footer-link"
+            >
+              🔒 {SUPPORT_CONFIG.LABELS.PRIVACY} (Privacy Policy)
+            </a>
+          </div>
         </div>
       </div>
     </div>

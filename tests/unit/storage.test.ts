@@ -205,6 +205,19 @@ describe('StorageManager 단위 테스트', () => {
     list = await StorageManager.getBlockList(false);
     expect(list.length).toBe(1);
   });
+
+  it('리뷰 유도 배너 숨김 여부 조회 및 숨김 처리가 정상 작동해야 한다', async () => {
+    // 초기 상태: 숨김 처리되지 않음 (false)
+    const initialDismissed = await StorageManager.isRatingBannerDismissed();
+    expect(initialDismissed).toBe(false);
+
+    // 숨김 처리 호출
+    await StorageManager.dismissRatingBanner();
+
+    // 숨김 상태로 전환 확인 (true)
+    const afterDismissed = await StorageManager.isRatingBannerDismissed();
+    expect(afterDismissed).toBe(true);
+  });
 });
 
 
