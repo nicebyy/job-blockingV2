@@ -2245,6 +2245,52 @@ describe('Site Adapters 단위 테스트', () => {
       const nextUrl = saramin.getNextPageUrl(doc, 1);
       expect(nextUrl).toBeNull();
     });
+
+    it('사람인 getCardListContainer는 네이버 파워링크 광고 목록(#powerLink 안의 .list_item)을 공고 컨테이너로 오인하지 않아야 한다', () => {
+      // [회귀 방지] 직업별 목록(job-category) 초기 HTML 은 실제 공고 목록이 아직 없고
+      // 네이버 파워링크 광고 블록 안에만 <li class="list_item"> 이 존재한다.
+      // 이 광고 <ul> 을 컨테이너로 반환하면 무한 스크롤이 광고 영역에 공고를 append 하여
+      // UI 가 깨지고 스피너가 무한히 도는 것처럼 보인다.
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div id="content">
+          <div id="powerLink" class="powerlink pc none-img">
+            <ul id="contentsList" class="powerlink_list">
+              <li class="list_item img_type"><a href="/ad/1">광고 공고 1</a></li>
+              <li class="list_item img_type"><a href="/ad/2">광고 공고 2</a></li>
+            </ul>
+          </div>
+        </div>
+      `;
+
+      const container = saramin.getCardListContainer(doc);
+      expect(container).toBeNull();
+    });
+
+    it('사람인 getCardListContainer는 광고 영역 없이 정상 목록(.list_body)이 있으면 그 목록을 반환해야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div id="default_list_wrap">
+          <section class="list_recruiting">
+            <div class="list_body">
+              <div id="rec-1" class="list_item"><a href="/zf_user/jobs/relay/view?rec_idx=1">공고 1</a></div>
+            </div>
+          </section>
+        </div>
+        <div id="powerLink" class="powerlink">
+          <ul id="contentsList" class="powerlink_list">
+            <li class="list_item"><a href="/ad/1">광고</a></li>
+          </ul>
+        </div>
+      `;
+
+      const container = saramin.getCardListContainer(doc);
+      expect(container).not.toBeNull();
+      expect(container?.classList.contains('list_body')).toBe(true);
+      expect(container?.closest('#powerLink, .powerlink')).toBeNull();
+    });
   });
 
   describe('기업 평점 뱃지 주입 (injectRatingBadge - 잡플래닛 & 블라인드)', () => {

@@ -281,9 +281,19 @@ div:has(> h1):has(a[href*="/company/"]) .job-filter-btn-group {
 }
 
 
-/* 무한 스크롤 로딩 인디케이터 스타일 */
+/* 무한 스크롤 로딩 인디케이터 스타일
+ *
+ * [중요] 기본값은 반드시 `display: none !important` 이어야 한다.
+ * 기존에는 `display: flex !important` 가 무조건 적용되어, JS 가
+ * `element.style.display = 'none'` 으로 숨겨도 CSS 캐스케이드상
+ * (!important > 인라인 일반 선언) 무시되었다. 그 결과 로딩 중이 아닐 때도
+ * "다음 공고를 불러오는 중입니다..." 스피너가 항상 화면 하단에 붙어
+ * 무한 회전하는 버그가 발생했다.
+ *
+ * 표시는 오직 `.is-active` 상태 클래스로만 제어한다.
+ */
 .job-filter-infinite-loading {
-  display: flex !important;
+  display: none !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 10px !important;
@@ -297,13 +307,36 @@ div:has(> h1):has(a[href*="/company/"]) .job-filter-btn-group {
   border: 1px dashed #cbd5e1 !important;
 }
 
+/* 로딩 중일 때만 표시 (JS 는 이 클래스만 토글한다) */
+.job-filter-infinite-loading.is-active {
+  display: flex !important;
+}
+
 .job-filter-spinner {
   width: 16px !important;
   height: 16px !important;
   border: 2px solid #e2e8f0 !important;
   border-top-color: #2563eb !important;
   border-radius: 50% !important;
+}
+
+/* 회전 애니메이션은 실제 로딩 중(.is-active)에만 돌린다 (유휴 시 CPU/GPU 낭비 방지) */
+.job-filter-infinite-loading.is-active .job-filter-spinner {
   animation: job-filter-spin 0.6s linear infinite !important;
+}
+
+/* 연속 실패로 무한 스크롤을 중단했을 때의 안내 문구 */
+.job-filter-infinite-failure {
+  display: block !important;
+  padding: 14px 0 !important;
+  margin: 12px 0 !important;
+  text-align: center !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #b91c1c !important;
+  background-color: #fef2f2 !important;
+  border-radius: 8px !important;
+  border: 1px solid #fecaca !important;
 }
 
 @keyframes job-filter-spin {
