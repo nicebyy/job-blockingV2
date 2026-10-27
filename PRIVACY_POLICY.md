@@ -39,10 +39,13 @@
 | 권한 (Permission) | 사용 목적 |
 | :--- | :--- |
 | `storage` | 사용자의 차단 목록 및 사용자 환경설정을 브라우저 로컬/동기화 스토리지에 저장하기 위해 사용 |
-| `activeTab` | 사용자가 팝업 창을 열었을 때 현재 보고 있는 채용 사이트의 실시간 필터링 통계를 집계하고 반영하기 위해 사용 |
-| `tabs` | 상세페이지에서 공고/회사 차단 시 이전 목록으로 복귀하거나 새 탭을 닫기 위해, 그리고 팝업에서 현재 탭으로 재필터링 메시지를 전송하기 위해 사용 |
+| `activeTab` | 사용자가 팝업 창을 열었을 때 현재 보고 있는 채용 사이트의 URL을 확인하고 실시간 필터링 통계를 집계하기 위해 사용 |
 | `host_permissions`<br>(`*.wanted.co.kr`, `*.saramin.co.kr`, `*.jobkorea.co.kr`, `*.rememberapp.co.kr`, `*.jumpit.co.kr`) | 지원하는 채용 사이트의 공고 목록 및 상세 페이지 DOM에서 사용자가 지정한 차단 회사/공고 카드를 숨기거나 블러 처리하기 위해 사용 |
 | `host_permissions`<br>(`*.jobplanet.co.kr`, `*.teamblind.com`) | 채용 공고에 표시되는 회사의 잡플래닛 및 블라인드 공개 기업 평점을 브라우저에서 단방향으로 조회하여 뱃지로 표시하기 위해 사용 (사용자 데이터 전송 없음) |
+
+> **권한 최소화 안내**: `tabs` 권한은 요청하지 않습니다. 탭 메시징(`tabs.sendMessage`)과 탭 닫기(`tabs.remove`)는 `tabs` 권한 없이 동작하며, 현재 탭 식별은 `activeTab` 으로 충분합니다. 콘텐츠 스크립트는 `host_permissions` 로 이미 주입됩니다.
+>
+> **최소 브라우저 버전**: `:has()` CSS 선택자와 MV3 기능을 사용하므로 **Chrome 105 이상**이 필요합니다 (`manifest.json` 의 `minimum_chrome_version`).
 
 ---
 

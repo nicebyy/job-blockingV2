@@ -4,6 +4,7 @@ import {
   JOBPLANET_CONFIG,
   BLIND_CONFIG,
   RATING_BADGE_CONFIG,
+  FILTER_CONFIG,
 } from '../constants';
 
 export interface SiteAdapter {
@@ -27,6 +28,15 @@ export interface SiteAdapter {
   getCardListContainer?(currentDoc: Document): HTMLElement | null;
   getPaginationElement?(currentDoc: Document): HTMLElement | null;
   hidePromotionBanners?(container?: Document | HTMLElement): number;
+  /**
+   * hidePromotionBanners 로 숨긴 프로모션 배너를 원래 상태로 복원한다.
+   * 사용자가 "추천/광고 공고 숨김" 토글을 끄면 호출된다.
+   */
+  restorePromotionBanners?(container?: Document | HTMLElement): void;
+  /**
+   * 공고 필터링(숨김/차단) 후 그리드 또는 캐러셀 슬라이드 내 빈 공간을 채우기 위한 재정렬 훅
+   */
+  reflow?(container?: Document | HTMLElement): void;
 }
 
 export interface BlockActions {
@@ -48,6 +58,25 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
     return 0;
   }
 
+  /**
+   * 광고 배너 숨김을 해제한다.
+   *
+   * 기본 구현은 어댑터별 PROMOTION_BANNERS 셀렉터를 알 수 없으므로,
+   * hidePromotionBanners 가 남긴 공통 속성(data-blocked-type="ad")을 기준으로 복원한다.
+   * 어댑터가 자체 셀렉터를 알고 있으면 재정의해 더 정확히 복원할 수 있다.
+   */
+  public restorePromotionBanners(container: Document | HTMLElement = document): void {
+    const hiddenAds = Array.from(
+      container.querySelectorAll<HTMLElement>('[data-blocked-type="ad"]')
+    );
+    hiddenAds.forEach((el) => {
+      el.style.display = '';
+      el.removeAttribute('data-job-filtered');
+      el.removeAttribute('data-filter-mode');
+      el.removeAttribute('data-blocked-type');
+    });
+  }
+
   public getNextPageUrl?(_currentDoc: Document, _currentPage: number): string | null {
     return null;
   }
@@ -65,6 +94,10 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
 
   public getPaginationElement?(_currentDoc: Document): HTMLElement | null {
     return null;
+  }
+
+  public reflow?(_container?: Document | HTMLElement): void {
+    // 기본 구현은 no-op (그리드나 캐러셀 재정렬이 필요한 하위 어댑터에서 오버라이드)
   }
 
   /**
@@ -126,6 +159,11 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
         cardInfo.cardElement.setAttribute('data-job-filtered', 'true');
         cardInfo.cardElement.setAttribute('data-filter-mode', 'hide');
         cardInfo.cardElement.setAttribute('data-blocked-type', 'job');
+        // 사용자가 직접 누른 숨김이므로, 차단 목록/설정 변경과 무관하게 유지한다
+        cardInfo.cardElement.setAttribute(
+          FILTER_CONFIG.ATTR_FILTER_ORIGIN,
+          FILTER_CONFIG.FILTER_ORIGIN_MANUAL
+        );
 
         try {
           await onBlockJob(cardInfo);

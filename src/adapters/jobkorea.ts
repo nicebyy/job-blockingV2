@@ -5,6 +5,7 @@ import {
   JOBKOREA_SELECTORS,
   JOBKOREA_CONFIG,
   INLINE_BUTTON_CONFIG,
+  FILTER_CONFIG,
 } from '../constants';
 
 export class JobKoreaAdapter extends BaseSiteAdapter {
@@ -71,6 +72,52 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
     const rawBanners = Array.from(
       container.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.PROMOTION_BANNERS)
     );
+
+    // 잡코리아 메인 페이지 텍스트 기반 광고 섹션 탐색 (동적 SDUI 렌더링 폴백 보장)
+    const candidateHeadings = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'h2, [data-sentry-component="TitlePC"] h2, [data-sentry-component="TitlePC"], .title, div'
+      )
+    );
+    for (const el of candidateHeadings) {
+      if (
+        Array.from(el.children).some(
+          (child) =>
+            child.textContent &&
+            JOBKOREA_SELECTORS.MAIN_AD_TITLES.some((t) => child.textContent?.includes(t))
+        )
+      ) {
+        continue;
+      }
+      const text = el.textContent?.trim().replace(/\s+/g, ' ') || '';
+      if (JOBKOREA_SELECTORS.MAIN_AD_TITLES.some((adTitle) => text.includes(adTitle))) {
+        let sectionContainer: HTMLElement | null =
+          el.closest<HTMLElement>('[data-section-alias]') ||
+          el.closest<HTMLElement>('[data-animation-section="true"]');
+
+        if (!sectionContainer) {
+          let cur: HTMLElement | null = el.parentElement;
+          while (cur && cur !== container && cur !== document.body) {
+            if (
+              cur.tagName.toUpperCase() === 'SECTION' ||
+              cur.parentElement === container ||
+              cur.parentElement === document.body
+            ) {
+              sectionContainer = cur;
+              if (cur.parentElement === container || cur.parentElement === document.body) {
+                break;
+              }
+            }
+            cur = cur.parentElement;
+          }
+        }
+
+        if (sectionContainer && !rawBanners.includes(sectionContainer)) {
+          rawBanners.push(sectionContainer);
+        }
+      }
+    }
+
     const topLevelBanners = rawBanners.filter(
       (el) => !rawBanners.some((parent) => parent !== el && parent.contains(el))
     );
@@ -372,6 +419,178 @@ export class JobKoreaAdapter extends BaseSiteAdapter {
       return;
     }
 
+    // 잡코리아 메인 페이지 카드(CardJobBasic)인 경우:
+    // 숨김/차단 버튼 클릭 시 부모 그리드 셀도 함께 숨기고 즉시 캐러셀 슬라이드 재정렬(Reflow) 수행
+    const isCardJobBasic =
+      rawCard.getAttribute('data-component-type') === 'CARD_JOB_BASIC' ||
+      rawCard.getAttribute('data-sentry-component') === 'CardJobBasic' ||
+      rawCard.classList.contains('job-recommendation-item');
+
+    if (isCardJobBasic) {
+      const onBlockCompany = typeof actions === 'function' ? actions : actions.onBlockCompany;
+      const onBlockJob = typeof actions === 'object' ? actions.onBlockJob : undefined;
+
+      const wrappedActions: BlockActions = {
+        onBlockCompany: (compName) => {
+          this.hideCardAndParentCell(rawCard, 'company');
+          this.reflow(rawCard.closest<HTMLElement>(JOBKOREA_SELECTORS.CAROUSEL) || document);
+          onBlockCompany?.(compName);
+        },
+        onBlockJob: (info) => {
+          this.hideCardAndParentCell(rawCard, 'job');
+          this.reflow(rawCard.closest<HTMLElement>(JOBKOREA_SELECTORS.CAROUSEL) || document);
+          onBlockJob?.(info);
+        },
+      };
+
+      super.injectInlineButton(cardInfo, wrappedActions);
+      return;
+    }
+
     super.injectInlineButton(cardInfo, actions);
+  }
+
+  /**
+   * 카드의 직계 상위 그리드 셀 요소 탐색
+   * (잡코리아 메인 캐러셀의 경우: div.grid > div > div[data-component-type="CARD_JOB_BASIC"])
+   */
+  public getParentGridCell(cardEl: HTMLElement): HTMLElement | null {
+    const parent = cardEl.parentElement;
+    if (!parent) return null;
+    const grandParent = parent.parentElement;
+    if (
+      grandParent &&
+      (grandParent.classList.contains('grid') ||
+        grandParent.className.includes('grid-col') ||
+        grandParent.matches?.(JOBKOREA_SELECTORS.CAROUSEL_GRID))
+    ) {
+      return parent;
+    }
+    return null;
+  }
+
+  /**
+   * 카드와 해당 카드를 감싸는 부모 그리드 셀 동시 숨김 처리
+   */
+  public hideCardAndParentCell(
+    rawCard: HTMLElement,
+    blockedType: 'job' | 'company' = 'job'
+  ): void {
+    rawCard.style.setProperty('display', 'none', 'important');
+    rawCard.setAttribute('data-job-filtered', 'true');
+    rawCard.setAttribute('data-filter-mode', 'hide');
+    rawCard.setAttribute('data-blocked-type', blockedType);
+    rawCard.setAttribute(FILTER_CONFIG.ATTR_FILTER_ORIGIN, FILTER_CONFIG.FILTER_ORIGIN_MANUAL);
+
+    const parentCell = this.getParentGridCell(rawCard);
+    if (parentCell) {
+      parentCell.style.setProperty('display', 'none', 'important');
+      parentCell.setAttribute('data-job-filtered', 'true');
+      parentCell.setAttribute('data-filter-mode', 'hide');
+      parentCell.setAttribute('data-blocked-type', blockedType);
+      parentCell.setAttribute(
+        FILTER_CONFIG.ATTR_FILTER_ORIGIN,
+        FILTER_CONFIG.FILTER_ORIGIN_MANUAL
+      );
+    }
+  }
+
+  /**
+   * 잡코리아 메인 페이지 캐러셀 슬라이드 자동 재정렬 (Cross-Slide Card Reflow):
+   * 특정 슬라이드에서 공고가 숨겨져 빈 슬롯이 생겼을 때,
+   * 다음 슬라이드의 첫 번째 유효 카드를 앞 슬라이드의 빈자리로 당겨와 4열 그리드를 꽉 채운다.
+   * 모든 카드가 앞 슬라이드로 당겨져 비어버린 슬라이드는 자동으로 숨김 처리한다.
+   */
+  public override reflow(container: Document | HTMLElement = document): void {
+    const carousels = Array.from(
+      container.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.CAROUSEL)
+    );
+    if (
+      container instanceof HTMLElement &&
+      container.matches?.(JOBKOREA_SELECTORS.CAROUSEL) &&
+      !carousels.includes(container)
+    ) {
+      carousels.push(container);
+    }
+
+    for (const carousel of carousels) {
+      const slides = Array.from(
+        carousel.querySelectorAll<HTMLElement>(JOBKOREA_SELECTORS.CAROUSEL_ITEM)
+      );
+      if (slides.length <= 1) continue;
+
+      // 각 슬라이드의 초기 아이템 수(capacity) 파악 및 저장
+      for (const slide of slides) {
+        const grid = slide.querySelector<HTMLElement>(JOBKOREA_SELECTORS.CAROUSEL_GRID);
+        if (grid && !slide.hasAttribute(JOBKOREA_CONFIG.ATTR_INITIAL_CAPACITY)) {
+          const count = grid.children.length;
+          if (count > 0) {
+            slide.setAttribute(JOBKOREA_CONFIG.ATTR_INITIAL_CAPACITY, String(count));
+          }
+        }
+      }
+
+      const getActiveCells = (grid: HTMLElement): HTMLElement[] =>
+        Array.from(grid.children).filter((cell) => {
+          const el = cell as HTMLElement;
+          const innerCard = el.querySelector<HTMLElement>(JOBKOREA_SELECTORS.CAROUSEL_CARD_BASIC);
+          const isHidden =
+            el.style.display === 'none' ||
+            el.getAttribute('data-job-filtered') === 'true' ||
+            innerCard?.style.display === 'none' ||
+            innerCard?.getAttribute('data-job-filtered') === 'true';
+          return !isHidden;
+        }) as HTMLElement[];
+
+      // 앞 슬라이드부터 순회하며 빈 슬롯 채우기
+      for (let i = 0; i < slides.length - 1; i++) {
+        const curSlide = slides[i];
+        const curGrid = curSlide.querySelector<HTMLElement>(JOBKOREA_SELECTORS.CAROUSEL_GRID);
+        if (!curGrid) continue;
+
+        const capacity =
+          Number(curSlide.getAttribute(JOBKOREA_CONFIG.ATTR_INITIAL_CAPACITY)) ||
+          JOBKOREA_CONFIG.DEFAULT_CAROUSEL_CAPACITY;
+
+        let activeCells = getActiveCells(curGrid);
+
+        while (activeCells.length < capacity) {
+          let foundCell: HTMLElement | null = null;
+
+          for (let j = i + 1; j < slides.length; j++) {
+            const nextGrid = slides[j].querySelector<HTMLElement>(
+              JOBKOREA_SELECTORS.CAROUSEL_GRID
+            );
+            if (!nextGrid) continue;
+
+            const nextActive = getActiveCells(nextGrid);
+            if (nextActive.length > 0) {
+              foundCell = nextActive[0];
+              break;
+            }
+          }
+
+          if (!foundCell) break;
+
+          curGrid.appendChild(foundCell);
+          activeCells.push(foundCell);
+        }
+      }
+
+      // 활성 카드가 0개인 슬라이드 자동 숨김
+      for (const slide of slides) {
+        const grid = slide.querySelector<HTMLElement>(JOBKOREA_SELECTORS.CAROUSEL_GRID);
+        if (!grid) continue;
+
+        const active = getActiveCells(grid);
+        if (active.length === 0) {
+          slide.style.display = 'none';
+          slide.setAttribute('data-job-filtered', 'true');
+        } else {
+          slide.style.display = '';
+          slide.removeAttribute('data-job-filtered');
+        }
+      }
+    }
   }
 }

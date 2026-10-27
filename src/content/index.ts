@@ -2,7 +2,17 @@ import { AdapterRegistry } from '../adapters';
 import { FilterEngine } from '../core/filter-engine';
 import { InfiniteScrollManager } from '../core/infinite-scroll';
 import { StorageManager } from '../core/storage';
-import { BlindRatingInfo, ExtensionMessage, FilterSettings, FilterStats, JobCardInfo, JobplanetRatingInfo, JobPlatform } from '../types';
+import {
+  BlindRatingInfo,
+  BlockItem,
+  DEFAULT_SETTINGS,
+  ExtensionMessage,
+  FilterSettings,
+  FilterStats,
+  JobCardInfo,
+  JobplanetRatingInfo,
+  JobPlatform,
+} from '../types';
 import { FILTER_CONFIG, RATING_BADGE_CONFIG } from '../constants';
 import { calculateJobExpiration } from '../utils/date';
 import { normalizeCompanyName } from '../utils/text';
@@ -30,8 +40,22 @@ export class ContentController {
     // 팝업 및 외부 메시지 리스너 최우선 등록 (초기화 지연 시에도 메시지 유실 방지)
     this.setupMessageListener();
 
-    this.settings = await StorageManager.getSettings();
-    const blockList = await StorageManager.getBlockList();
+    // [중요] 저장소 조회가 실패하더라도 필터링 이외의 기능(옵저버/메시지 응답)은
+    // 계속 동작해야 한다. 기존에는 아래 await 가 reject 되면 이후 초기화가 전부
+    // 중단되어 확장이 완전히 무력화되었다(손상된 차단 목록 1건으로 전체 정지).
+    try {
+      this.settings = await StorageManager.getSettings();
+    } catch (err) {
+      console.error('[JobFilter] 설정 로드 실패, 기본 설정으로 진행:', err);
+      this.settings = { ...DEFAULT_SETTINGS };
+    }
+
+    let blockList: BlockItem[] = [];
+    try {
+      blockList = await StorageManager.getBlockList();
+    } catch (err) {
+      console.error('[JobFilter] 차단 목록 로드 실패, 빈 목록으로 진행:', err);
+    }
     this.filterEngine = new FilterEngine(this.settings, blockList);
 
     // 무한 스크롤 초기화 (단, 상세 페이지에서는 비활성화)
@@ -111,6 +135,12 @@ export class ContentController {
     this.infiniteScroll = new InfiniteScrollManager({
       adapter: this.adapter,
       onCardsAppended: () => {
+        // 신규 카드가 DOM에 주입되었을 때 즉시 필터링 적용 및
+        // DOM 삽입으로 인해 발생한 MutationObserver의 중복 지연 재스캔 방지
+        if (this.debounceTimer) {
+          window.clearTimeout(this.debounceTimer);
+          this.debounceTimer = null;
+        }
         this.scanAndFilter();
       },
     });
@@ -164,8 +194,11 @@ export class ContentController {
             .querySelectorAll(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`)
             .forEach((el) => el.remove());
           document
-            .querySelectorAll('[data-jp-rating-requested]')
-            .forEach((el) => el.removeAttribute('data-jp-rating-requested'));
+            .querySelectorAll('[data-jp-rating-in-flight], [data-jp-rating-requested]')
+            .forEach((el) => {
+              el.removeAttribute('data-jp-rating-in-flight');
+              el.removeAttribute('data-jp-rating-requested');
+            });
         }
 
         if (!message.settings.showBlindRating) {
@@ -173,8 +206,11 @@ export class ContentController {
             .querySelectorAll(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`)
             .forEach((el) => el.remove());
           document
-            .querySelectorAll('[data-blind-rating-requested]')
-            .forEach((el) => el.removeAttribute('data-blind-rating-requested'));
+            .querySelectorAll('[data-blind-rating-in-flight], [data-blind-rating-requested]')
+            .forEach((el) => {
+              el.removeAttribute('data-blind-rating-in-flight');
+              el.removeAttribute('data-blind-rating-requested');
+            });
         }
 
         // 비어있는 평점 래퍼 정리
@@ -205,6 +241,10 @@ export class ContentController {
     let promoAdsCount = 0;
     if (this.settings?.hideAds !== false) {
       promoAdsCount = this.adapter.hidePromotionBanners?.() || 0;
+    } else {
+      // [버그 수정] 광고 숨김 토글을 끄면 이전에 숨긴 배너를 복원해야 한다.
+      // (기존에는 hidePromotionBanners 호출만 건너뛰고 복구를 하지 않아 새로고침 전까지 배너가 사라진 채로 남았다)
+      this.adapter.restorePromotionBanners?.();
     }
 
     const elements = this.adapter.getJobCardElements();
@@ -233,6 +273,27 @@ export class ContentController {
         this.filterEngine.applyFilter(cardInfo.cardElement, effectiveMode);
         totalBlocked++;
 
+        // 그리드 셀 내부 카드인 경우 부모 셀의 숨김 스타일 동기화 (그리드 빈 슬롯 방지)
+        const parentCell = cardInfo.cardElement.parentElement;
+        const grandParent = parentCell?.parentElement;
+        const isGridChild =
+          grandParent &&
+          (grandParent.classList.contains('grid') ||
+            grandParent.className.includes('grid-col') ||
+            grandParent.getAttribute('data-slot') === 'carousel-item');
+
+        if (parentCell && isGridChild) {
+          if (effectiveMode === 'hide') {
+            parentCell.style.setProperty('display', 'none', 'important');
+            parentCell.setAttribute('data-job-filtered', 'true');
+            parentCell.setAttribute('data-filter-mode', 'hide');
+          } else {
+            parentCell.style.display = '';
+            parentCell.removeAttribute('data-job-filtered');
+            parentCell.removeAttribute('data-filter-mode');
+          }
+        }
+
         if (evalResult.isAdFilter) {
           cardInfo.cardElement.setAttribute('data-blocked-type', 'ad');
           blockedAds++;
@@ -250,11 +311,18 @@ export class ContentController {
           if (compKey) blockedCompanySet.add(compKey);
         }
       } else {
-        // 이미 사용자가 명시적으로 숨김 처리한 카드는 부활시키지 않고 숨김 상태 유지
-        if (
-          cardInfo.cardElement.getAttribute('data-job-filtered') === 'true' &&
-          cardInfo.cardElement.getAttribute('data-filter-mode') === 'hide'
-        ) {
+        // [중요] 사용자가 카드에서 직접 [공고숨김]을 누른 경우에만 부활시키지 않는다.
+        //
+        // 기존 구현은 `data-filter-mode === 'hide'` 이기만 하면 무조건 continue 해서,
+        // 회사 차단을 해제하거나 "광고 숨김"을 꺼도 카드가 복원되지 않았다(영구 숨김).
+        // 이제는 수동 숨김(data-filter-origin="manual")만 유지하고,
+        // 목록/설정 기반 필터는 해제 시 정상적으로 복원한다.
+        const origin = cardInfo.cardElement.getAttribute(FILTER_CONFIG.ATTR_FILTER_ORIGIN);
+        const isManualHide =
+          origin === FILTER_CONFIG.FILTER_ORIGIN_MANUAL &&
+          cardInfo.cardElement.getAttribute('data-filter-mode') === 'hide';
+
+        if (isManualHide) {
           totalBlocked++;
           const blockedType = cardInfo.cardElement.getAttribute('data-blocked-type');
           if (blockedType === 'company') {
@@ -269,6 +337,16 @@ export class ContentController {
         }
 
         this.filterEngine.removeFilter(cardInfo.cardElement);
+        cardInfo.cardElement.removeAttribute('data-blocked-type');
+        cardInfo.cardElement.removeAttribute(FILTER_CONFIG.ATTR_FILTER_ORIGIN);
+
+        // 그리드 셀 내부 카드인 경우 부모 셀의 숨김 스타일도 해제 복원
+        const restoreParent = cardInfo.cardElement.parentElement;
+        if (restoreParent && restoreParent.getAttribute('data-job-filtered') === 'true') {
+          restoreParent.style.display = '';
+          restoreParent.removeAttribute('data-job-filtered');
+          restoreParent.removeAttribute('data-filter-mode');
+        }
 
         // 필터링되지 않은 정상 카드에 [공고숨김 / 회사차단] 듀얼 인라인 버튼 주입
         this.adapter.injectInlineButton(cardInfo, {
@@ -307,9 +385,26 @@ export class ContentController {
 
     this.notifyBadgeUpdate(this.currentStats.totalBlocked);
 
+    // 필터링 적용 완료 후 캐러셀/그리드 카드 자동 재정렬 (빈자리 채우기)
+    this.adapter.reflow?.(document);
+
     // 유효 공고 개수 확인 후 필요 시 다음 페이지 자동 채우기 (Auto-Refill)
-    const visibleCount = elements.length - this.currentStats.totalBlocked;
+    //
+    // 주의: totalBlocked 에는 프로모션 배너 수(promoAdsCount)가 포함되어 있으나
+    // 배너는 공고 카드가 아니므로 elements.length 에서 빼면 이중 차감이 된다.
+    // 실제 "공고 카드 중 차단된 수"만 계산해야 Auto-Refill 이 조기에 오동작하지 않는다.
+    const visibleCount = elements.length - (totalBlocked - promoAdsCount);
     if (this.settings?.enableInfiniteScroll) {
+      // SPA / 비동기 검색 패널(RequireJS) 등에 의해 컨테이너/페이지네이션이 동적으로 로드된 경우 무한 스크롤 지연 활성화
+      if (
+        !this.infiniteScroll &&
+        this.adapter?.supportsInfiniteScroll &&
+        !this.adapter.isDetailPage?.() &&
+        this.adapter.getPaginationElement?.(document) &&
+        this.adapter.getCardListContainer?.(document)
+      ) {
+        this.setupInfiniteScroll();
+      }
       this.infiniteScroll?.checkAndAutoRefill(visibleCount);
     }
   }
@@ -411,25 +506,35 @@ export class ContentController {
   private async attachJobplanetRating(cardInfo: JobCardInfo): Promise<void> {
     if (!this.adapter || !cardInfo.cardElement || !cardInfo.companyName) return;
 
-    // 이미 주입되었거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
+    // 카드의 대상 회사가 변경된 경우 캐시 플래그 초기화 (가상 스크롤 / 카드 재활용 대응)
+    const currentComp = cardInfo.cardElement.getAttribute('data-rating-company');
+    if (currentComp !== cardInfo.companyName) {
+      cardInfo.cardElement.setAttribute('data-rating-company', cardInfo.companyName);
+      cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
+      cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
+    }
+
+    // 이미 주입되어 있거나 이미 비동기 요청이 진행 중/완료된 경우 중복 요청 방지
     if (
       cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`) ||
+      cardInfo.cardElement.getAttribute('data-jp-rating-in-flight') === 'true' ||
       cardInfo.cardElement.getAttribute('data-jp-rating-requested') === 'true'
     ) {
       return;
     }
 
-    cardInfo.cardElement.setAttribute('data-jp-rating-requested', 'true');
+    cardInfo.cardElement.setAttribute('data-jp-rating-in-flight', 'true');
 
     try {
       const response = await this.requestJobplanetRating(cardInfo.companyName);
       if (response && response.status === 'found') {
         this.adapter.injectRatingBadge(cardInfo, response);
-      } else if (!response || response.status === 'error') {
-        cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
       }
     } catch {
-      cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
+      // 에러 발생 시 무시
+    } finally {
+      cardInfo.cardElement.removeAttribute('data-jp-rating-in-flight');
+      cardInfo.cardElement.setAttribute('data-jp-rating-requested', 'true');
     }
   }
 
@@ -458,25 +563,34 @@ export class ContentController {
   private async attachBlindRating(cardInfo: JobCardInfo): Promise<void> {
     if (!this.adapter || !cardInfo.cardElement || !cardInfo.companyName) return;
 
-    // 이미 주입되었거나 이미 비동기 요청이 진행 중인 경우 중복 요청 방지
+    const currentComp = cardInfo.cardElement.getAttribute('data-rating-company');
+    if (currentComp !== cardInfo.companyName) {
+      cardInfo.cardElement.setAttribute('data-rating-company', cardInfo.companyName);
+      cardInfo.cardElement.removeAttribute('data-jp-rating-requested');
+      cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
+    }
+
+    // 이미 주입되어 있거나 이미 비동기 요청이 진행 중/완료된 경우 중복 요청 방지
     if (
       cardInfo.cardElement.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`) ||
+      cardInfo.cardElement.getAttribute('data-blind-rating-in-flight') === 'true' ||
       cardInfo.cardElement.getAttribute('data-blind-rating-requested') === 'true'
     ) {
       return;
     }
 
-    cardInfo.cardElement.setAttribute('data-blind-rating-requested', 'true');
+    cardInfo.cardElement.setAttribute('data-blind-rating-in-flight', 'true');
 
     try {
       const response = await this.requestBlindRating(cardInfo.companyName);
       if (response && response.status === 'found') {
         this.adapter.injectRatingBadge(cardInfo, response);
-      } else if (!response || response.status === 'error') {
-        cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
       }
     } catch {
-      cardInfo.cardElement.removeAttribute('data-blind-rating-requested');
+      // 에러 발생 시 무시
+    } finally {
+      cardInfo.cardElement.removeAttribute('data-blind-rating-in-flight');
+      cardInfo.cardElement.setAttribute('data-blind-rating-requested', 'true');
     }
   }
 
@@ -522,5 +636,8 @@ export class ContentController {
 // 스크립트 실행 (단위 테스트 환경에서는 자동 실행 방지)
 if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
   const controller = new ContentController();
-  controller.init();
+  // 초기화 실패가 unhandled rejection 으로 남지 않도록 반드시 catch 한다
+  controller.init().catch((err) => {
+    console.error('[JobFilter] 초기화 실패:', err);
+  });
 }

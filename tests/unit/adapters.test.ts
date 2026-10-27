@@ -504,6 +504,173 @@ describe('Site Adapters 단위 테스트', () => {
       expect(companyEl?.nextElementSibling).toBe(ratingWrap);
       expect(ratingWrap?.textContent).toContain('4.3');
     });
+
+    it('원티드 채용 목록 실 브라우저 픽스처(wanted_wdlist.html)의 카드에서 getRatingBadgeAnchorElement가 회사명을 정확히 반환하고 평점 뱃지가 옆에 주입되어야 한다', () => {
+      const fixturePath = path.resolve(__dirname, '../fixtures/wanted_wdlist.html');
+      const fixtureHtml = fs.readFileSync(fixturePath, 'utf-8');
+      const container = document.createElement('div');
+      container.innerHTML = fixtureHtml;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBeGreaterThan(0);
+
+      const firstCard = cards[0];
+      const cardInfo = adapter.parseCard(firstCard)!;
+      expect(cardInfo).not.toBeNull();
+      expect(cardInfo.companyName).toBe('매드업');
+
+      const anchorEl = adapter.getRatingBadgeAnchorElement(firstCard);
+      expect(anchorEl).not.toBeNull();
+      expect(anchorEl?.textContent?.trim()).toBe('매드업');
+
+      // 평점 뱃지 주입
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        companyName: '매드업',
+        rating: 3.2,
+        status: 'found',
+        companyId: '198924',
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'blind',
+        companyName: '매드업',
+        rating: 3.3,
+        status: 'found',
+        companyUrl: 'https://www.teamblind.com/kr/company/%EB%A7%A4%EB%93%9C%EC%97%85',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = firstCard.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(wrap).not.toBeNull();
+      expect(anchorEl?.nextElementSibling).toBe(wrap);
+
+      const jpBadge = wrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`);
+      const blindBadge = wrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`);
+      expect(jpBadge).not.toBeNull();
+      expect(blindBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('3.2');
+      expect(blindBadge?.textContent).toContain('3.3');
+
+      // 뱃지 주입 후에도 getCompanyElement가 순수 회사명을 유지해야 함
+      const recheckedCompanyEl = adapter.getCompanyElement(firstCard);
+      expect(recheckedCompanyEl?.textContent?.trim()).toBe('매드업');
+    });
+
+    it('원티드 MiniJobCard에 평점 뱃지 주입 후에도 getCompanyElement와 getRatingBadgeAnchorElement가 실제 회사명 요소를 일관되게 반환해야 한다', () => {
+      const miniCard = document.createElement('a');
+      miniCard.className = 'MiniJobCard_MiniJobCard__E1SH1';
+      miniCard.href = '/wd/366201';
+      miniCard.innerHTML = `
+        <div class="MiniJobCard_MiniJobCard__image__q80aY">
+          <img src="test.png" alt="가상자산거래소 PM" />
+        </div>
+        <header>
+          <span class="MiniJobCard_MiniJobCard__positionTitle__jay_D montage-isl78f">가상자산거래소 PM (Product Manager)</span>
+          <span class="montage-29ldoy">디지털엑스</span>
+          <span class="montage-29ldoy">서울 강남구 · 경력 5-11년</span>
+        </header>
+      `;
+
+      const cardInfo = adapter.parseCard(miniCard)!;
+      expect(cardInfo).not.toBeNull();
+      expect(cardInfo.companyName).toBe('디지털엑스');
+
+      const anchorEl = adapter.getRatingBadgeAnchorElement(miniCard);
+      expect(anchorEl).not.toBeNull();
+      expect(anchorEl?.textContent?.trim()).toBe('디지털엑스');
+
+      // 뱃지 주입
+      adapter.injectRatingBadge(cardInfo, {
+        platform: 'jobplanet',
+        companyName: '디지털엑스',
+        rating: 4.2,
+        status: 'found',
+        companyId: '21',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = miniCard.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(wrap).not.toBeNull();
+      expect(anchorEl?.nextElementSibling).toBe(wrap);
+
+      // 재조회 시에도 anchor 및 companyEl이 wrap이 아닌 회사명 요소를 반환하는지 확인
+      expect(adapter.getCompanyElement(miniCard)?.textContent?.trim()).toBe('디지털엑스');
+      expect(adapter.getRatingBadgeAnchorElement(miniCard)?.textContent?.trim()).toBe('디지털엑스');
+    });
+
+    it('원티드 상세 페이지 URL 판별(isDetailPage)이 올바르게 동작해야 한다', () => {
+      expect(adapter.isDetailPage('https://www.wanted.co.kr/wd/326613')).toBe(true);
+      expect(adapter.isDetailPage('https://www.wanted.co.kr/wd/12345?query=frontend')).toBe(true);
+      expect(adapter.isDetailPage('https://www.wanted.co.kr/wdlist/518/872')).toBe(false);
+      expect(adapter.isDetailPage('https://www.wanted.co.kr/')).toBe(false);
+    });
+
+    it('원티드 실제 상세 페이지 픽스처(wanted_detail_326613.html)에서 헤더 파싱 및 회사명 옆 평점 뱃지 앵커링이 정확해야 한다', () => {
+      const fixturePath = path.resolve(__dirname, '../fixtures/wanted_detail_326613.html');
+      const fixtureHtml = fs.readFileSync(fixturePath, 'utf-8');
+      const container = document.createElement('div');
+      container.innerHTML = fixtureHtml;
+
+      // 1. 상세 페이지 헤더를 카드로 수집해야 함
+      const cards = adapter.getJobCardElements(container);
+      const detailHeader = cards.find((c) => c.tagName.toUpperCase() === 'HEADER');
+      expect(detailHeader).toBeDefined();
+
+      // 2. 카드 파싱 정보 검증
+      const info = adapter.parseCard(detailHeader!);
+      expect(info).not.toBeNull();
+      expect(info?.companyName).toBe('와탭랩스(WhaTapLabs)');
+      expect(info?.title).toBe('Kubernetes 에이전트 개발자 (GPU/AI Observability)');
+      expect(info?.jobId).toBe('326613');
+
+      // 3. 회사명 앵커 요소 추출 검증 (점 기호 `∙` 대신 실제 <a> 회사 링크 태그여야 함)
+      const companyEl = adapter.getCompanyElement(detailHeader!);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.tagName.toUpperCase()).toBe('A');
+      expect(companyEl?.textContent?.trim()).toBe('와탭랩스(WhaTapLabs)');
+
+      // 4. 평점 뱃지 주입 검증 (회사명 <a> 바로 다음, 가운데 점 `∙` 앞)
+      adapter.injectRatingBadge(info!, {
+        platform: 'jobplanet',
+        companyName: '와탭랩스',
+        rating: 3.8,
+        status: 'found',
+        companyId: '311253',
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(info!, {
+        platform: 'blind',
+        companyName: '와탭랩스',
+        rating: 3.5,
+        status: 'found',
+        companyUrl: 'https://www.teamblind.com/kr/company/%EC%99%80%ED%83%AD%EB%9E%A9%EC%8A%A4',
+        cachedAt: Date.now(),
+      });
+
+      const ratingWrap = detailHeader!.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.WRAP}`);
+      expect(ratingWrap).not.toBeNull();
+      expect(companyEl?.nextElementSibling).toBe(ratingWrap);
+
+      const jpBadge = ratingWrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.JOBPLANET}`);
+      expect(jpBadge).not.toBeNull();
+      expect(jpBadge?.textContent).toContain('3.8');
+
+      const blindBadge = ratingWrap?.querySelector(`.${RATING_BADGE_CONFIG.CLASSES.BLIND}`);
+      expect(blindBadge).not.toBeNull();
+      expect(blindBadge?.textContent).toContain('3.5');
+
+      // 5. 인라인 [공고숨김 / 회사차단] 버튼 주입 검증 (상세 전용 클래스 확인)
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+      adapter.injectInlineButton(info!, { onBlockCompany, onBlockJob });
+
+      const btnGroup = detailHeader!.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+      expect(btnGroup?.classList.contains('job-filter-btn-group-detail')).toBe(true);
+    });
   });
 
   describe('SaraminAdapter DOM 파싱', () => {
@@ -954,6 +1121,106 @@ describe('Site Adapters 단위 테스트', () => {
       expect(normalJob?.style.display).not.toBe('none');
     });
 
+    it('사람인 hidePromotionBanners는 스폰서 상품 배너(.wrap_list_banner, .list_product), Nest 배너(.wrap_nest), 네이버 파워링크(#powerLink)를 일괄 숨김 처리해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="wrap_list_banner">
+          <ul class="list_product list_grand">
+            <li class="item">그랜드 공고</li>
+          </ul>
+        </div>
+        <div class="wrap_nest">Nest Ad Banner</div>
+        <div id="powerLink">Naver PowerLink</div>
+        <div class="recruit_line_banner">Line Banner</div>
+        <div id="default_list_wrap">
+          <div class="list_body">
+            <div class="list_item">일반 공고 1</div>
+          </div>
+        </div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBe(4);
+
+      const listBanner = container.querySelector<HTMLElement>('.wrap_list_banner');
+      const nestBanner = container.querySelector<HTMLElement>('.wrap_nest');
+      const powerLink = container.querySelector<HTMLElement>('#powerLink');
+      const lineBanner = container.querySelector<HTMLElement>('.recruit_line_banner');
+      const normalItem = container.querySelector<HTMLElement>('.list_item');
+
+      expect(listBanner?.style.display).toBe('none');
+      expect(nestBanner?.style.display).toBe('none');
+      expect(powerLink?.style.display).toBe('none');
+      expect(lineBanner?.style.display).toBe('none');
+      expect(normalItem?.style.display).not.toBe('none');
+    });
+
+    it('사람인 메인 홈의 주요채용 및 유료 광고 상품 섹션(section#section_banner.main_product: 회원/곽현기님이 꼭 봐야 할 공고, 플래티넘, 프라임, 상품안내 등)을 hidePromotionBanners로 일괄 완전 숨김 처리하고 restorePromotionBanners로 복원할 수 있어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <section id="section_banner" class="main_product">
+          <div class="cont_product prd_platinum">
+            <div class="inner_cont">
+              <div class="top_poduct">
+                <strong class="tit_cont" id="product_platinum">곽현기님이 꼭 봐야 할 공고 (플래티넘)</strong>
+                <button class="btn_product" data-banner="platinum" aria-label="플래티넘 상품 안내">
+                  <span>상품안내</span>
+                </button>
+              </div>
+              <ul class="prd_list plus" id="_platinumPlus">
+                <li class="expanded" data-rec_idx="55389676">
+                  <span class="c_name">(주)지에스네트웍스</span>
+                  <span class="title">신입사원 공채</span>
+                </li>
+                <li class="option" data-rec_idx="55076829">
+                  <span class="c_name">(주)세스코</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="cont_product prd_prime">
+            <div class="inner_cont">
+              <div class="top_poduct">
+                <strong class="tit_cont" id="product_prime">최고의 인기 공고 (프라임)</strong>
+                <button class="btn_product" data-banner="prime" aria-label="프라임 상품안내">
+                  <span>상품안내</span>
+                </button>
+              </div>
+              <ul class="prd_list" id="_prime"></ul>
+            </div>
+          </div>
+        </section>
+        <div id="recruit_info_list">
+          <div class="content_wrap">
+            <div class="item_recruit">
+              <div class="area_corp"><span class="corp_name"><a href="#">일반기업</a></span></div>
+              <div class="area_job"><h2 class="job_tit"><a href="#">일반공고</a></h2></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBeGreaterThanOrEqual(1);
+
+      const sectionBanner = container.querySelector<HTMLElement>('#section_banner');
+      const normalJob = container.querySelector<HTMLElement>('.item_recruit');
+
+      // 최상위 광고 섹션(#section_banner)이 숨김 처리되어야 함
+      expect(sectionBanner?.style.display).toBe('none');
+      expect(sectionBanner?.getAttribute('data-job-filtered')).toBe('true');
+      expect(sectionBanner?.getAttribute('data-blocked-type')).toBe('ad');
+
+      // 일반 공고는 영향받지 않아야 함
+      expect(normalJob?.style.display).not.toBe('none');
+
+      // restorePromotionBanners 호출 시 정상 복원되어야 함
+      adapter.restorePromotionBanners(container);
+      expect(sectionBanner?.style.display).toBe('');
+      expect(sectionBanner?.getAttribute('data-job-filtered')).toBeNull();
+      expect(sectionBanner?.getAttribute('data-blocked-type')).toBeNull();
+    });
+
     it('사람인 지역별/직무별 목록(/zf_user/jobs/list/domestic)의 그랜드/프리미엄 채용공고(.list_product .item)를 파싱하고 차단 툴바 및 평점 뱃지를 주입해야 한다', () => {
       const container = document.createElement('div');
       container.innerHTML = `
@@ -1082,6 +1349,38 @@ describe('Site Adapters 단위 테스트', () => {
       expect(listContainer?.classList.contains('list_body')).toBe(true);
     });
 
+    it('사람인 getCardListContainer는 상위 래퍼(#default_list_wrap)가 매칭되더라도 내부의 .list_body를 우선 반환해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div id="default_list_wrap">
+          <div class="common_recruilt_list">
+            <div class="list_body">
+              <div class="list_item">공고 1</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const listContainer = adapter.getCardListContainer(container);
+      expect(listContainer).not.toBeNull();
+      expect(listContainer?.classList.contains('list_body')).toBe(true);
+    });
+
+    it('사람인 getCardListContainer는 컨테이너 셀렉터 미매칭 시에도 firstCard.closest(.list_body)를 우선 반환해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="custom_unknown_wrap">
+          <div class="list_body">
+            <div class="list_item">공고 1</div>
+          </div>
+        </div>
+      `;
+
+      const listContainer = adapter.getCardListContainer(container);
+      expect(listContainer).not.toBeNull();
+      expect(listContainer?.classList.contains('list_body')).toBe(true);
+    });
+
     it('사람인 지역별/직무별 목록 페이지의 PageBox 버튼 페이징 및 onclick URL을 getNextPageUrl에서 올바르게 추출해야 한다', () => {
       const doc = document.createElement('div');
       doc.innerHTML = `
@@ -1093,7 +1392,38 @@ describe('Site Adapters 단위 테스트', () => {
       `;
 
       const nextUrl = adapter.getNextPageUrl(doc, 1);
-      expect(nextUrl).toBe('/zf_user/jobs/list/domestic?page=2&loc_mcd=101000');
+      expect(nextUrl).toContain('/zf_user/jobs/list/domestic?page=2&loc_mcd=101000');
+    });
+
+    it('사람인 직업별(job-category) 목록에서 onclick 내 &amp; 엔티티 및 #searchTitle 해시가 포함되어 있어도 깔끔하게 정규화된 다음 URL을 반환해야 한다', () => {
+      const doc = document.createElement('div');
+      doc.innerHTML = `
+        <div class="PageBox">
+          <span class="BtnType SizeS active">1</span>
+          <button class="BtnType SizeS" page="2" onclick="location.href='/zf_user/jobs/list/job-category?page=2&amp;cat_mcls=2&amp;isAjaxRequest=0&amp;page_count=50&amp;sort=RL&amp;type=job-category&amp;is_param=1#searchTitle'">2</button>
+        </div>
+      `;
+
+      const nextUrl = adapter.getNextPageUrl(doc, 1);
+      expect(nextUrl).not.toBeNull();
+      expect(nextUrl).toContain('/zf_user/jobs/list/job-category?page=2&cat_mcls=2');
+      expect(nextUrl).not.toContain('&amp;');
+      expect(nextUrl).not.toContain('#searchTitle');
+    });
+
+    it('사람인 페이징 10페이지 초과 시 .BtnNext(다음) 버튼의 onclick URL을 정상 추출해야 한다', () => {
+      const doc = document.createElement('div');
+      doc.innerHTML = `
+        <div class="PageBox">
+          <button class="BtnType SizeS" page="10">10</button>
+          <button class="BtnType SizeS BtnNext" onclick="location.href='/zf_user/jobs/list/job-category?page=11&cat_mcls=2#searchTitle'">다음</button>
+        </div>
+      `;
+
+      const nextUrl = adapter.getNextPageUrl(doc, 10);
+      expect(nextUrl).not.toBeNull();
+      expect(nextUrl).toContain('/zf_user/jobs/list/job-category?page=11&cat_mcls=2');
+      expect(nextUrl).not.toContain('#searchTitle');
     });
   });
 
@@ -1503,6 +1833,486 @@ describe('Site Adapters 단위 테스트', () => {
       expect(normalList?.style.display).not.toBe('none');
     });
 
+    it('잡코리아 메인 페이지의 4대 광고 섹션(나에게 꼭 맞는 공고, 주목할 만한 JOB, 놓치면 아쉬운 JOB, 지원자가 몰리는 JOB)을 hidePromotionBanners로 완전 숨김 처리하고 restorePromotionBanners로 복원할 수 있어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <!-- 1. 나에게 꼭 맞는 공고 (CPC_SMARTFIT_HOME_PC) -->
+        <div data-animation-section="true" data-render-type="GRID_CARD_DEFAULT" data-section-alias="CPC_SMARTFIT_HOME_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>나에게 꼭 맞는 공고 <span class="badge">AD</span></h2>
+            </div>
+            <div class="cards">공고 카드 목록</div>
+          </div>
+        </div>
+
+        <!-- 2. 주목할 만한 JOB (CPT_FIRSTVVIP_PC) -->
+        <div data-animation-section="true" data-render-type="GRID_CARD_SEPERATED" data-section-alias="CPT_FIRSTVVIP_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>주목할 만한 JOB <span class="badge">AD</span></h2>
+              <a href="/service/company/option">상품안내 &gt;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 놓치면 아쉬운 JOB (CPT_VIP_PC) -->
+        <div data-animation-section="true" data-render-type="GRID_CARD_THUMBNAIL" data-section-alias="CPT_VIP_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>놓치면 아쉬운 JOB <span class="badge">AD</span></h2>
+              <a href="/service/company/option">상품안내 &gt;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 지원자가 몰리는 JOB (CPT_EXCELLENT_PC) -->
+        <div data-animation-section="true" data-render-type="GRID_CARD_LOGO" data-section-alias="CPT_EXCELLENT_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>지원자가 몰리는 JOB <span class="badge">AD</span></h2>
+              <a href="/service/company/option">상품안내 &gt;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. 일반 섹션 (AI 추천 인사이트 등 - 숨겨지지 않아야 함) -->
+        <div data-animation-section="true" data-section-alias="AI_INSIGHT_PC">
+          <div class="flex w-full justify-center pb-[48px]">
+            <h2>AI 매칭 인사이트</h2>
+          </div>
+        </div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBe(4);
+
+      const sec1 = container.querySelector<HTMLElement>('[data-section-alias="CPC_SMARTFIT_HOME_PC"]');
+      const sec2 = container.querySelector<HTMLElement>('[data-section-alias="CPT_FIRSTVVIP_PC"]');
+      const sec3 = container.querySelector<HTMLElement>('[data-section-alias="CPT_VIP_PC"]');
+      const sec4 = container.querySelector<HTMLElement>('[data-section-alias="CPT_EXCELLENT_PC"]');
+      const normalSec = container.querySelector<HTMLElement>('[data-section-alias="AI_INSIGHT_PC"]');
+
+      expect(sec1?.style.display).toBe('none');
+      expect(sec1?.getAttribute('data-job-filtered')).toBe('true');
+      expect(sec1?.getAttribute('data-blocked-type')).toBe('ad');
+
+      expect(sec2?.style.display).toBe('none');
+      expect(sec2?.getAttribute('data-job-filtered')).toBe('true');
+
+      expect(sec3?.style.display).toBe('none');
+      expect(sec3?.getAttribute('data-job-filtered')).toBe('true');
+
+      expect(sec4?.style.display).toBe('none');
+      expect(sec4?.getAttribute('data-job-filtered')).toBe('true');
+
+      // 일반 섹션은 숨김 대상이 아님
+      expect(normalSec?.style.display).not.toBe('none');
+      expect(normalSec?.getAttribute('data-job-filtered')).toBeNull();
+
+      // restorePromotionBanners 호출 시 복원 검증
+      adapter.restorePromotionBanners(container);
+      expect(sec1?.style.display).toBe('');
+      expect(sec1?.getAttribute('data-job-filtered')).toBeNull();
+      expect(sec2?.style.display).toBe('');
+      expect(sec3?.style.display).toBe('');
+      expect(sec4?.style.display).toBe('');
+    });
+
+    it('잡코리아 메인 페이지 광고 섹션이 data-section-alias가 없는 동적 DOM 환경이어도 제목 텍스트로 폴백 탐색하여 숨김 처리해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="main-custom-section">
+          <div class="flex w-full justify-center pb-[48px]">
+            <div data-sentry-component="TitlePC">
+              <h2>주목할만한 JOB</h2>
+            </div>
+            <div class="card-list">광고 카드들</div>
+          </div>
+        </div>
+        <div class="main-custom-section-2">
+          <section>
+            <h2>지원자가 몰리는 JOB</h2>
+            <div class="card-list">광고 카드들</div>
+          </section>
+        </div>
+      `;
+
+      const hiddenCount = adapter.hidePromotionBanners(container);
+      expect(hiddenCount).toBe(2);
+
+      const sec1 = container.querySelector<HTMLElement>('.main-custom-section');
+      const sec2 = container.querySelector<HTMLElement>('.main-custom-section-2');
+
+      expect(sec1?.style.display).toBe('none');
+      expect(sec1?.getAttribute('data-job-filtered')).toBe('true');
+      expect(sec2?.style.display).toBe('none');
+      expect(sec2?.getAttribute('data-job-filtered')).toBe('true');
+    });
+
+    it('잡코리아 메인 페이지의 큐레이션 및 추천 공고 카드(CardJobBasic)를 정확히 수집·파싱하고 인라인 툴바와 기업 평점 뱃지가 주입되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="grid grid-col-4 gap-[20px]">
+          <!-- 큐레이션 JOB 카드 1 -->
+          <div>
+            <div data-component-type="CARD_JOB_BASIC" class="relative h-full w-full min-w-[305px]" data-sentry-component="CardJobBasic">
+              <a href="/Recruit/GI_Read/50117195?sc=729&amp;traceId=abc&amp;sn=103" rel="noopener noreferrer" target="_blank" data-sentry-element="BaseAnchor">
+                <div class="h-full rounded-[10px] border-[#e6e8ea] border-[1px] bg-[#ffffff] p-[16px]">
+                  <div class="flex h-full flex-col justify-between gap-0">
+                    <div class="flex flex-col gap-[2px]">
+                      <div class="flex justify-between">
+                        <span class="w-full min-w-0 font-semibold text-[#1a1a1e] text-[17px] leading-[25px]">
+                          [NHN Cloud] 프레임워크 개발
+                        </span>
+                        <div style="width:32px;height:32px"></div>
+                      </div>
+                      <div class="flex items-center gap-[8px] overflow-hidden">
+                        <span style="flex-shrink:1" class="truncate font-normal text-[#1a1a1e] text-[15px] leading-[22px]">
+                          엔에이치엔클라우드(주)
+                        </span>
+                        <span style="flex-shrink:0" class="font-semibold text-[#f37676] text-[11px] leading-[15px]">
+                          D-4
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex gap-[4px]">
+                      <div class="tag"><span class="text-[11px] font-semibold">경력 5년↑</span></div>
+                    </div>
+                  </div>
+                </div>
+              </a>
+              <div style="position:absolute;top:16px;right:16px">
+                <button type="button" class="button-scrap flex items-center">
+                  <i class="icon icon--system-scrap"></i>
+                  <span class="sr-only">스크랩</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 지원자가 많아요 카드 2 -->
+          <div>
+            <div data-component-type="CARD_JOB_BASIC" class="relative h-full w-full min-w-[305px]" data-sentry-component="CardJobBasic">
+              <a href="/Recruit/GI_Read/50185207?sc=729" target="_blank">
+                <div class="h-full">
+                  <div class="flex flex-col">
+                    <div class="flex justify-between">
+                      <span class="font-semibold text-[17px]">
+                        수도권 / SI,SM 프로젝트 인력 구함
+                      </span>
+                    </div>
+                    <div class="flex items-center overflow-hidden">
+                      <span class="truncate font-normal">
+                        (주)아이티크리스탈
+                      </span>
+                      <span>D-23</span>
+                    </div>
+                  </div>
+                </div>
+              </a>
+              <div style="position:absolute;top:16px;right:16px">
+                <button type="button" class="button-scrap"><span class="sr-only">스크랩</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 1. 공고 카드 수집 검증
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(2);
+
+      // 2. 첫 번째 카드 파싱 검증
+      const firstCard = cards[0];
+      const firstInfo = adapter.parseCard(firstCard);
+      expect(firstInfo).not.toBeNull();
+      expect(firstInfo?.companyName).toBe('엔에이치엔클라우드(주)');
+      expect(firstInfo?.title).toBe('[NHN Cloud] 프레임워크 개발');
+      expect(firstInfo?.jobId).toBe('50117195');
+      expect(firstInfo?.closingDate).toBe('D-4');
+      expect(firstInfo?.isAd).toBe(false);
+
+      // 3. 두 번째 카드 파싱 검증
+      const secondCard = cards[1];
+      const secondInfo = adapter.parseCard(secondCard);
+      expect(secondInfo).not.toBeNull();
+      expect(secondInfo?.companyName).toBe('(주)아이티크리스탈');
+      expect(secondInfo?.title).toBe('수도권 / SI,SM 프로젝트 인력 구함');
+      expect(secondInfo?.jobId).toBe('50185207');
+      expect(secondInfo?.closingDate).toBe('D-23');
+
+      // 4. 회사명 및 뱃지 앵커 요소 검증
+      const companyEl = adapter.getCompanyElement(firstCard);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent?.trim()).toBe('엔에이치엔클라우드(주)');
+
+      const anchorEl = adapter.getRatingBadgeAnchorElement(firstCard);
+      expect(anchorEl).not.toBeNull();
+      expect(anchorEl).toBe(companyEl);
+
+      // 5. 잡플래닛 및 블라인드 평점 뱃지 주입 검증
+      adapter.injectRatingBadge(firstInfo!, {
+        platform: 'jobplanet',
+        companyName: '엔에이치엔클라우드(주)',
+        rating: 3.7,
+        companyId: '12345',
+        reviewCount: 88,
+        status: 'found',
+        cachedAt: Date.now(),
+      });
+
+      adapter.injectRatingBadge(firstInfo!, {
+        platform: 'blind',
+        companyName: '엔에이치엔클라우드(주)',
+        rating: 4.0,
+        reviewCount: 42,
+        status: 'found',
+        cachedAt: Date.now(),
+      });
+
+      const wrap = firstCard.querySelector('.job-filter-ratings-wrap');
+      expect(wrap).not.toBeNull();
+      expect(wrap?.querySelector('.job-filter-rating-jobplanet')).not.toBeNull();
+      expect(wrap?.querySelector('.job-filter-rating-blind')).not.toBeNull();
+      expect(wrap?.textContent).toContain('3.7');
+      expect(wrap?.textContent).toContain('4.0');
+
+      // 6. 인라인 툴바([공고숨김] / [회사차단]) 주입 검증
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(firstInfo!, { onBlockCompany, onBlockJob });
+
+      const btnGroup = firstCard.querySelector('.job-filter-btn-group');
+      expect(btnGroup).not.toBeNull();
+
+      const hideJobBtn = firstCard.querySelector<HTMLButtonElement>('.job-filter-btn-job');
+      const blockCompanyBtn = firstCard.querySelector<HTMLButtonElement>('.job-filter-btn-company');
+
+      expect(hideJobBtn).not.toBeNull();
+      expect(blockCompanyBtn).not.toBeNull();
+      expect(blockCompanyBtn?.title).toContain('엔에이치엔클라우드(주)');
+
+      hideJobBtn?.click();
+      expect(onBlockJob).toHaveBeenCalledWith(firstInfo);
+
+      blockCompanyBtn?.click();
+      expect(onBlockCompany).toHaveBeenCalledWith('엔에이치엔클라우드(주)');
+    });
+
+    it('잡코리아 메인 캐러셀에서 공고 숨김 시 부모 그리드 셀이 함께 숨겨지고 다음 슬라이드의 카드가 당겨져 빈자리 없이 재정렬되어야 한다 (Cross-Slide Reflow)', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div data-slot="carousel" data-sentry-element="Carousel">
+          <div data-slot="carousel-content" data-sentry-component="CarouselContent">
+            <!-- 슬라이드 0 -->
+            <div data-slot="carousel-item" data-sentry-component="CarouselItem">
+              <div class="grid grid-col-4 gap-[20px]">
+                <div class="cell-s0-0">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사0</span>
+                    <div class="flex justify-between"><span>공고0</span></div>
+                  </div>
+                </div>
+                <div class="cell-s0-1">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">차단대상회사</span>
+                    <div class="flex justify-between"><span>숨길공고1</span></div>
+                  </div>
+                </div>
+                <div class="cell-s0-2">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사2</span>
+                    <div class="flex justify-between"><span>공고2</span></div>
+                  </div>
+                </div>
+                <div class="cell-s0-3">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사3</span>
+                    <div class="flex justify-between"><span>공고3</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 슬라이드 1 -->
+            <div data-slot="carousel-item" data-sentry-component="CarouselItem">
+              <div class="grid grid-col-4 gap-[20px]">
+                <div class="cell-s1-0">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사4</span>
+                    <div class="flex justify-between"><span>공고4</span></div>
+                  </div>
+                </div>
+                <div class="cell-s1-1">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사5</span>
+                    <div class="flex justify-between"><span>공고5</span></div>
+                  </div>
+                </div>
+                <div class="cell-s1-2">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사6</span>
+                    <div class="flex justify-between"><span>공고6</span></div>
+                  </div>
+                </div>
+                <div class="cell-s1-3">
+                  <div data-component-type="CARD_JOB_BASIC" data-sentry-component="CardJobBasic">
+                    <span class="truncate">회사7</span>
+                    <div class="flex justify-between"><span>공고7</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(8);
+
+      const targetCard = cards[1]; // cell-s0-1 내의 카드
+      const targetCell = adapter.getParentGridCell(targetCard);
+      expect(targetCell).not.toBeNull();
+      expect(targetCell?.classList.contains('cell-s0-1')).toBe(true);
+
+      // 1. 카드 및 부모 셀 숨김 처리
+      adapter.hideCardAndParentCell(targetCard, 'job');
+      expect(targetCard.style.display).toBe('none');
+      expect(targetCard.getAttribute('data-job-filtered')).toBe('true');
+      expect(targetCell?.style.display).toBe('none');
+      expect(targetCell?.getAttribute('data-job-filtered')).toBe('true');
+
+      // 2. 캐러셀 슬라이드 재정렬 실행
+      adapter.reflow(container);
+
+      const slides = container.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]');
+      const grid0 = slides[0].querySelector<HTMLElement>('.grid');
+      const grid1 = slides[1].querySelector<HTMLElement>('.grid');
+
+      // 슬라이드 0의 활성(보이는) 셀은 4개로 유지되어야 함 (슬라이드 1의 첫 카드가 당겨옴)
+      const activeInSlide0 = Array.from(grid0?.children || []).filter(
+        (cell) => (cell as HTMLElement).style.display !== 'none'
+      );
+      expect(activeInSlide0.length).toBe(4);
+
+      // 당겨온 마지막 카드가 슬라이드 1의 첫 카드(cell-s1-0)여야 함
+      expect(activeInSlide0[3].classList.contains('cell-s1-0')).toBe(true);
+      expect(activeInSlide0[3].textContent).toContain('회사4');
+
+      // 슬라이드 1에는 3개의 카드가 남아있어야 함
+      const activeInSlide1 = Array.from(grid1?.children || []).filter(
+        (cell) => (cell as HTMLElement).style.display !== 'none'
+      );
+      expect(activeInSlide1.length).toBe(3);
+    });
+
+    it('잡코리아 메인 캐러셀에서 슬라이드의 모든 카드가 앞 슬라이드로 당겨지면 빈 슬라이드는 자동으로 display: none 처리되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div data-slot="carousel" data-sentry-element="Carousel">
+          <div data-slot="carousel-content">
+            <!-- 슬라이드 0 (카드가 2개 숨겨짐) -->
+            <div data-slot="carousel-item">
+              <div class="grid grid-col-4">
+                <div class="cell-s0-0"><div data-component-type="CARD_JOB_BASIC"><span>A</span></div></div>
+                <div class="cell-s0-1" style="display:none" data-job-filtered="true"><div data-component-type="CARD_JOB_BASIC"><span>B</span></div></div>
+                <div class="cell-s0-2" style="display:none" data-job-filtered="true"><div data-component-type="CARD_JOB_BASIC"><span>C</span></div></div>
+                <div class="cell-s0-3"><div data-component-type="CARD_JOB_BASIC"><span>D</span></div></div>
+              </div>
+            </div>
+            <!-- 슬라이드 1 (원래 2개만 있던 마지막 슬라이드) -->
+            <div data-slot="carousel-item">
+              <div class="grid grid-col-4">
+                <div class="cell-s1-0"><div data-component-type="CARD_JOB_BASIC"><span>E</span></div></div>
+                <div class="cell-s1-1"><div data-component-type="CARD_JOB_BASIC"><span>F</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      adapter.reflow(container);
+
+      const slides = container.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]');
+      const grid0 = slides[0].querySelector<HTMLElement>('.grid');
+
+      // 슬라이드 0에 E, F가 당겨와 활성 카드가 총 4개가 됨
+      const activeInSlide0 = Array.from(grid0?.children || []).filter(
+        (cell) => (cell as HTMLElement).style.display !== 'none'
+      );
+      expect(activeInSlide0.length).toBe(4);
+
+      // 슬라이드 1은 이제 활성 카드가 0개이므로 display: none 처리됨
+      expect(slides[1].style.display).toBe('none');
+      expect(slides[1].getAttribute('data-job-filtered')).toBe('true');
+    });
+
+    it('잡코리아 CardJobBasic 카드에서 인라인 [이 공고 숨기기] 및 [회사 차단] 클릭 시 즉시 부모 셀 숨김 및 reflow가 트리거되어야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div data-slot="carousel" data-sentry-element="Carousel">
+          <div data-slot="carousel-content">
+            <div data-slot="carousel-item">
+              <div class="grid grid-col-4">
+                <div class="cell-0">
+                  <div data-component-type="CARD_JOB_BASIC">
+                    <span class="truncate">카카오페이</span>
+                    <div class="flex justify-between"><span>iOS 개발자</span></div>
+                  </div>
+                </div>
+                <div class="cell-1">
+                  <div data-component-type="CARD_JOB_BASIC">
+                    <span class="truncate">네이버</span>
+                    <div class="flex justify-between"><span>백엔드 개발자</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div data-slot="carousel-item">
+              <div class="grid grid-col-4">
+                <div class="cell-2">
+                  <div data-component-type="CARD_JOB_BASIC">
+                    <span class="truncate">라인</span>
+                    <div class="flex justify-between"><span>서버 엔지니어</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      const cardInfo = adapter.parseCard(cards[0]);
+      expect(cardInfo).not.toBeNull();
+
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+
+      adapter.injectInlineButton(cardInfo!, { onBlockCompany, onBlockJob });
+
+      const cell0 = container.querySelector<HTMLElement>('.cell-0');
+      const hideJobBtn = cards[0].querySelector<HTMLButtonElement>('.job-filter-btn-job');
+      expect(hideJobBtn).not.toBeNull();
+
+      // [이 공고 숨기기] 클릭
+      hideJobBtn?.click();
+
+      // 1. 카드와 부모 셀이 즉시 display: none 처리되었는지 검증
+      expect(cards[0].style.display).toBe('none');
+      expect(cell0?.style.display).toBe('none');
+
+      // 2. 콜백 호출 검증
+      expect(onBlockJob).toHaveBeenCalled();
+
+      // 3. 슬라이드 1의 cell-2(라인)가 슬라이드 0으로 당겨졌는지 검증
+      const slides = container.querySelectorAll<HTMLElement>('[data-slot="carousel-item"]');
+      const grid0 = slides[0].querySelector<HTMLElement>('.grid');
+      expect(grid0?.contains(container.querySelector('.cell-2'))).toBe(true);
+    });
+
     it('잡코리아 인기 TOP 100(ol.rankList > li.dmpItem) 공고 카드를 정확히 수집 및 파싱하고 평점 뱃지와 인라인 툴바가 올바르게 주입되어야 한다', () => {
       const container = document.createElement('div');
       container.innerHTML = `
@@ -1777,6 +2587,82 @@ describe('Site Adapters 단위 테스트', () => {
       expect(container).not.toBeNull();
       expect(container?.className).toBe('content');
       expect(container?.parentElement?.id).toBe('recruit_info_list');
+    });
+
+    it('사람인 getCardListContainer는 스폰서 상품 그리드(.list_product)를 절대 컨테이너로 반환하지 않아야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div class="wrap_list_banner">
+          <ul class="list_product list_grand">
+            <li class="item">스폰서 카드</li>
+          </ul>
+        </div>
+      `;
+
+      const container = saramin.getCardListContainer(doc);
+      expect(container).toBeNull();
+    });
+
+    it('사람인 getNextPageUrl은 페이지네이션 요소가 없는 정적/단일 페이지에서 null을 반환해야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div class="wrap_list_banner">
+          <ul class="list_product list_grand">
+            <li class="item">스폰서 카드</li>
+          </ul>
+        </div>
+      `;
+
+      const nextUrl = saramin.getNextPageUrl(doc, 1);
+      expect(nextUrl).toBeNull();
+    });
+
+    it('사람인 getCardListContainer는 네이버 파워링크 광고 목록(#powerLink 안의 .list_item)을 공고 컨테이너로 오인하지 않아야 한다', () => {
+      // [회귀 방지] 직업별 목록(job-category) 초기 HTML 은 실제 공고 목록이 아직 없고
+      // 네이버 파워링크 광고 블록 안에만 <li class="list_item"> 이 존재한다.
+      // 이 광고 <ul> 을 컨테이너로 반환하면 무한 스크롤이 광고 영역에 공고를 append 하여
+      // UI 가 깨지고 스피너가 무한히 도는 것처럼 보인다.
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div id="content">
+          <div id="powerLink" class="powerlink pc none-img">
+            <ul id="contentsList" class="powerlink_list">
+              <li class="list_item img_type"><a href="/ad/1">광고 공고 1</a></li>
+              <li class="list_item img_type"><a href="/ad/2">광고 공고 2</a></li>
+            </ul>
+          </div>
+        </div>
+      `;
+
+      const container = saramin.getCardListContainer(doc);
+      expect(container).toBeNull();
+    });
+
+    it('사람인 getCardListContainer는 광고 영역 없이 정상 목록(.list_body)이 있으면 그 목록을 반환해야 한다', () => {
+      const saramin = new SaraminAdapter();
+      const doc = document.implementation.createHTMLDocument();
+      doc.body.innerHTML = `
+        <div id="default_list_wrap">
+          <section class="list_recruiting">
+            <div class="list_body">
+              <div id="rec-1" class="list_item"><a href="/zf_user/jobs/relay/view?rec_idx=1">공고 1</a></div>
+            </div>
+          </section>
+        </div>
+        <div id="powerLink" class="powerlink">
+          <ul id="contentsList" class="powerlink_list">
+            <li class="list_item"><a href="/ad/1">광고</a></li>
+          </ul>
+        </div>
+      `;
+
+      const container = saramin.getCardListContainer(doc);
+      expect(container).not.toBeNull();
+      expect(container?.classList.contains('list_body')).toBe(true);
+      expect(container?.closest('#powerLink, .powerlink')).toBeNull();
     });
   });
 

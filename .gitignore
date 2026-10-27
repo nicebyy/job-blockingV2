@@ -46,3 +46,10 @@ Thumbs.db
 *_sample.html
 sample_*.html
 
+# Review & Test Reports (프로덕션 배포물에 불필요한 내부 문서)
+# README.md / PRIVACY_POLICY.md 는 배포에 필요하므로 제외 대상이 아니다.
+CODE_REVIEW_*.md
+PLATFORM_TEST_REPORT*.md
+*_REPORT.md
+REVIEW_*.md
+

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { BlockItem, BlockType } from '../types';
-import { StorageManager } from '../core/storage';
+import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings } from '../types';
+import { StorageManager, normalizeBlockList } from '../core/storage';
 import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType, PLATFORM_CONFIG, PlatformFilterType, SUPPORT_CONFIG } from '../constants';
 import { formatDate } from '../utils/date';
 
@@ -11,14 +11,28 @@ export const Options: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<OptionsFilterType>(OPTIONS_FILTER_CONFIG.ALL);
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformFilterType>(PLATFORM_CONFIG.ALL);
+  const [settings, setSettings] = useState<FilterSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     loadBlockList();
+    StorageManager.getSettings().then(setSettings);
   }, []);
 
   const loadBlockList = async () => {
     const list = await StorageManager.getBlockList();
     setBlockList(list);
+  };
+
+  /**
+   * 회사명 매칭 정책 변경.
+   * exact(정확 일치) / contains(부분 일치, 계열사 일괄 차단)
+   */
+  const handleToggleMatchMode = async () => {
+    const nextMode = settings.companyMatchMode === 'contains' ? 'exact' : 'contains';
+    const updated = await StorageManager.saveSettings({ companyMatchMode: nextMode });
+    setSettings(updated);
+    // 열려 있는 채용 사이트 탭에 즉시 반영
+    notifyContentScript({ type: 'SETTINGS_CHANGED', settings: updated });
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -27,12 +41,41 @@ export const Options: React.FC = () => {
 
     await StorageManager.addBlockItem(pattern.trim(), type, { platform: 'custom' });
     setPattern('');
-    loadBlockList();
+    await loadBlockList();
+    // 차단 목록 변경을 열려 있는 탭에 즉시 전파 (기존에는 새로고침 전까지 반영되지 않았다)
+    notifyContentScript({ type: 'BLOCKLIST_CHANGED', items: await StorageManager.getBlockList() });
   };
 
   const handleDelete = async (id: string) => {
     await StorageManager.removeBlockItem(id);
-    loadBlockList();
+    await loadBlockList();
+    notifyContentScript({ type: 'BLOCKLIST_CHANGED', items: await StorageManager.getBlockList() });
+  };
+
+  /**
+   * 열려 있는 채용 사이트 탭의 content script 에 메시지를 전달한다.
+   * (Options 는 지금까지 storage 만 쓰고 알림을 보내지 않아 변경이 즉시 반영되지 않았다)
+   */
+  const notifyContentScript = (message: unknown) => {
+    if (typeof chrome === 'undefined' || !chrome.tabs?.query) return;
+    try {
+      chrome.tabs.query({}, (tabs) => {
+        if (chrome.runtime?.lastError) return;
+        for (const tab of tabs || []) {
+          if (!tab.id) continue;
+          try {
+            chrome.tabs.sendMessage(tab.id, message, () => {
+              // content script 가 없는 탭(설정 페이지 등)은 무시
+              void chrome.runtime?.lastError;
+            });
+          } catch {
+            // 개별 탭 전송 실패는 무시
+          }
+        }
+      });
+    } catch {
+      // chrome API 사용 불가 환경 무시
+    }
   };
 
   const handlePurgeExpired = async () => {
@@ -63,13 +106,31 @@ export const Options: React.FC = () => {
     reader.onload = async (event) => {
       try {
         const imported = JSON.parse(event.target?.result as string);
-        if (Array.isArray(imported)) {
-          await StorageManager.saveBlockList(imported);
-          loadBlockList();
+        if (!Array.isArray(imported)) {
+          alert(UI_MESSAGES.IMPORT_INVALID_JSON);
+          return;
+        }
+
+        // [중요] 원소 단위 스키마 검증.
+        // 기존에는 배열인지만 확인하고 그대로 저장해서, [null] 같은 손상 항목이 들어가면
+        // getBlockList() 가 TypeError 를 던져 팝업·옵션·content script 가 모두 정지했다.
+        const validItems = normalizeBlockList(imported);
+        const skipped = imported.length - validItems.length;
+
+        await StorageManager.saveBlockList(validItems);
+        await loadBlockList();
+        notifyContentScript({ type: 'BLOCKLIST_CHANGED', items: validItems });
+
+        if (skipped > 0) {
+          alert(UI_MESSAGES.IMPORT_SUCCESS_WITH_SKIPPED(validItems.length, skipped));
+        } else {
           alert(UI_MESSAGES.IMPORT_SUCCESS);
         }
       } catch (err) {
         alert(UI_MESSAGES.IMPORT_INVALID_JSON);
+      } finally {
+        // 같은 파일을 다시 선택해도 onChange 가 발생하도록 초기화
+        e.target.value = '';
       }
     };
     reader.readAsText(file);
@@ -195,6 +256,30 @@ export const Options: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
+
+        {/* 회사명 매칭 정책 설정 */}
+        <div className="match-mode-row">
+          <span className="match-mode-label">
+            {settings.companyMatchMode === 'contains'
+              ? UI_MESSAGES.TOGGLE_LABELS.COMPANY_MATCH_CONTAINS
+              : UI_MESSAGES.TOGGLE_LABELS.COMPANY_MATCH_EXACT}
+          </span>
+          <button
+            type="button"
+            className={`match-mode-toggle ${
+              settings.companyMatchMode === 'contains' ? 'active' : ''
+            }`}
+            onClick={handleToggleMatchMode}
+            aria-pressed={settings.companyMatchMode === 'contains'}
+            title={
+              settings.companyMatchMode === 'contains'
+                ? UI_MESSAGES.COMPANY_MATCH_TOOLTIPS.CONTAINS
+                : UI_MESSAGES.COMPANY_MATCH_TOOLTIPS.EXACT
+            }
+          >
+            {settings.companyMatchMode === 'contains' ? '부분 일치' : '정확 일치'}
+          </button>
         </div>
 
         {/* 2단 다층 필터링 컨테이너 */}
