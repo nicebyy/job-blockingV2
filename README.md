@@ -1,6 +1,28 @@
 # Job Blocking V2 (채용 사이트 공고 필터링)
 
-채용 플랫폼(원티드, 사람인, 잡코리아, 리멤버, 점핏 등)에서 원하지 않는 기업 및 불필요한 추천/스폰서 광고 공고를 숨기거나 흐리게(블러) 처리해 주는 크롬 확장 프로그램(Manifest V3)입니다.
+<p align="left">
+  <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Manifest V3" />
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Vitest-100%25_Passed-6E9F18?style=flat-square&logo=vitest&logoColor=white" alt="Vitest" />
+  <img src="https://img.shields.io/badge/Playwright-E2E_Passed-2EAD33?style=flat-square&logo=playwright&logoColor=white" alt="Playwright" />
+  <img src="https://img.shields.io/badge/Privacy-Zero_Data_Collection-success?style=flat-square" alt="Privacy" />
+</p>
+
+채용 플랫폼(원티드, 사람인, 잡코리아, 리멤버, 점핏 등)에서 원하지 않는 기업 및 불필요한 추천/스폰서 광고 공고를 숨기거나 흐리게(블러) 처리해 주는 고성능 크롬 확장 프로그램(Manifest V3)입니다.
+
+---
+
+## 🌐 지원 채용 플랫폼 요약 (Supported Platforms)
+
+| 채용 플랫폼 | 지원 페이지 범위 | 공고 숨김 / 회사 차단 | 기업 평점 뱃지 (잡플래닛·블라인드) | 광고/프로모션 자동 숨김 | 무한 스크롤 / 자동 리필 | 상세페이지 스마트 이탈 가드 |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **원티드 (Wanted)** | 채용목록(`/wdlist/*`), 상세페이지(`/wd/*`), 큐레이션 캐러셀 | ✅ | ✅ (듀얼 뱃지) | ✅ (적극 채용 슬라이더) | ✅ (SPA 최적화) | ✅ |
+| **사람인 (Saramin)** | 검색목록, 상세페이지 릴레이 뷰(`.jview`) | ✅ | ✅ (듀얼 뱃지) | ✅ (AI검색·스토어·추천) | ✅ (Auto-Refill 지원) | ✅ |
+| **잡코리아 (JobKorea)** | 채용목록, 인기 TOP 100, AI추천, 상세페이지 | ✅ | ✅ (듀얼 뱃지) | ✅ (TOP 헤드라인·추천) | ✅ (POST 무한 스크롤) | ✅ (뒤로가기 / 탭 종료) |
+| **리멤버 (Remember)** | 채용목록, 인기/큐레이션 공고, 상세페이지 | ✅ | ✅ (듀얼 뱃지) | ✅ (프리미엄기업·광고배너) | ✅ (SPA 최적화) | ✅ (뒤로가기 / 탭 종료) |
+| **점핏 (Jumpit)** | 채용목록(`/positions`), 상세페이지(`/position/*`) | ✅ | ✅ (듀얼 뱃지) | ✅ (사이드 윙·프로모션) | ✅ (SPA 최적화) | ✅ (뒤로가기 / 탭 종료) |
 
 ---
 
@@ -110,6 +132,12 @@
   - **마감시각 + 30일 만료 계산**: 공고 숨김 시 해당 카드의 마감일시(`~ MM/DD`, `YYYY-MM-DD`, `D-Day`, `오늘/내일마감` 등)를 자동 파싱하여 **[공고 마감시각 + 30일]**로 보관 만료 타임스탬프(`expiresAt`) 계산 (상시/수시 채용인 경우 등록일 + 30일)
   - **스토리지 쿼터 방어 및 자동 청소(Lazy Auto-Purge)**: 이미 마감되어 다시 볼 일 없는 공고가 크롬 동기화 스토리지(100KB 쿼터)를 불필요하게 차지하지 않도록, 스토리지 조회 시 만료된 공고를 백그라운드에서 자동 필터링 및 영구 제거
   - **옵션 관리 지원**: 차단 목록에서 각 공고의 마감일 및 만료 예정일 배지 노출, `[🧹 만료 공고 정리]` 원클릭 수동 청소 지원
+- **사용자 소통 및 리뷰 유도 경험 (Feedback & Community Experience)**:
+  - **Google Forms 원클릭 피드백 창구**: 별도 백엔드 서버 구축 없이 팝업 및 옵션 페이지 푸터의 `[💬 문의/피드백]` 링크를 통해 사용자 건의사항, 버그 제보, 신규 채용 사이트 요청을 실시간으로 수렴
+  - **크롬 웹스토어 리뷰 유도 배너 (Rating Review Prompt Banner)**:
+    - 팝업 창 상단에 사용자 친화적 리뷰 배너(`Job Blocking V2가 도움이 되셨나요? 별점 5점과 리뷰를 남겨주세요! ⭐`) 제공
+    - `[⭐ 리뷰 쓰기]` 클릭 시 웹스토어 리뷰 페이지로 즉시 연결되며, `[다시 보지 않기]` 클릭 시 영구 숨김 플래그가 `chrome.storage.sync`에 저장되어 재노출 방지
+  - **안심 로컬 개인정보 보호 (Privacy-First Architecture)**: 사용자 계정, 이력서, 브라우징 히스토리 등 일체의 개인정보(PII)를 수집하거나 전송하지 않으며, 모든 설정 및 차단 데이터는 사용자의 로컬 브라우저에만 보관 ([개인정보처리방침](./PRIVACY_POLICY.md))
 
 ---
 
@@ -229,5 +257,6 @@ npm run test:e2e
 ## 💬 문의 및 피드백 (Support & Feedback)
 
 - **온라인 문의 및 버그 제보**: [Google Forms 온라인 접수](https://docs.google.com/forms/d/e/1FAIpQLSc8dy59w4vzCQZ5oWlTtMY8DEEeFbX5ktvS4I7ZOOlLwWZcKQ/viewform)
-- **크롬 웹스토어 리뷰**: 확장 프로그램 사용 후 유용하셨다면 웹스토어에 별점 5점과 따뜻한 리뷰를 남겨주세요!
+- **GitHub 저장소 및 이슈 제보**: [nicebyy/job-blockingV2](https://github.com/nicebyy/job-blockingV2)
+- **크롬 웹스토어 리뷰**: 확장 프로그램 사용 후 유용하셨다면 웹스토어에 별점 5점과 따뜻한 리뷰를 남겨주세요! ⭐
 
