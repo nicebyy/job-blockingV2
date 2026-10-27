@@ -58,7 +58,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
     return count;
   }
 
-  public override getCardListContainer(doc: Document = document): HTMLElement | null {
+  public override getCardListContainer(doc: Document | HTMLElement = document): HTMLElement | null {
     const container = doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.LIST_CONTAINER);
     if (container) {
       const innerContent = container.querySelector<HTMLElement>('.content');
@@ -69,19 +69,30 @@ export class SaraminAdapter extends BaseSiteAdapter {
     return firstCard?.parentElement || null;
   }
 
-  public override getPaginationElement(doc: Document = document): HTMLElement | null {
+  public override getPaginationElement(doc: Document | HTMLElement = document): HTMLElement | null {
     return doc.querySelector<HTMLElement>(SARAMIN_SELECTORS.PAGINATION);
   }
 
-  public override getNextPageUrl(doc: Document = document, currentPage: number): string | null {
+  public override getNextPageUrl(
+    doc: Document | HTMLElement = document,
+    currentPage: number
+  ): string | null {
     const nextPage = currentPage + 1;
 
-    // 1. DOM 내부의 페이지네이션 a 태그 우선 탐색
+    // 1. DOM 내부의 페이지네이션 a 또는 button 태그 우선 탐색
     const pageLink =
-      doc.querySelector<HTMLAnchorElement>(
-        `a[page="${nextPage}"], a[href*="page=${nextPage}"], a[href*="recruitPage=${nextPage}"]`
+      doc.querySelector<HTMLAnchorElement | HTMLButtonElement>(
+        `a[page="${nextPage}"], a[href*="page=${nextPage}"], a[href*="recruitPage=${nextPage}"], button[page="${nextPage}"]`
       ) ||
-      doc.querySelector<HTMLAnchorElement>('.pagination .next, .page_box .btn_next');
+      doc.querySelector<HTMLAnchorElement | HTMLButtonElement>(
+        '.pagination .next, .page_box .btn_next, .PageBox .BtnType.next, .PageBox button.next'
+      );
+
+    const rawOnClick = pageLink?.getAttribute('onclick');
+    if (rawOnClick) {
+      const match = rawOnClick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
+      if (match) return match[1];
+    }
 
     // a 태그가 실제 이동 URL(page/recruitPage 쿼리가 포함되고 # 해시 전용이 아닌 URL)을 갖고 있는 경우 반환
     const rawHref = pageLink?.getAttribute('href');
@@ -91,7 +102,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
       !rawHref.includes('javascript:') &&
       (rawHref.includes('page=') || rawHref.includes('recruitPage='))
     ) {
-      return pageLink!.href;
+      return (pageLink as HTMLAnchorElement).href;
     }
 
     // 2. 현재 URL 기준 query parameter 갱신 (사람인 검색은 recruitPage, 일반 목록은 page 사용)
@@ -122,7 +133,9 @@ export class SaraminAdapter extends BaseSiteAdapter {
   public parseCard(element: HTMLElement): JobCardInfo | null {
     const isListCard =
       element.classList.contains('item_recruit') ||
-      Boolean(element.querySelector('.area_corp, .corp_name'));
+      element.classList.contains('list_item') ||
+      element.classList.contains('item') ||
+      Boolean(element.querySelector('.area_corp, .corp_name, .company_nm, .corp'));
 
     // 1. 회사명 추출 (리스트 카드 우선 탐색 또는 상세 헤더 우선 탐색)
     let companyEl = isListCard
@@ -138,14 +151,16 @@ export class SaraminAdapter extends BaseSiteAdapter {
     ) {
       companyEl =
         element.querySelector<HTMLElement>(
-          '.area_corp .corp_name a, .corp_name a, .area_corp .corp_name, .corp_name'
+          '.area_corp .corp_name a, .corp_name a, .area_corp .corp_name, .corp_name, .col.company_nm a, .company_nm a'
         ) || companyEl;
     }
 
     // 2. 공고 제목 추출
-    const titleEl =
-      element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_POSITION_TITLE) ||
-      element.querySelector<HTMLElement>(SARAMIN_SELECTORS.POSITION_TITLE);
+    const titleEl = isListCard
+      ? element.querySelector<HTMLElement>(SARAMIN_SELECTORS.POSITION_TITLE) ||
+        element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_POSITION_TITLE)
+      : element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_POSITION_TITLE) ||
+        element.querySelector<HTMLElement>(SARAMIN_SELECTORS.POSITION_TITLE);
 
     let companyName = companyEl?.textContent?.trim() || '';
     if (companyName === '기업정보') {
@@ -235,7 +250,9 @@ export class SaraminAdapter extends BaseSiteAdapter {
   public getCompanyElement(cardElement: HTMLElement): HTMLElement | null {
     const isListCard =
       cardElement.classList.contains('item_recruit') ||
-      Boolean(cardElement.querySelector('.area_corp, .corp_name'));
+      cardElement.classList.contains('list_item') ||
+      cardElement.classList.contains('item') ||
+      Boolean(cardElement.querySelector('.area_corp, .corp_name, .company_nm, .corp'));
 
     let el = isListCard
       ? cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME) ||
@@ -246,7 +263,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
     if (el?.textContent?.trim() === '기업정보' || el?.classList.contains('company_popup')) {
       el =
         cardElement.querySelector<HTMLElement>(
-          '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name'
+          '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a'
         ) || el;
     }
 

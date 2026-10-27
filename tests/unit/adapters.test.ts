@@ -953,6 +953,148 @@ describe('Site Adapters 단위 테스트', () => {
       // 일반 공고는 영향받지 않아야 함
       expect(normalJob?.style.display).not.toBe('none');
     });
+
+    it('사람인 지역별/직무별 목록(/zf_user/jobs/list/domestic)의 그랜드/프리미엄 채용공고(.list_product .item)를 파싱하고 차단 툴바 및 평점 뱃지를 주입해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="banner_list">
+          <ul class="list_product list_grand">
+            <li class="item">
+              <a href="/zf_user/jobs/relay/view?view_type=list&rec_idx=55345321">
+                <strong class="tit">기구설계 채용 채용/6500이상</strong>
+                <span class="corp">(주)씨에이치티</span>
+                <span class="date">~11.19(목)</span>
+              </a>
+              <button type="button" rec_idx="55345321" class="btn_scrap" title="스크랩"></button>
+            </li>
+          </ul>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(1);
+
+      const card = cards[0];
+      const cardInfo = adapter.parseCard(card);
+      expect(cardInfo).not.toBeNull();
+      expect(cardInfo?.companyName).toBe('(주)씨에이치티');
+      expect(cardInfo?.title).toBe('기구설계 채용 채용/6500이상');
+      expect(cardInfo?.jobId).toBe('55345321');
+      expect(cardInfo?.closingDate).toBe('~11.19(목)');
+
+      // 회사 엘리먼트 추출 검증
+      const companyEl = adapter.getCompanyElement(card);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent?.trim()).toBe('(주)씨에이치티');
+
+      // 툴바 주입 검증
+      const onBlockCompany = vi.fn();
+      const onBlockJob = vi.fn();
+      adapter.injectInlineButton(cardInfo!, { onBlockCompany, onBlockJob });
+
+      const blockCompanyBtn = card.querySelector<HTMLButtonElement>('.job-filter-btn-company');
+      expect(blockCompanyBtn).not.toBeNull();
+      expect(blockCompanyBtn?.title).toContain('씨에이치티');
+      blockCompanyBtn?.click();
+      expect(onBlockCompany).toHaveBeenCalledWith('(주)씨에이치티');
+
+      // 평점 뱃지 주입 검증
+      adapter.injectRatingBadge(cardInfo!, {
+        platform: 'jobplanet',
+        companyName: '(주)씨에이치티',
+        rating: 3.8,
+        status: 'found',
+        companyId: '77440',
+        cachedAt: Date.now(),
+      });
+      const badge = card.querySelector('.job-filter-rating-jobplanet');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('3.8');
+    });
+
+    it('사람인 지역별/직무별 목록(/zf_user/jobs/list/domestic)의 일반 공고 행(.list_item)에서 회사명, 공고제목(스크랩 제외), 평점 뱃지 연동이 정확히 작동해야 한다', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div id="default_list_wrap">
+          <section class="list_recruiting">
+            <div class="list_body">
+              <div id="rec-55323519" class="list_item effect">
+                <div class="box_item">
+                  <div class="col company_nm">
+                    <a href="/zf_user/company-info/view-inner-recruit?csn=123" class="str_tit" target="_blank">
+                      (주)이씨엘글로벌코리아
+                    </a>
+                    <button type="button" class="interested_corp"><span>관심기업 등록</span></button>
+                  </div>
+                  <div class="col notification_info">
+                    <div class="job_tit">
+                      <a class="str_tit" id="rec_link_55323519" href="/zf_user/jobs/relay/view?rec_idx=55323519">
+                        <span>포워딩 영업직(신입/경력) 채용공고</span>
+                      </a>
+                      <button type="button" class="spr_scrap"><span class="blind">스크랩</span></button>
+                    </div>
+                  </div>
+                  <div class="col support_info">
+                    <button class="sri_btn_md"><span class="sri_btn_immediately">입사지원</span></button>
+                    <p class="support_detail">
+                      <span class="date">~11.18(수)</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      `;
+
+      const cards = adapter.getJobCardElements(container);
+      expect(cards.length).toBe(1);
+
+      const card = cards[0];
+      const cardInfo = adapter.parseCard(card);
+      expect(cardInfo).not.toBeNull();
+      // 관심기업 등록 텍스트가 섞이지 않고 순수 회사명만 추출되어야 함
+      expect(cardInfo?.companyName).toBe('(주)이씨엘글로벌코리아');
+      // 제목에 스크랩 텍스트가 섞이지 않아야 함
+      expect(cardInfo?.title).toBe('포워딩 영업직(신입/경력) 채용공고');
+      expect(cardInfo?.jobId).toBe('55323519');
+      expect(cardInfo?.closingDate).toBe('~11.18(수)');
+
+      const companyEl = adapter.getCompanyElement(card);
+      expect(companyEl).not.toBeNull();
+      expect(companyEl?.textContent?.trim()).toBe('(주)이씨엘글로벌코리아');
+
+      // 평점 뱃지 주입 시 회사명 링크 바로 뒤에 위치해야 함
+      adapter.injectRatingBadge(cardInfo!, {
+        platform: 'blind',
+        companyName: '(주)이씨엘글로벌코리아',
+        rating: 4.1,
+        status: 'found',
+        cachedAt: Date.now(),
+      });
+      const badge = card.querySelector('.job-filter-rating-blind');
+      expect(badge).not.toBeNull();
+      expect(badge?.textContent).toContain('4.1');
+
+      // 리스트 컨테이너 탐색 검증
+      const listContainer = adapter.getCardListContainer(container);
+      expect(listContainer).not.toBeNull();
+      expect(listContainer?.classList.contains('list_body')).toBe(true);
+    });
+
+    it('사람인 지역별/직무별 목록 페이지의 PageBox 버튼 페이징 및 onclick URL을 getNextPageUrl에서 올바르게 추출해야 한다', () => {
+      const doc = document.createElement('div');
+      doc.innerHTML = `
+        <div class="PageBox">
+          <span class="BtnType SizeS active">1</span>
+          <button class="BtnType SizeS" page="2" onclick="location.href='/zf_user/jobs/list/domestic?page=2&loc_mcd=101000'">2</button>
+          <button class="BtnType SizeS" page="3" onclick="location.href='/zf_user/jobs/list/domestic?page=3&loc_mcd=101000'">3</button>
+        </div>
+      `;
+
+      const nextUrl = adapter.getNextPageUrl(doc, 1);
+      expect(nextUrl).toBe('/zf_user/jobs/list/domestic?page=2&loc_mcd=101000');
+    });
   });
 
   describe('JobKoreaAdapter DOM 파싱', () => {
