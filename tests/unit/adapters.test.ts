@@ -1427,6 +1427,127 @@ describe('Site Adapters 단위 테스트', () => {
       expect(nextUrl).toContain('/zf_user/jobs/list/job-category?page=11&cat_mcls=2');
       expect(nextUrl).not.toContain('#searchTitle');
     });
+
+    /**
+     * [회귀] 사람인 직업별 목록의 무한 스크롤이 11페이지에서 멈추던 버그.
+     *
+     * 사람인 목록의 페이지 번호 블록은 10개 단위로 끊겨 있고 "다음" 버튼은 "다음 블록의 첫 페이지"를
+     * 가리킨다. 즉 1페이지 DOM 의 "다음" 버튼은 언제나 page=11 이므로, 그 URL 을 그대로 쓰면
+     * 11페이지 이후에는 매번 11페이지를 다시 받아와 중복 판정으로 조용히 종료되었다.
+     */
+    it('[회귀] 사람인 목록에서 currentPage 가 10을 넘어가면 "다음" 버튼(page=11)이 아닌 실제 다음 페이지 URL 을 만들어야 한다', () => {
+      const origLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = new URL(
+        'https://www.saramin.co.kr/zf_user/jobs/list/job-category?cat_mcls=2&page_count=50&sort=RL&type=job-category'
+      );
+
+      try {
+        const doc = document.createElement('div');
+        // 1페이지 DOM 그대로: "다음" 버튼은 항상 page=11 을 가리킨다
+        doc.innerHTML = `
+          <div id="default_list_wrap">
+            <div class="list_body">
+              <div class="list_item"><a href="/zf_user/jobs/relay/view?rec_idx=111">공고 1</a></div>
+            </div>
+          </div>
+          <div class="PageBox">
+            <span class="BtnType SizeS active">1</span>
+            <button class="BtnType SizeS" page="2" onclick="location.href='/zf_user/jobs/list/job-category?page=2&cat_mcls=2&page_count=50'">2</button>
+            <button class="BtnType SizeS BtnNext" onclick="location.href='/zf_user/jobs/list/job-category?page=11&cat_mcls=2&page_count=50'">다음</button>
+          </div>
+        `;
+
+        const nextUrl = adapter.getNextPageUrl(doc, 11);
+        expect(nextUrl).not.toBeNull();
+        // 11페이지 다음은 12페이지여야 한다 (11페이지 재요청 금지)
+        expect(nextUrl).toContain('page=12');
+        expect(nextUrl).not.toMatch(/[?&]page=11([&#]|$)/);
+        // 기존 목록 조건은 그대로 유지되어야 한다
+        expect(nextUrl).toContain('cat_mcls=2');
+        expect(nextUrl).toContain('page_count=50');
+        expect(nextUrl).toContain('sort=RL');
+        expect(nextUrl).toContain('type=job-category');
+        // 해시는 제거되어야 한다
+        expect(nextUrl).not.toContain('#searchTitle');
+      } finally {
+        (window as any).location = origLocation;
+      }
+    });
+
+    it('[회귀] 사람인 검색 목록은 page 가 아닌 recruitPage 파라미터로 다음 페이지를 이어가야 한다', () => {
+      const origLocation = window.location;
+      delete (window as any).location;
+      (window as any).location = new URL(
+        'https://www.saramin.co.kr/zf_user/search/recruit?searchword=%EA%B0%9C%EB%B0%9C&recruitPage=11&recruitPageCount=40'
+      );
+
+      try {
+        const doc = document.createElement('div');
+        // 검색 목록의 "다음" 버튼은 href="#recruit_info" 이므로 실제 URL 정보가 없다
+        doc.innerHTML = `
+          <div id="recruit_info_list">
+            <div class="content_wrap">
+              <div class="item_recruit"><a href="/zf_user/jobs/relay/view?rec_idx=222">공고</a></div>
+            </div>
+          </div>
+          <div class="pagination">
+            <span class="page">11</span>
+            <a href="#recruit_info" page="12" class="page page_move">12</a>
+            <a href="#recruit_info" page="21" class="btnNext page_move">다음</a>
+          </div>
+        `;
+
+        // 12페이지는 실제 링크(page="12")가 있으므로 그 페이지 번호를 사용해야 한다
+        expect(adapter.getNextPageUrl(doc, 11)).toContain('recruitPage=12');
+
+        // 20페이지 다음(21페이지)도 recruitPage 로 이어져야 한다
+        const beyondBlockUrl = adapter.getNextPageUrl(doc, 20);
+        expect(beyondBlockUrl).toContain('recruitPage=21');
+        expect(beyondBlockUrl).not.toMatch(/[?&]page=21([&#]|$)/);
+        expect(beyondBlockUrl).toContain('searchword=');
+      } finally {
+        (window as any).location = origLocation;
+      }
+    });
+
+    it('[회귀] 페이지가 지정된 URL 로 진입하면 getCurrentPageNumber 가 그 페이지 번호를 반환해야 한다', () => {
+      const origLocation = window.location;
+      const adapter = new SaraminAdapter();
+
+      try {
+        // 1) PageBox 의 활성 페이지 마커
+        delete (window as any).location;
+        (window as any).location = new URL(
+          'https://www.saramin.co.kr/zf_user/jobs/list/job-category?cat_mcls=2&page=11'
+        );
+        const listDoc = document.createElement('div');
+        listDoc.innerHTML = `
+          <div class="PageBox">
+            <span class="BtnType SizeS active">11</span>
+            <button class="BtnType SizeS" page="12">12</button>
+          </div>
+        `;
+        expect(adapter.getCurrentPageNumber(listDoc)).toBe(11);
+
+        // 2) DOM 마커가 없으면 URL 쿼리에서 읽는다
+        delete (window as any).location;
+        (window as any).location = new URL(
+          'https://www.saramin.co.kr/zf_user/search/recruit?searchword=test&recruitPage=11'
+        );
+        const emptyDoc = document.createElement('div');
+        expect(adapter.getCurrentPageNumber(emptyDoc)).toBe(11);
+
+        // 3) 페이지 정보가 전혀 없으면 null (매니저가 1페이지로 간주)
+        delete (window as any).location;
+        (window as any).location = new URL(
+          'https://www.saramin.co.kr/zf_user/jobs/list/job-category?cat_mcls=2'
+        );
+        expect(adapter.getCurrentPageNumber(document.createElement('div'))).toBeNull();
+      } finally {
+        (window as any).location = origLocation;
+      }
+    });
   });
 
   describe('JobKoreaAdapter DOM 파싱', () => {

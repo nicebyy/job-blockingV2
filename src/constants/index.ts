@@ -161,6 +161,19 @@ export const INFINITE_SCROLL_CONFIG = {
     LOAD_FAILURE: '다음 공고를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.',
   },
   ROOT_MARGIN: '1200px', // 바닥 도달 전 약 1.5~2 화면 전 선제적 백그라운드 프리페치
+  /**
+   * 로딩 완료 후 센티넬이 여전히 화면 안에 있을 때 다음 페이지를 이어서 불러오기까지의 지연(ms).
+   *
+   * IntersectionObserver 는 교차 상태가 바뀔 때만 이벤트를 주므로, 사용자가 바닥에 머무른 채
+   * 로딩이 끝나면 이벤트가 오지 않아 목록이 멈춘 것처럼 보인다. 이 지연 후 스스로 재확인한다.
+   * (서버 보호를 위해 MAX_CONSECUTIVE_FETCHES 회까지만 연속 자동 로딩)
+   */
+  INTERSECTION_REFILL_DELAY_MS: 250,
+  /**
+   * 연속 자동 로딩이 MAX_CONSECUTIVE_FETCHES 회에 도달했을 때의 휴지 시간(ms).
+   * 영구 정지하지 않고 잠시 쉬었다 다시 이어간다(서버 보호 + 스크롤 정지 방지).
+   */
+  INTERSECTION_REFILL_COOLDOWN_MS: 1200,
 } as const;
 
 /**
@@ -172,6 +185,22 @@ export const SARAMIN_SELECTORS = {
   LIST_CONTAINER:
     '#default_list_wrap .list_body, #default_list_wrap, .list_recruiting .list_body, .recruit_list_renew .list_body, .common_recruilt_list, #recruit_info_list .content, #recruit_info_list .content_wrap, #recruit_info_list, .recruit_list',
   PAGINATION: '.pagination, .page_box, .PageBox, .common_recruilt_list .PageBox, .pagination_wrap',
+
+  /**
+   * 현재(활성) 페이지 번호를 표시하는 마커 셀렉터.
+   *
+   * [배경] 사람인 목록의 페이지 번호 블록은 10개 단위로 끊겨 있고(1~10, 11~20 …),
+   * "다음" 버튼의 onclick URL 은 "다음 블록의 첫 페이지"를 가리킨다.
+   * 즉 1페이지의 DOM 에서 "다음" 버튼은 언제나 page=11 을 가리키므로,
+   * 무한 스크롤이 원본 DOM 의 페이지네이션만 참고하면 11페이지 이후로는
+   * 계속 11페이지를 다시 받아오게 되어(중복 판정) 목록이 더 이상 늘지 않는다.
+   */
+  ACTIVE_PAGE:
+    '.PageBox .BtnType.active, .PageBox .btn_page.active, .PageBox .active, .pagination .active, .pagination span.page, .page_box .active, .pagination_wrap .active',
+
+  /** 목록 페이지 번호를 담는 쿼리 파라미터 (검색 목록은 recruitPage, 그 외 목록은 page) */
+  PAGE_QUERY_PARAMS: ['recruitPage', 'page'],
+
   COMPANY_NAME:
     '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a, .company_nm .str_tit, .corp, span.corp, a.company:not(.company_popup)',
 

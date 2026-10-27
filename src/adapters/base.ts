@@ -25,6 +25,14 @@ export interface SiteAdapter {
     currentDoc: Document,
     currentPage: number
   ): { url: string; options?: RequestInit } | null;
+  /**
+   * 현재 화면이 실제로 몇 번째 페이지인지 반환한다.
+   *
+   * 페이지 번호가 지정된 URL(?page=11, ?recruitPage=11)로 바로 진입한 경우,
+   * 무한 스크롤이 1페이지부터 다시 받아오면 중복 공고만 쌓이고 목록이 이어지지 않는다.
+   * 어댑터가 페이지 개념을 모르는 경우 null 을 반환한다(매니저는 1페이지로 간주).
+   */
+  getCurrentPageNumber?(currentDoc: Document): number | null;
   getCardListContainer?(currentDoc: Document): HTMLElement | null;
   getPaginationElement?(currentDoc: Document): HTMLElement | null;
   hidePromotionBanners?(container?: Document | HTMLElement): number;
@@ -78,6 +86,10 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   }
 
   public getNextPageUrl?(_currentDoc: Document, _currentPage: number): string | null {
+    return null;
+  }
+
+  public getCurrentPageNumber?(_currentDoc: Document): number | null {
     return null;
   }
 
