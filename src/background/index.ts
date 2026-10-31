@@ -1,5 +1,5 @@
 import { ExtensionMessage } from '../types';
-import { BADGE_CONFIG } from '../constants';
+import { BADGE_CONFIG, WELCOME_CONFIG } from '../constants';
 import { JobplanetService } from '../core/jobplanet';
 import { BlindService } from '../core/blind';
 
@@ -25,10 +25,18 @@ export function updateBadge(tabId: number, count: number): string {
   return text;
 }
 
+export function handleInstalled(details: chrome.runtime.InstalledDetails): void {
+  if (details?.reason === WELCOME_CONFIG.INSTALL_REASON) {
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create && chrome.runtime?.getURL) {
+      chrome.tabs.create({
+        url: chrome.runtime.getURL(WELCOME_CONFIG.PAGE_PATH),
+      });
+    }
+  }
+}
+
 if (typeof chrome !== 'undefined' && chrome.runtime?.onInstalled) {
-  chrome.runtime.onInstalled.addListener(() => {
-    console.log('Job Filter V2 확장 프로그램이 설치/업데이트되었습니다.');
-  });
+  chrome.runtime.onInstalled.addListener(handleInstalled);
 }
 
 export function handleBackgroundMessage(

@@ -379,15 +379,18 @@ describe('Options 환경설정 페이지 단위 테스트', () => {
     });
     expect(openMock).toHaveBeenCalledWith(expect.stringContaining('chromewebstore.google.com'), '_blank');
 
-    // 피드백 및 개인정보처리방침 링크 확인
+    // 사용 가이드, 피드백 및 개인정보처리방침 링크 확인
     const links = container.querySelectorAll<HTMLAnchorElement>('.options-footer-link');
-    expect(links.length).toBe(2);
+    expect(links.length).toBe(3);
 
-    expect(links[0].href).toBe(SUPPORT_CONFIG.FEEDBACK_URL);
+    expect(links[0].textContent).toContain(SUPPORT_CONFIG.LABELS.GUIDE);
     expect(links[0].target).toBe('_blank');
 
-    expect(links[1].href).toBe(SUPPORT_CONFIG.PRIVACY_POLICY_URL);
+    expect(links[1].href).toBe(SUPPORT_CONFIG.FEEDBACK_URL);
     expect(links[1].target).toBe('_blank');
+
+    expect(links[2].href).toBe(SUPPORT_CONFIG.PRIVACY_POLICY_URL);
+    expect(links[2].target).toBe('_blank');
 
     window.open = originalOpen;
   });

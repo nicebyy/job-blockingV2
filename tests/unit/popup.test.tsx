@@ -472,23 +472,29 @@ describe('Popup 팝업 페이지 단위 테스트', () => {
     });
 
     const footerButtons = container.querySelectorAll<HTMLButtonElement>('.footer-link-btn');
-    expect(footerButtons.length).toBe(3);
+    expect(footerButtons.length).toBe(4);
 
-    // 1. 문의 / 피드백 클릭 (Google Forms)
+    // 1. 사용 가이드 클릭
     await act(async () => {
       footerButtons[0].click();
     });
-    expect(openMock).toHaveBeenCalledWith(SUPPORT_CONFIG.FEEDBACK_URL, '_blank');
+    expect(openMock).toHaveBeenCalledWith(expect.stringContaining('src/welcome/index.html'), '_blank');
 
-    // 2. 리뷰 남기기 클릭 (Chrome Web Store)
+    // 2. 문의 / 피드백 클릭 (Google Forms)
     await act(async () => {
       footerButtons[1].click();
     });
-    expect(openMock).toHaveBeenCalledWith(expect.stringContaining('chromewebstore.google.com'), '_blank');
+    expect(openMock).toHaveBeenCalledWith(SUPPORT_CONFIG.FEEDBACK_URL, '_blank');
 
-    // 3. 개인정보처리방침 클릭
+    // 3. 리뷰 남기기 클릭 (Chrome Web Store)
     await act(async () => {
       footerButtons[2].click();
+    });
+    expect(openMock).toHaveBeenCalledWith(expect.stringContaining('chromewebstore.google.com'), '_blank');
+
+    // 4. 개인정보처리방침 클릭
+    await act(async () => {
+      footerButtons[3].click();
     });
     expect(openMock).toHaveBeenCalledWith(SUPPORT_CONFIG.PRIVACY_POLICY_URL, '_blank');
 
