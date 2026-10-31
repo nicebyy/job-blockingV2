@@ -1,0 +1,91 @@
+name: Release & Chrome Web Store Auto-Publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  release:
+    name: 빌드 · GitHub Release · 크롬 웹스토어 자동 배포
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 통합 검증 및 릴리스 ZIP 생성
+        run: |
+          npm run verify:all
+          node scripts/package-release.mjs
+
+      - name: 버전 및 패키지 경로 추출
+        id: meta
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          ZIP_PATH="release/job-blocking-v2-v${VERSION}.zip"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "zip_path=${ZIP_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: GitHub Release 아티팩트 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-blocking-v2-v${{ steps.meta.outputs.version }}
+          path: ${{ steps.meta.outputs.zip_path }}
+          retention-days: 90
+
+      - name: GitHub Release 자동 생성 (v${{ steps.meta.outputs.version }})
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.meta.outputs.version }}
+          name: Job Blocking V2 v${{ steps.meta.outputs.version }}
+          files: ${{ steps.meta.outputs.zip_path }}
+          generate_release_notes: true
+
+      - name: 크롬 웹스토어 시크릿 설정 여부 확인
+        id: cws_check
+        env:
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          if [ -n "$CWS_EXTENSION_ID" ] && [ -n "$CWS_CLIENT_ID" ] && [ -n "$CWS_CLIENT_SECRET" ] && [ -n "$CWS_REFRESH_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Chrome Web Store API 시크릿(CWS_EXTENSION_ID, CWS_CLIENT_ID, CWS_CLIENT_SECRET, CWS_REFRESH_TOKEN)이 아직 설정되지 않아 웹스토어 자동 제출 단계를 건너뜁니다." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: 크롬 웹스토어 자동 업로드 및 심사 제출 (Chrome Web Store Publish)
+        if: steps.cws_check.outputs.enabled == 'true'
+        env:
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          npx --yes chrome-webstore-upload-cli@3 upload \
+            --source "${{ steps.meta.outputs.zip_path }}" \
+            --extension-id "$EXTENSION_ID" \
+            --client-id "$CLIENT_ID" \
+            --client-secret "$CLIENT_SECRET" \
+            --refresh-token "$REFRESH_TOKEN" \
+            --auto-publish
