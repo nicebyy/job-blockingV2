@@ -270,14 +270,26 @@ git push origin v<x.y.z>
 2. [Chrome Web Store 개발자 콘솔](https://chrome.google.com/webstore/devconsole)에서 zip 업로드
 3. 스토어 등록정보(스크린샷, 설명) 갱신 후 심사 제출
 
-### CI (GitHub Actions)
-`main`/`develop` 푸시 및 PR 시 아래가 자동 실행됩니다 (`.github/workflows/ci.yml`).
+### CI / CD (GitHub Actions)
+
+#### 1. 지속적 통합 검증 (`.github/workflows/ci.yml`)
+`main`/`develop` 푸시 및 PR 시 아래가 자동 실행됩니다.
 
 | 잡 | 내용 |
 | :--- | :--- |
 | `verify` | TypeScript 타입 검사 + 단위 테스트 |
 | `build` | 프로덕션 빌드 + 버전 일관성 + 산출물 무결성 + 패키지 아티팩트 업로드 |
 | `e2e` | Chromium 확장 로드 기반 E2E (headless) |
+
+#### 2. 프로덕션 릴리스 & 크롬 웹스토어 자동 배포 (`.github/workflows/release.yml`)
+`main` 브랜치에 병합(Push)되면 자동으로 아래 파이프라인이 실행됩니다:
+1. `npm run verify:all` 및 `release/job-blocking-v2-v<버전>.zip` 패키지 생성
+2. **GitHub Release (`v<버전>`)** 자동 생성 및 `.zip` 파일 첨부
+3. GitHub Repository Secrets에 아래 4개 환경변수가 등록되어 있으면 **Chrome Web Store API를 통해 새 패키지 업로드 및 심사 제출(`--auto-publish`)**까지 자동 수행:
+   - `CWS_EXTENSION_ID`: 크롬 웹스토어 확장 프로그램 32자리 ID
+   - `CWS_CLIENT_ID`: Google Cloud Console OAuth 2.0 클라이언트 ID
+   - `CWS_CLIENT_SECRET`: Google Cloud Console OAuth 2.0 클라이언트 보안 비밀번호
+   - `CWS_REFRESH_TOKEN`: Chrome Web Store API(`https://www.googleapis.com/auth/chromewebstore`) 권한으로 발급받은 Refresh Token
 
 ---
 
