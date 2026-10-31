@@ -154,7 +154,13 @@ console.log(`  엔트리: ${files.length}개`);
 console.log(`  루트 manifest.json: ${files.some((f) => f.rel === 'manifest.json') ? 'OK' : 'MISSING'}`);
 
 // 필수 파일 검증
-const required = ['manifest.json', 'service-worker-loader.js', 'src/popup/index.html', 'src/options/index.html'];
+const required = [
+  'manifest.json',
+  'service-worker-loader.js',
+  'src/popup/index.html',
+  'src/options/index.html',
+  'src/welcome/index.html',
+];
 const missing = required.filter((r) => !files.some((f) => f.rel === r));
 if (missing.length > 0) {
   console.error(`  ❌ 필수 파일 누락: ${missing.join(', ')}`);

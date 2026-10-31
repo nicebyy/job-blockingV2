@@ -1,6 +1,6 @@
 {
   "name": "job-blocking-v2",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "채용 사이트 공고 필터링 크롬 확장 프로그램",
   "type": "module",
   "scripts": {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FilterSettings, DEFAULT_SETTINGS, FilterStats, TotalBlockStats, JobPlatform } from '../types';
 import { StorageManager } from '../core/storage';
-import { FILTER_CONFIG, UI_MESSAGES, POPUP_STATS_CONFIG, PopupStatsMode, SITE_DOMAINS, SUPPORT_CONFIG } from '../constants';
+import { FILTER_CONFIG, UI_MESSAGES, POPUP_STATS_CONFIG, PopupStatsMode, SITE_DOMAINS, SUPPORT_CONFIG, WELCOME_CONFIG } from '../constants';
 
 export const Popup: React.FC = () => {
   const [settings, setSettings] = useState<FilterSettings>(DEFAULT_SETTINGS);
@@ -221,6 +221,14 @@ export const Popup: React.FC = () => {
     window.open(SUPPORT_CONFIG.PRIVACY_POLICY_URL, '_blank');
   };
 
+  const handleOpenGuide = () => {
+    const url =
+      typeof chrome !== 'undefined' && chrome.runtime?.getURL
+        ? chrome.runtime.getURL(WELCOME_CONFIG.PAGE_PATH)
+        : `/${WELCOME_CONFIG.PAGE_PATH}`;
+    window.open(url, '_blank');
+  };
+
   const handleDismissRatingBanner = async () => {
     setShowRatingBanner(false);
     await StorageManager.dismissRatingBanner();
@@ -422,6 +430,10 @@ export const Popup: React.FC = () => {
 
       <div className="footer">
         <div className="footer-links">
+          <button type="button" className="footer-link-btn" onClick={handleOpenGuide}>
+            📖 {SUPPORT_CONFIG.LABELS.GUIDE}
+          </button>
+          <span className="footer-dot">·</span>
           <button type="button" className="footer-link-btn" onClick={handleOpenFeedback}>
             💬 {SUPPORT_CONFIG.LABELS.FEEDBACK}
           </button>

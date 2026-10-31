@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings } from '../types';
 import { StorageManager, normalizeBlockList } from '../core/storage';
-import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType, PLATFORM_CONFIG, PlatformFilterType, SUPPORT_CONFIG } from '../constants';
+import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType, PLATFORM_CONFIG, PlatformFilterType, SUPPORT_CONFIG, WELCOME_CONFIG } from '../constants';
 import { formatDate } from '../utils/date';
 
 export const Options: React.FC = () => {
@@ -459,6 +459,19 @@ export const Options: React.FC = () => {
           </div>
 
           <div className="options-footer-links">
+            <a
+              href={
+                typeof chrome !== 'undefined' && chrome.runtime?.getURL
+                  ? chrome.runtime.getURL(WELCOME_CONFIG.PAGE_PATH)
+                  : `/${WELCOME_CONFIG.PAGE_PATH}`
+              }
+              target="_blank"
+              rel="noreferrer"
+              className="options-footer-link"
+            >
+              📖 {SUPPORT_CONFIG.LABELS.GUIDE}
+            </a>
+            <span className="options-footer-dot">·</span>
             <a
               href={SUPPORT_CONFIG.FEEDBACK_URL}
               target="_blank"

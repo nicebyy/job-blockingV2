@@ -85,7 +85,8 @@
   - 공고 마감일시를 자동 인식하여 마감 후 30일 경과 시 백그라운드 자동 청소(Lazy Auto-Purge)
   - 환경설정에서 `[🧹 만료 공고 정리]` 수동 원클릭 지원 및 JSON 백업/복원 기능 제공
 
-### 6. 🔒 안심 개인정보 보호 & 사용자 소통
+### 6. 🔒 안심 개인정보 보호 & 온보딩 가이드 · 사용자 소통
+- **설치 환영 & 인터랙티브 사용 가이드 (`src/welcome/`)**: 확장 프로그램 최초 설치 시 자동으로 환영 및 4단계 사용 가이드 탭이 열리며, 공고 숨김/블러 데모 체험과 5대 채용 사이트 바로가기를 제공합니다. (팝업 및 설정 하단의 `[📖 사용 가이드]` 버튼으로 언제든 다시 열람 가능)
 - **무수집 원칙 (Zero Data Collection)**: 사용자 계정, 이력서, 탐색 기록 등 어떠한 개인 식별 정보(PII)도 수집하거나 외부 서버로 전송하지 않으며, 모든 데이터는 브라우저 로컬 저장소에만 보관됩니다 ([개인정보처리방침](./PRIVACY_POLICY.md)).
 - **Google Forms 원클릭 피드백**: 팝업 및 옵션 푸터의 `[💬 문의/피드백]` 링크를 통해 별도 로그인 없이 건의사항 및 버그를 간편하게 전달할 수 있습니다.
 - **크롬 웹스토어 리뷰 유도 배너**: 팝업 상단에 친근한 리뷰 유도 배너를 제공하며, `[다시 보지 않기]` 클릭 시 영구 숨김 처리됩니다.
@@ -133,8 +134,12 @@ src/
 │   ├── index.ts               # MutationObserver 무한 스크롤 감지 및 실시간 필터링
 │   └── style.css              # 블러/숨김 효과 및 인라인 [차단] 버튼 UI 스타일
 ├── background/                # Background Service Worker
-│   └── index.ts               # 백그라운드 서비스 워커 (설정 및 툴바 뱃지 제어)
-
+│   └── index.ts               # 백그라운드 서비스 워커 (초기 설치 웰컴 탭 오픈, 뱃지/평점 제어)
+├── welcome/                   # 최초 설치 환영 및 인터랙티브 온보딩/사용 가이드 페이지
+│   ├── index.html
+│   ├── main.tsx
+│   ├── Welcome.tsx            # 핀 고정 안내, 블러 체험 데모 카드, 4단계 핵심 가이드
+│   └── welcome.css
 ├── popup/                     # 브라우저 툴바 팝업 UI
 │   ├── index.html
 │   ├── main.tsx
@@ -265,14 +270,26 @@ git push origin v<x.y.z>
 2. [Chrome Web Store 개발자 콘솔](https://chrome.google.com/webstore/devconsole)에서 zip 업로드
 3. 스토어 등록정보(스크린샷, 설명) 갱신 후 심사 제출
 
-### CI (GitHub Actions)
-`main`/`develop` 푸시 및 PR 시 아래가 자동 실행됩니다 (`.github/workflows/ci.yml`).
+### CI / CD (GitHub Actions)
+
+#### 1. 지속적 통합 검증 (`.github/workflows/ci.yml`)
+`main`/`develop` 푸시 및 PR 시 아래가 자동 실행됩니다.
 
 | 잡 | 내용 |
 | :--- | :--- |
 | `verify` | TypeScript 타입 검사 + 단위 테스트 |
 | `build` | 프로덕션 빌드 + 버전 일관성 + 산출물 무결성 + 패키지 아티팩트 업로드 |
 | `e2e` | Chromium 확장 로드 기반 E2E (headless) |
+
+#### 2. 프로덕션 릴리스 & 크롬 웹스토어 자동 배포 (`.github/workflows/release.yml`)
+`main` 브랜치에 병합(Push)되면 자동으로 아래 파이프라인이 실행됩니다:
+1. `npm run verify:all` 및 `release/job-blocking-v2-v<버전>.zip` 패키지 생성
+2. **GitHub Release (`v<버전>`)** 자동 생성 및 `.zip` 파일 첨부
+3. GitHub Repository Secrets에 아래 4개 환경변수가 등록되어 있으면 **Chrome Web Store API를 통해 새 패키지 업로드 및 심사 제출(`--auto-publish`)**까지 자동 수행:
+   - `CWS_EXTENSION_ID`: 크롬 웹스토어 확장 프로그램 32자리 ID
+   - `CWS_CLIENT_ID`: Google Cloud Console OAuth 2.0 클라이언트 ID
+   - `CWS_CLIENT_SECRET`: Google Cloud Console OAuth 2.0 클라이언트 보안 비밀번호
+   - `CWS_REFRESH_TOKEN`: Chrome Web Store API(`https://www.googleapis.com/auth/chromewebstore`) 권한으로 발급받은 Refresh Token
 
 ---
 
