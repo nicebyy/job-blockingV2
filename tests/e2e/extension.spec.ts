@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect } from './fixtures';
-import { UI_MESSAGES, POPUP_STATS_CONFIG, SUPPORT_CONFIG } from '../../src/constants';
+import { UI_MESSAGES, POPUP_STATS_CONFIG, SUPPORT_CONFIG, WELCOME_CONFIG } from '../../src/constants';
 
 test.describe('크롬 확장 프로그램 E2E 테스트', () => {
   test('팝업 창(Popup UI)이 정상적으로 렌더링되어야 한다', async ({ page, extensionId }) => {
@@ -107,6 +107,7 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/wanted_wdlist.html');
     const fixtureHtml = fs.readFileSync(fixturePath, 'utf8');
 
+    await page.route('**/_next/static/**/*.js', (route) => route.abort());
     await page.route('https://www.wanted.co.kr/wdlist/518/872', (route) => {
       route.fulfill({
         status: 200,
@@ -124,8 +125,8 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     const badges = await page.locator('.job-filter-rating-badge').all();
     expect(badges.length).toBeGreaterThan(0);
 
-    // 첫 번째 카드(디알비동일)의 회사명 및 평점 뱃지 가시성 및 가로 인라인 정렬 확인
-    const targetCard = page.locator('li:has-text("디알비동일")').first();
+    // 첫 번째 카드(매드업)의 회사명 및 평점 뱃지 가시성 및 가로 인라인 정렬 확인
+    const targetCard = page.locator('li:has-text("매드업")').first();
     const wrap = targetCard.locator('.job-filter-ratings-wrap');
     await expect(wrap).toBeVisible();
 
@@ -353,5 +354,33 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     });
     expect(overlapsText, '툴바가 공고 제목/설명 텍스트를 덮고 있음').toBe(0);
   });
+
+  test('최초 설치 환영 및 사용 가이드(Welcome UI) 페이지가 정상 렌더링되고 인터랙티브 데모가 동작해야 한다', async ({
+    page,
+    extensionId,
+  }) => {
+    await page.goto(`chrome-extension://${extensionId}/${WELCOME_CONFIG.PAGE_PATH}`);
+
+    await expect(page.locator('h1')).toContainText(WELCOME_CONFIG.LABELS.HERO_TITLE);
+    await expect(page.locator('.pin-tip-card')).toContainText(WELCOME_CONFIG.LABELS.PIN_TIP_TITLE);
+
+    // 4단계 가이드 카드 확인
+    await expect(page.locator('.step-card')).toHaveCount(WELCOME_CONFIG.STEPS.length);
+
+    // 5대 채용 플랫폼 바로가기 링크 확인
+    await expect(page.locator('.platform-card')).toHaveCount(WELCOME_CONFIG.PLATFORMS.length);
+
+    // 인터랙티브 데모 카드 [공고숨김] 클릭 -> 블러 처리 및 초기화 동작 확인
+    const demoCard = page.locator('.demo-job-card');
+    await expect(demoCard).not.toHaveClass(/is-blocked/);
+
+    await page.locator('.demo-btn-hide').click();
+    await expect(demoCard).toHaveClass(/is-blocked/);
+    await expect(page.locator('.demo-blocked-notice')).toContainText(WELCOME_CONFIG.LABELS.DEMO_BLOCKED_MSG);
+
+    await page.locator('.demo-reset-inline-btn').click();
+    await expect(demoCard).not.toHaveClass(/is-blocked/);
+  });
 });
+
 

@@ -653,6 +653,7 @@ export const SUPPORT_CONFIG = {
       ? `https://chromewebstore.google.com/detail/${extensionId}/reviews`
       : 'https://chromewebstore.google.com',
   LABELS: {
+    GUIDE: '사용 가이드',
     FEEDBACK: '문의 / 피드백',
     REVIEW: '리뷰 남기기',
     PRIVACY: '개인정보처리방침',
@@ -667,6 +668,100 @@ export const SUPPORT_CONFIG = {
     DISMISS_RATING_BANNER: 'job_filter_dismiss_rating_banner',
   },
 } as const;
+
+/**
+ * 최초 설치 시 표시되는 웰컴(온보딩/사용 가이드) 페이지 설정 상수
+ */
+export const WELCOME_CONFIG = {
+  PAGE_PATH: 'src/welcome/index.html',
+  INSTALL_REASON: 'install',
+  LABELS: {
+    PAGE_TITLE: 'Job Blocking V2 - 설치 환영 및 사용 가이드',
+    BADGE_TEXT: '설치 완료 · 바로 사용 가능',
+    HERO_TITLE: 'Job Blocking V2를 설치해 주셔서 감사합니다! 🎉',
+    HERO_SUBTITLE:
+      '원티드, 사람인, 잡코리아, 리멤버, 점핏에서 원치 않는 공고와 광고를 원클릭으로 숨기고, 잡플래닛·블라인드 평점까지 한눈에 확인해 보세요.',
+    PIN_TIP_TITLE: '💡 시작 전 꿀팁: 브라우저 우측 상단에 아이콘을 고정(Pin)해 주세요!',
+    PIN_TIP_DESC:
+      '크롬 우측 상단 퍼즐 아이콘(🧩)을 클릭한 뒤 Job Blocking V2 옆의 고정 핀(📌)을 켜두면 언제든 빠르게 필터 설정과 차단 통계를 확인할 수 있습니다.',
+    DEMO_SECTION_TITLE: '미리 체험해 보기 (인터랙티브 데모)',
+    DEMO_SECTION_DESC:
+      '실제 채용 사이트의 공고 카드에 아래와 같이 평점 뱃지와 차단 버튼이 표시됩니다. 버튼을 직접 클릭해 보세요!',
+    DEMO_RESET_BTN: '데모 초기화',
+    DEMO_BLOCKED_MSG: '차단된 공고입니다. (실제 사이트에서는 설정에 따라 완전히 숨겨지거나 흐리게 표시됩니다)',
+    DEMO_MOCK_COMPANY: '(주)예시테크코리아',
+    DEMO_MOCK_TITLE: '시니어 프론트엔드 엔지니어 (React / TypeScript)',
+    DEMO_MOCK_META: '서울 강남구 · 경력 3~8년 · 합격보상금 100만원',
+    STEPS_SECTION_TITLE: '핵심 기능 4가지, 이렇게 사용해 보세요',
+    PLATFORMS_SECTION_TITLE: '지금 바로 채용 사이트에서 시작해 보세요',
+    PLATFORMS_SECTION_DESC:
+      '아래 채용 사이트로 이동하면 별도 설정 없이 즉시 필터링과 기업 평점 뱃지가 작동합니다.',
+    CTA_OPEN_OPTIONS: '⚙️ 상세 설정 및 차단 목록 관리 열기',
+  },
+  STEPS: [
+    {
+      badge: 'STEP 01',
+      icon: '🚫',
+      title: '원클릭 공고 숨김 & 기업 영구 차단',
+      description:
+        '채용 공고 카드나 상세 페이지의 [공고숨김 | 회사차단] 버튼을 누르면 보고 싶지 않은 특정 공고나 기업의 모든 공고를 즉시 차단합니다.',
+    },
+    {
+      badge: 'STEP 02',
+      icon: '⭐',
+      title: '잡플래닛 & 블라인드 실시간 평점 뱃지',
+      description:
+        '공고의 기업명 옆에 잡플래닛과 블라인드 평점(★)이 나란히 표시되며, 뱃지를 클릭하면 해당 기업의 리뷰 페이지로 바로 이동합니다.',
+    },
+    {
+      badge: 'STEP 03',
+      icon: '🎛️',
+      title: '완전 숨김 vs 흐리게(Blur) & 광고 필터링',
+      description:
+        '확장 프로그램 팝업에서 스위치 하나로 차단 공고를 아예 지우거나 흐리게(Blur) 볼 수 있고, 광고성·추천 공고도 깔끔하게 숨길 수 있습니다.',
+    },
+    {
+      badge: 'STEP 04',
+      icon: '🔄',
+      title: '무한 스크롤 & 키워드 필터 · 데이터 백업',
+      description:
+        '페이지 번호를 누를 필요 없이 스크롤만으로 다음 공고를 이어서 탐색하고, 키워드 차단 및 JSON 파일 백업/복원으로 나만의 필터를 관리하세요.',
+    },
+  ],
+  PLATFORMS: [
+    {
+      id: 'wanted',
+      name: '원티드 (Wanted)',
+      desc: '포지션 탐색 바로가기',
+      url: 'https://www.wanted.co.kr/wdlist',
+    },
+    {
+      id: 'saramin',
+      name: '사람인 (Saramin)',
+      desc: '채용정보 전체보기',
+      url: 'https://www.saramin.co.kr/zf_user/jobs/list/job-category',
+    },
+    {
+      id: 'jobkorea',
+      name: '잡코리아 (JobKorea)',
+      desc: '채용정보 상세검색',
+      url: 'https://www.jobkorea.co.kr/recruit/joblist',
+    },
+    {
+      id: 'remember',
+      name: '리멤버 (Remember)',
+      desc: '커리어 채용공고 탐색',
+      url: 'https://career.rememberapp.co.kr/job/postings',
+    },
+    {
+      id: 'jumpit',
+      name: '점핏 (Jumpit)',
+      desc: '개발자 포지션 탐색',
+      url: 'https://jumpit.saramin.co.kr/positions',
+    },
+  ],
+} as const;
+
 
 
 

@@ -14,6 +14,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        welcome: path.resolve(__dirname, 'src/welcome/index.html'),
+      },
+    },
+  },
   server: {
     port: 5173,
     strictPort: true,
