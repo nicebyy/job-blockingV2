@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings } from '../types';
 import { StorageManager, normalizeBlockList } from '../core/storage';
 import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType, PLATFORM_CONFIG, PlatformFilterType, SUPPORT_CONFIG, WELCOME_CONFIG } from '../constants';
-import { formatDate } from '../utils/date';
+import { formatDate, isJobExpired } from '../utils/date';
 
 export const Options: React.FC = () => {
   const [blockList, setBlockList] = useState<BlockItem[]>([]);
@@ -82,10 +82,12 @@ export const Options: React.FC = () => {
     const purgedCount = await StorageManager.purgeExpiredJobs();
     if (purgedCount > 0) {
       alert(UI_MESSAGES.PURGE_EXPIRED_SUCCESS(purgedCount));
+      // 정리 결과를 열려 있는 채용 사이트 탭에도 즉시 반영
+      notifyContentScript({ type: 'BLOCKLIST_CHANGED', items: await StorageManager.getBlockList() });
     } else {
       alert(UI_MESSAGES.EMPTY_EXPIRED_LIST);
     }
-    loadBlockList();
+    await loadBlockList();
   };
 
   const handleExport = () => {
@@ -145,6 +147,18 @@ export const Options: React.FC = () => {
       [OPTIONS_FILTER_CONFIG.KEYWORD]: blockList.filter((item) => item.type === 'keyword').length,
     };
   }, [blockList]);
+
+  /**
+   * 보관 기한이 지난 공고 개수.
+   *
+   * [UX] 정리 버튼을 목록 상단으로 올리면서, "지금 누르면 몇 개가 정리되는지"를
+   * 버튼에서 바로 보여준다. 기존에는 버튼을 누른 뒤 alert 로만 알 수 있었고,
+   * 무엇보다 목록이 길면 버튼까지 스크롤해야 했다.
+   */
+  const expiredCount = useMemo(
+    () => blockList.filter((item) => isJobExpired(item)).length,
+    [blockList]
+  );
 
   // 플랫폼별 차단 개수 계산 (현재 선택된 유형 조건과 연동)
   const platformCounts = useMemo(() => {
@@ -361,6 +375,41 @@ export const Options: React.FC = () => {
           </div>
         </div>
 
+        {/*
+         * [UX] 액션 툴바를 차단 목록 "위"에 배치한다.
+         *
+         * 기존에는 목록 아래에 있어, 공고를 수백~수천 개 차단한 사용자는
+         * [만료 공고 정리] 버튼을 누르기 위해 목록 끝까지 스크롤해야 했다.
+         * 목록 길이와 무관하게 항상 화면 안에 들어오도록 목록 앞으로 옮기고,
+         * 만료된 공고가 몇 개인지 버튼에 바로 표시해 누를 이유를 알 수 있게 한다.
+         */}
+        <div className="action-bar">
+          <button
+            className={`btn-secondary btn-purge ${expiredCount > 0 ? 'has-expired' : ''}`}
+            onClick={handlePurgeExpired}
+            title={UI_MESSAGES.PURGE_EXPIRED_TOOLTIP(expiredCount)}
+            aria-label={UI_MESSAGES.PURGE_EXPIRED_TOOLTIP(expiredCount)}
+          >
+            {expiredCount > 0
+              ? UI_MESSAGES.PURGE_EXPIRED_BUTTON_WITH_COUNT(expiredCount)
+              : UI_MESSAGES.PURGE_EXPIRED_BUTTON}
+          </button>
+          <div className="action-bar-right">
+            <button className="btn-secondary" onClick={handleExport}>
+              {UI_MESSAGES.EXPORT_BUTTON}
+            </button>
+            <label className="btn-secondary" style={{ display: 'inline-block', cursor: 'pointer' }}>
+              {UI_MESSAGES.IMPORT_BUTTON}
+              <input
+                type="file"
+                accept=".json"
+                style={{ display: 'none' }}
+                onChange={handleImport}
+              />
+            </label>
+          </div>
+        </div>
+
         {filteredList.length === 0 ? (
           <div className="empty-state">
             {getEmptyMessage()}
@@ -419,25 +468,6 @@ export const Options: React.FC = () => {
             })}
           </ul>
         )}
-
-
-        <div className="action-bar">
-          <button className="btn-secondary" onClick={handlePurgeExpired} title="보관 기한이 지난 마감 공고 일괄 정리">
-            🧹 만료 공고 정리
-          </button>
-          <button className="btn-secondary" onClick={handleExport}>
-            📥 목록 내보내기 (Export JSON)
-          </button>
-          <label className="btn-secondary" style={{ display: 'inline-block', cursor: 'pointer' }}>
-            📤 목록 가져오기 (Import JSON)
-            <input
-              type="file"
-              accept=".json"
-              style={{ display: 'none' }}
-              onChange={handleImport}
-            />
-          </label>
-        </div>
 
         {/* 크롬 웹스토어 평점 리뷰 유도 & 피드백 및 개인정보처리방침 푸터 카드 */}
         <div className="options-footer-section">
