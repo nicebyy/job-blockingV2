@@ -424,6 +424,14 @@ export const UI_MESSAGES = {
   EMPTY_BLOCK_LIST: '등록된 차단 항목이 없습니다.',
   PURGE_EXPIRED_SUCCESS: (count: number) => `만료된 공고 ${count}개가 자동 정리되었습니다.`,
   EMPTY_EXPIRED_LIST: '만료된 공고가 없습니다.',
+  PURGE_EXPIRED_BUTTON: '🧹 만료 공고 정리',
+  PURGE_EXPIRED_BUTTON_WITH_COUNT: (count: number) => `🧹 만료 공고 ${count}개 정리`,
+  PURGE_EXPIRED_TOOLTIP: (count: number) =>
+    count > 0
+      ? `보관 기한(마감 후 30일)이 지난 공고 ${count}개를 목록에서 지금 바로 정리합니다.`
+      : '보관 기한(마감 후 30일)이 지난 만료 공고를 일괄 정리합니다. (현재 만료된 공고 없음)',
+  EXPORT_BUTTON: '📥 목록 내보내기 (Export JSON)',
+  IMPORT_BUTTON: '📤 목록 가져오기 (Import JSON)',
   TOGGLE_LABELS: {
     MODE_BLUR: '블러(흐리게) 처리',
     MODE_HIDE: '완전 숨김 처리',

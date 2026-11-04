@@ -365,12 +365,36 @@ body {
   color: #94a3b8;
 }
 
+/* 액션 툴바: 차단 목록 "위"에 고정 배치하여 목록 길이와 무관하게 항상 접근 가능 */
 .action-bar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.action-bar-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 만료 공고가 있을 때는 정리 버튼을 강조해 "지금 누를 이유"를 시각적으로 전달 */
+.btn-purge.has-expired {
+  background-color: #fff7ed;
+  border-color: #fdba74;
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.btn-purge.has-expired:hover {
+  background-color: #ffedd5;
+  border-color: #fb923c;
 }
 
 /* 푸터 영역: 크롬 웹스토어 리뷰 유도 카드 및 지원 링크 */
