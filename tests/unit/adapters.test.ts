@@ -291,9 +291,7 @@ describe('Site Adapters 단위 테스트', () => {
       // FilterEngine hide 적용 시 li 요소 자체가 display: none이 되는지 확인
       const engine = new FilterEngine({
         mode: 'hide',
-        blurIntensity: 5,
         hideAds: false,
-        showInlineButton: true,
         enableInfiniteScroll: true,
         showJobplanetRating: true,
         showBlindRating: true,
@@ -1037,9 +1035,7 @@ describe('Site Adapters 단위 테스트', () => {
       const engine = new FilterEngine(
         {
           mode: 'hide',
-          blurIntensity: 5,
           hideAds: false,
-          showInlineButton: true,
           enableInfiniteScroll: true,
           showJobplanetRating: true,
           showBlindRating: true,
@@ -2591,9 +2587,7 @@ describe('Site Adapters 단위 테스트', () => {
       const engine = new FilterEngine(
         {
           mode: 'hide',
-          blurIntensity: 6,
           hideAds: true,
-          showInlineButton: true,
           enableInfiniteScroll: true,
           showJobplanetRating: true,
           showBlindRating: true,
@@ -2632,9 +2626,7 @@ describe('Site Adapters 단위 테스트', () => {
       const engine = new FilterEngine(
         {
           mode: 'hide',
-          blurIntensity: 6,
           hideAds: true,
-          showInlineButton: true,
           enableInfiniteScroll: true,
           showJobplanetRating: true,
           showBlindRating: true,
@@ -3284,9 +3276,7 @@ describe('Site Adapters 단위 테스트', () => {
       const engine = new FilterEngine(
         {
           mode: 'hide',
-          blurIntensity: 6,
           hideAds: true,
-          showInlineButton: true,
           enableInfiniteScroll: true,
           showJobplanetRating: true,
           showBlindRating: true,
@@ -3458,9 +3448,7 @@ describe('Site Adapters 단위 테스트', () => {
       const engine = new FilterEngine(
         {
           mode: 'hide',
-          blurIntensity: 6,
           hideAds: true,
-          showInlineButton: true,
           enableInfiniteScroll: true,
           showJobplanetRating: true,
           showBlindRating: true,
@@ -3683,9 +3671,7 @@ describe('Site Adapters 단위 테스트', () => {
       const engine = new FilterEngine(
         {
           mode: 'hide',
-          blurIntensity: 6,
           hideAds: true,
-          showInlineButton: true,
           enableInfiniteScroll: true,
           showJobplanetRating: true,
           showBlindRating: true,
@@ -3943,9 +3929,7 @@ describe('Site Adapters 단위 테스트', () => {
       const engine = new FilterEngine(
         {
           mode: 'hide',
-          blurIntensity: 6,
           hideAds: true,
-          showInlineButton: true,
           enableInfiniteScroll: true,
           showJobplanetRating: true,
           showBlindRating: true,
