@@ -1,6 +1,7 @@
 import { BlockItem, FilterMode, FilterResult, FilterSettings, JobCardInfo, JobPlatform } from '../types';
 import { normalizeCompanyName } from '../utils/text';
 import { isJobExpired } from '../utils/date';
+import { FILTER_CONFIG } from '../constants';
 
 /**
  * 인덱스에 담긴 차단 항목과 그 원본 순서.
@@ -410,11 +411,14 @@ export class FilterEngine {
 
   /**
    * DOM 카드 요소에 필터 스타일 적용 (blur 또는 hide)
+   *
+   * 블러 강도는 설정값이 아니라 FILTER_CONFIG.DEFAULT_BLUR_INTENSITY 상수를 사용한다.
+   * (blurIntensity 는 UI 에 노출된 적이 없어 죽은 설정이었고 타입에서 제거되었다)
    */
   public applyFilter(
     cardElement: HTMLElement,
     mode: FilterMode = this.settings.mode,
-    intensity: number = this.settings.blurIntensity
+    intensity: number = FILTER_CONFIG.DEFAULT_BLUR_INTENSITY
   ): void {
     cardElement.setAttribute('data-job-filtered', 'true');
     cardElement.setAttribute('data-filter-mode', mode);

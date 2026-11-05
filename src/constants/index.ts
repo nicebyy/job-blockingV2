@@ -432,6 +432,14 @@ export const UI_MESSAGES = {
       : '보관 기한(마감 후 30일)이 지난 만료 공고를 일괄 정리합니다. (현재 만료된 공고 없음)',
   EXPORT_BUTTON: '📥 목록 내보내기 (Export JSON)',
   IMPORT_BUTTON: '📤 목록 가져오기 (Import JSON)',
+  DELETE_BUTTON: '삭제',
+  DELETE_BUTTON_TOOLTIP: '이 항목을 차단 목록에서 삭제합니다.',
+  /** 목록 페이지네이션 — 더 보기 버튼 라벨/안내 */
+  LOAD_MORE_BUTTON: (step: number) => `↓ ${step}개 더 보기`,
+  LOAD_MORE_REMAINING: (shown: number, total: number) =>
+    `전체 ${total.toLocaleString()}개 중 ${shown.toLocaleString()}개 표시 중`,
+  LOAD_MORE_ALL_LOADED: (total: number) => `전체 ${total.toLocaleString()}개 모두 표시됨`,
+  SHOW_ALL_BUTTON: (total: number) => `전체 ${total.toLocaleString()}개 모두 보기`,
   TOGGLE_LABELS: {
     MODE_BLUR: '블러(흐리게) 처리',
     MODE_HIDE: '완전 숨김 처리',
@@ -467,6 +475,17 @@ export const OPTIONS_FILTER_CONFIG = {
     COMPANY: '차단된 회사가 없습니다.',
     JOB: '숨긴 공고가 없습니다.',
     KEYWORD: '차단된 키워드가 없습니다.',
+  },
+  /**
+   * 목록 페이지네이션(점진적 렌더링) 설정.
+   *
+   * 차단 항목이 수천 건이면 한 번에 모두 렌더링할 때 DOM 노드가 수만 개가 되어
+   * 옵션 페이지 스크롤이 버벅이고, 사용자가 목록 끝을 찾기도 어렵다.
+   * 처음에는 PAGE_SIZE 개만 그리고 [더 보기] 로 확장한다.
+   */
+  PAGINATION: {
+    PAGE_SIZE: 50,
+    LOAD_MORE_STEP: 100,
   },
 } as const;
 
