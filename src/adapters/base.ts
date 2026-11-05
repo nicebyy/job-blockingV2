@@ -240,9 +240,28 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
   }
 
   /**
+   * 평점 뱃지 요소의 좌→우 표시 우선순위 값을 반환한다.
+   *
+   * 뱃지가 아닌 요소(혹은 알 수 없는 플랫폼 클래스)는 우선순위 비교 대상이 아니므로 null 을 반환한다.
+   * 우선순위 값은 RATING_BADGE_CONFIG.ORDER 에서 가져와 하드코딩을 피한다.
+   */
+  private getRatingBadgeOrder(el: Element): number | null {
+    if (!el.classList.contains(RATING_BADGE_CONFIG.CLASSES.BADGE)) return null;
+    if (el.classList.contains(RATING_BADGE_CONFIG.CLASSES.BLIND)) {
+      return RATING_BADGE_CONFIG.ORDER.blind;
+    }
+    if (el.classList.contains(RATING_BADGE_CONFIG.CLASSES.JOBPLANET)) {
+      return RATING_BADGE_CONFIG.ORDER.jobplanet;
+    }
+    return null;
+  }
+
+  /**
    * 기업 평점 뱃지 주입 (잡플래닛: 초록색, 블라인드: 빨간색)
    * - 평점이 유효하게 존재하는 단일 기업일 때만 기업명 옆에 배치
    * - 미존재, 에러, 동명 기업(ambiguous)일 경우 배치하지 않음 (배치x)
+   * - 좌→우 표시 순서는 미리 정의된 ORDER(잡플래닛 → 블라인드)로 고정한다.
+   *   (비동기 응답 도착 순서에 따라 append 하면 카드마다 순서가 뒤바뀌는 문제 방지)
    */
   public injectRatingBadge(cardInfo: JobCardInfo, ratingInfo: CompanyRatingInfo): void {
     if (
@@ -309,7 +328,20 @@ export abstract class BaseSiteAdapter implements SiteAdapter {
       e.stopPropagation();
     });
 
-    wrap.appendChild(badge);
+    // 결정적 위치 삽입: wrap 안의 기존 뱃지 중 "새 뱃지보다 뒤에 와야 하는"
+    // (= ORDER 값이 더 큰) 첫 뱃지 앞에 insertBefore 하고, 없으면 맨 뒤에 append 한다.
+    // 이렇게 하면 잡플래닛/블라인드 응답이 어느 순서로 도착해도 좌→우 순서가 항상 유지된다.
+    const newBadgeOrder = RATING_BADGE_CONFIG.ORDER[ratingInfo.platform];
+    const insertBeforeTarget = Array.from(wrap.children).find((child) => {
+      const existingOrder = this.getRatingBadgeOrder(child);
+      return existingOrder !== null && existingOrder > newBadgeOrder;
+    });
+
+    if (insertBeforeTarget) {
+      wrap.insertBefore(badge, insertBeforeTarget);
+    } else {
+      wrap.appendChild(badge);
+    }
   }
 }
 
