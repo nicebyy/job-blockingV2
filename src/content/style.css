@@ -208,6 +208,66 @@ div[data-sentry-component="CardJobBasic"] .job-filter-btn-group {
   right: 52px !important;
 }
 
+/* 잡코리아 메인 페이지 CardJobBasic 카드 회사명 행 전용 정렬
+ *
+ * [실측 근거 — 라이브 https://www.jobkorea.co.kr/ 메인]
+ * 카드 폭은 305px 이고, 평점 뱃지가 삽입되는 회사명 행은 다음 구조다.
+ *
+ *   <div class="flex items-center gap-[8px] overflow-hidden">
+ *     <span style="flex-shrink:1" class="truncate ...">회사명</span>
+ *     <span style="flex-shrink:0" class="...">D-16</span>
+ *   </div>
+ *
+ * 이 행의 flex item 은 (1) 회사명 span, (2) D-day span, (3) 확장이 삽입한
+ * `.job-filter-ratings-wrap` 세 개다. 회사명 span 은 `truncate`(overflow:hidden)지만
+ * flex item 기본값인 `min-width:auto` 때문에 콘텐츠 폭 아래로 줄어들지 못한다.
+ * 그래서 flex 축소가 회사명 span 에서 일어나지 않고, flex-shrink 미지정(=1)인
+ * 뱃지 wrap 쪽으로 그대로 전가되어 뱃지 "내부" 라벨이 한 글자씩 세로로 쪼개졌다.
+ * 실측(수정 전, 같은 페이지 카드 8개): wrap 높이 18.2px(1줄) / 29px(2줄) / 53px(4줄).
+ *   - 회사명 '㈜더 핸즈'                : wrap 18.2px, 라벨 12px (1줄)
+ *   - 회사명 '라바웨이브'               : wrap 29px,   라벨 24px (2줄)
+ *   - 회사명 '주식회사 가온감정평가법인' : wrap 53px,   라벨 48px (4줄 = 한 글자씩)
+ *
+ * 따라서 이 회사명 행에서만:
+ *   - 회사명 span 에 `min-width: 0` 을 주어 말줄임(ellipsis)으로 폭 부족분을 흡수하고,
+ *   - 뱃지 wrap 은 `flex-shrink: 0` 으로 절대 압축하지 않으며,
+ *   - 행은 한 줄(nowrap) + 세로 중앙 정렬(align-items: center)을 유지한다.
+ *
+ * [회귀 방지] `:has(> .job-filter-ratings-wrap)` 로 "뱃지 wrap 을 직계 자식으로 가진 행"에만
+ * 매칭되므로, td.tplCo / .list_item / .item_recruit 처럼 뱃지 "사이" 줄바꿈(flex-wrap: wrap)을
+ * 허용하는 다른 목록 레이아웃의 의도는 건드리지 않는다. 이 블록은 카드 루트로 스코프가 한정된다.
+ */
+div[data-component-type="CARD_JOB_BASIC"] :has(> .job-filter-ratings-wrap),
+div[data-sentry-component="CardJobBasic"] :has(> .job-filter-ratings-wrap) {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  min-width: 0 !important;
+}
+
+/* 회사명 span 이 줄어들어(말줄임) 뱃지 폭을 침범하지 않도록 축소 기준점을 0 으로 낮춘다.
+ * 대상은 라이브 DOM 의 회사명 `span.truncate` 로 한정한다 (D-day span 은 flex-shrink:0 유지). */
+div[data-component-type="CARD_JOB_BASIC"] :has(> .job-filter-ratings-wrap) > span.truncate,
+div[data-sentry-component="CardJobBasic"] :has(> .job-filter-ratings-wrap) > span.truncate {
+  min-width: 0 !important;
+  flex-shrink: 1 !important;
+  flex-grow: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* 뱃지 wrap 은 압축 금지 + 행 세로 중앙 정렬 유지 */
+div[data-component-type="CARD_JOB_BASIC"] :has(> .job-filter-ratings-wrap) > .job-filter-ratings-wrap,
+div[data-sentry-component="CardJobBasic"] :has(> .job-filter-ratings-wrap) > .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  align-self: center !important;
+  flex-wrap: nowrap !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
 /* 잡코리아 채용목록(.tplJobList) 테이블 행 툴바 위치 보정
  *
  * [실측 근거 — 라이브 페이지]
@@ -389,13 +449,33 @@ div[class*="sc-80824a9d-0"] .job-filter-btn-group {
   }
 }
 
-/* 잡플래닛 및 블라인드 평점 뱃지 스타일 */
+/* 잡플래닛 및 블라인드 평점 뱃지 스타일
+ *
+ * [회귀 방지 — 라이브 실측 근거]
+ * 잡코리아 메인 CardJobBasic 카드(폭 305px)에서 이 wrap 은 회사명 행
+ * (`<div class="flex items-center gap-[8px] overflow-hidden">`)의 flex item 이 된다.
+ * 그런데 wrap 에 flex-shrink 가 없고 뱃지의 white-space 가 normal 이라, 가용 폭이 좁아지면
+ * flex 축소가 뱃지 "내부" 텍스트까지 미쳐 라벨("잡플래닛" 4글자)이 한 글자씩 세로로 쪼개졌다.
+ * 실측(수정 전, 같은 페이지 카드 8개): wrap 높이 18.2px(1줄) / 29px(2줄) / 53px(4줄) 로 제각각.
+ *   - 회사명 '㈜더 핸즈'      : wrap 18.2px, 라벨 12px (1줄)
+ *   - 회사명 '라바웨이브'      : wrap 29px,   라벨 24px (2줄)
+ *   - 회사명 '주식회사 가온감정평가법인': wrap 53px, 라벨 48px (4줄 = 한 글자씩)
+ *
+ * 해결: 뱃지 요소들(wrap/badge/label/star/score)은 절대 줄바꿈·축소되지 않게 고정하고,
+ * 폭 부족분은 truncate(overflow:hidden)된 회사명 span 이 말줄임으로 흡수하도록 위임한다.
+ *
+ * [주의] 아래 td.tplCo / .list_item / .item_recruit 규칙의 flex-wrap: wrap 은
+ * "뱃지 사이"의 줄바꿈 허용이 의도된 동작이다. 그 의도는 훼손하지 않고,
+ * 뱃지 "내부"가 쪼개지는 것만 막는다 (white-space: nowrap 은 뱃지 내부 텍스트에만 영향).
+ */
 .job-filter-ratings-wrap {
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
   vertical-align: middle !important;
   margin-left: 6px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 /* 잡코리아 테이블 열(td.tplCo) 내 평점 뱃지 줄바꿈 최적화 */
@@ -512,6 +592,12 @@ td.tplCo .tplBtnFavOn,
   user-select: none !important;
   transition: all 0.15s ease-in-out !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  /* [회귀 방지] 좁은 카드(잡코리아 메인 305px)에서도 뱃지 자체가 압축되거나
+     라벨이 한 글자씩 세로로 쪼개지지 않도록 고정한다. 실측 수정 전: 뱃지 높이 18.2→53px 변동. */
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
 }
 
 .job-filter-rating-label {
@@ -520,17 +606,25 @@ td.tplCo .tplBtnFavOn,
   letter-spacing: -0.3px !important;
   margin-right: 1px !important;
   opacity: 0.9 !important;
+  /* 뱃지 내부 텍스트 노드도 부모 flex item 으로서 축소/줄바꿈되지 않게 고정 */
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  word-break: keep-all !important;
 }
 
 .job-filter-rating-star {
   font-size: 10px !important;
   line-height: 1 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .job-filter-rating-score {
   font-size: 11px !important;
   font-weight: 700 !important;
   font-variant-numeric: tabular-nums !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 /* 잡플래닛 전용 테마 (초록색) */

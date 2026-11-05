@@ -639,6 +639,22 @@ export const BLIND_CONFIG = {
  * 기업 평점(잡플래닛 / 블라인드) 뱃지 UI 설정 상수
  */
 export const RATING_BADGE_CONFIG = {
+  /**
+   * 뱃지 좌 → 우 표시 우선순위 (값이 작을수록 왼쪽)
+   *
+   * 잡플래닛 / 블라인드 평점은 각각 별도의 비동기 요청으로 도착하기 때문에,
+   * 도착 순서대로 DOM 에 append 하면 같은 목록 안에서도 카드마다 좌우 순서가 뒤바뀐다.
+   * (실측: 잡코리아 CardJobBasic 카드 8개 중 0,2,4,6 = 잡플래닛→블라인드 /
+   *  1,3,5,7 = 블라인드→잡플래닛 으로 교차)
+   *
+   * 따라서 삽입 위치를 이 상수 기준으로 결정해, 비동기 응답 도착 순서와 무관하게
+   * 표시 순서를 항상 잡플래닛 → 블라인드 로 고정한다.
+   * (사용처: src/adapters/base.ts 의 injectRatingBadge)
+   */
+  ORDER: {
+    jobplanet: 0,
+    blind: 1,
+  },
   CLASSES: {
     WRAP: 'job-filter-ratings-wrap',
     BADGE: 'job-filter-rating-badge',
