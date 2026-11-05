@@ -74,6 +74,9 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/jumpit_positions.html');
     const fixtureHtml = fs.readFileSync(fixturePath, 'utf8');
 
+    // 점핏 실제 Next.js 하이드레이션 청크가 로드되면 픽스처의 SSR DOM 이 라이브 데이터로
+    // 교체되어 '와탭랩스' 카드 구성이 달라진다. 청크 로드를 차단해 픽스처 DOM 을 고정한다.
+    await page.route('**/_next/static/**/*.js', (route) => route.abort());
     await page.route('https://jumpit.saramin.co.kr/positions?sort=popular', (route) => {
       route.fulfill({
         status: 200,
@@ -191,6 +194,9 @@ test.describe('크롬 확장 프로그램 E2E 테스트', () => {
     const fixturePath = path.resolve(process.cwd(), 'tests/fixtures/jumpit_positions.html');
     const fixtureHtml = fs.readFileSync(fixturePath, 'utf8');
 
+    // 점핏 실제 Next.js 하이드레이션이 픽스처 SSR DOM 을 라이브 데이터로 교체해
+    // 테스트 픽스처의 '위볼린' 카드가 사라진다. 청크 로드를 차단해 픽스처 DOM 을 고정한다.
+    await page.route('**/_next/static/**/*.js', (route) => route.abort());
     await page.route('https://jumpit.saramin.co.kr/positions?sort=popular', (route) => {
       route.fulfill({
         status: 200,
