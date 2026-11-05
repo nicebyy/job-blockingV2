@@ -3,7 +3,7 @@
 이 문서는 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 형식을 따르며,
 [유의적 버전(Semantic Versioning)](https://semver.org/lang/ko/)을 준수합니다.
 
-## [Unreleased]
+## [0.2.6] - 2026-11-05
 
 ### 변경
 - **설정 스키마 정리**: `FilterSettings` 에서 **죽은 설정 2개를 제거**했다.
