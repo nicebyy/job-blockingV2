@@ -299,6 +299,142 @@ test.describe('[회귀] 잡코리아 메인 CardJobBasic 평점 뱃지는 한 �
   });
 });
 
+/**
+ * 잡코리아 TOP100(/top100/)은 메인 CardJobBasic 과 **완전히 다른 레거시 레이아웃**이다.
+ *
+ *   <ol class="rankList listItem">
+ *     <li class="dmpItem">
+ *       <div class="rank">…</div>
+ *       <div class="co">
+ *         <div class="coTit">                       ← width: 150px, display: flex, flex-wrap: wrap
+ *           <a class="coLink"><b>회사명</b></a>
+ *           <button class="tplBtnTy tplBtnFavOff devFavor">…</button>
+ *           <span class="job-filter-ratings-wrap">…</span>   ← 확장이 주입
+ *         </div>
+ *         <div class="coDesc">…</div>
+ *       </div>
+ *       <div class="info">…</div>                   ← 옆 열(공고 제목)
+ *       <div class="side">…</div>
+ *     </li>
+ *   </ol>
+ *
+ * 회사명 열(`.coTit`)이 150px 로 **고정 폭**이라, 뱃지 두 개(내용폭 약 163.5px)가
+ * 한 줄에 들어가지 않으면 `.coTit` 의 `flex-wrap: wrap` 때문에 뱃지 사이에서 줄이 바뀌고,
+ * 그 상태에서 다시 뱃지 내부가 압축되면 라벨이 한 글자씩 세로로 쪼개진다.
+ *
+ * 실측(라이브 TOP100, 신입/경력 두 탭 동일):
+ *   - 수정 전: 뱃지 높이 29px, 라벨 높이 24px (2줄), white-space: normal, flex-shrink: 1
+ *   - 수정 후: 뱃지 높이 18.19px, 라벨 높이 12px (1줄), white-space: nowrap, flex-shrink: 0
+ */
+const TOP100_LAYOUT_HTML = `
+  <ol class="rankList listItem" style="list-style:none;margin:0;padding:0;">
+    ${[
+      { company: '㈜농심', jobplanetScore: '3.0', blindScore: '3.2', desc: '1000대기업' },
+      { company: '한미그룹', jobplanetScore: '3.0', blindScore: '3.2', desc: '우수기업' },
+      { company: '캐논쎄미콘덕터엔지니어링코리아㈜', jobplanetScore: '3.0', blindScore: '3.2', desc: '외국계' },
+    ]
+      .map(
+        (spec, i) => `
+      <li class="dmpItem" style="display:flex;width:918px;padding:12px 0;border-bottom:1px solid #eee;">
+        <div class="rank" style="width:45.9px;"><span class="num">${i + 1}</span></div>
+        <div class="co" style="width:192.8px;">
+          <div class="coTit" style="width:150px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;">
+            <a class="coLink" href="#"><b>${spec.company}</b></a>
+            <button type="button" class="tplBtnTy tplBtnFavOff devFavor"><span>관심기업</span></button>
+            <span class="job-filter-ratings-wrap">
+              ${badgeHtml('jobplanet', spec.jobplanetScore)}
+              ${badgeHtml('blind', spec.blindScore)}
+            </span>
+          </div>
+          <div class="coDesc"><span>${spec.desc}</span></div>
+        </div>
+        <div class="info" style="width:578.3px;padding-left:0;">채용 공고 제목 영역</div>
+        <div class="side" style="width:101px;">즉시지원</div>
+      </li>`
+      )
+      .join('')}
+  </ol>`;
+
+test.describe('[회귀] 잡코리아 TOP100(레거시 ol.rankList) 뱃지도 한 줄로 표시되어야 한다', () => {
+  test.beforeEach(async ({ page }) => {
+    await loadPage(page, TOP100_LAYOUT_HTML);
+  });
+
+  test('두 뱃지가 한 줄(< 20px)이고 라벨이 쪼개지지 않으며 좌→우 순서가 잡플래닛 → 블라인드 여야 한다', async ({
+    page,
+  }) => {
+    const cards = page.locator('ol.rankList li.dmpItem');
+    await expect(cards).toHaveCount(3);
+
+    for (let i = 0; i < 3; i += 1) {
+      const badges = cards.nth(i).locator('.job-filter-rating-badge');
+      await expect(badges).toHaveCount(2);
+
+      const jobplanet = await badges.nth(0).boundingBox();
+      const blind = await badges.nth(1).boundingBox();
+      expect(jobplanet).not.toBeNull();
+      expect(blind).not.toBeNull();
+
+      // TOP100 실측 수정 전: 29px(라벨 24px = 2줄) → 수정 후 18.19px
+      expect(
+        jobplanet!.height,
+        `TOP100 카드 ${i}: 잡플래닛 뱃지가 여러 줄로 쪼개짐 (height=${jobplanet!.height})`
+      ).toBeLessThan(20);
+      expect(
+        blind!.height,
+        `TOP100 카드 ${i}: 블라인드 뱃지가 여러 줄로 쪼개짐 (height=${blind!.height})`
+      ).toBeLessThan(20);
+
+      // 두 뱃지가 같은 줄 (한 줄에 나란히)
+      expect(
+        Math.abs(jobplanet!.y - blind!.y),
+        `TOP100 카드 ${i}: 뱃지 사이에서 줄이 바뀜 (y=${jobplanet!.y} vs ${blind!.y})`
+      ).toBeLessThanOrEqual(0.5);
+
+      // 좌→우 순서
+      expect(
+        jobplanet!.x,
+        `TOP100 카드 ${i}: 좌우 순서가 뒤바뀜 (잡플래닛 x=${jobplanet!.x}, 블라인드 x=${blind!.x})`
+      ).toBeLessThan(blind!.x);
+
+      await expect(badges.nth(0)).toContainText('잡플래닛');
+      await expect(badges.nth(1)).toContainText('블라인드');
+    }
+
+    // 라벨 높이 검증 (한 줄 = 12px)
+    const labels = page.locator('ol.rankList .job-filter-rating-label');
+    await expect(labels).toHaveCount(6);
+    for (let i = 0; i < 6; i += 1) {
+      const box = await labels.nth(i).boundingBox();
+      expect(box, `TOP100 라벨 ${i}: boundingBox 없음`).not.toBeNull();
+      expect(box!.height, `TOP100 라벨 ${i}: 한 줄이 아님`).toBeLessThan(16);
+    }
+  });
+
+  test('TOP100 뱃지도 nowrap + flex-shrink:0 이어야 한다 (셀렉터 비의존 방어)', async ({ page }) => {
+    const styles = await page.evaluate(() => {
+      const read = (selector: string) =>
+        Array.from(document.querySelectorAll(selector)).map((el) => {
+          const cs = getComputedStyle(el);
+          return { whiteSpace: cs.whiteSpace, flexShrink: cs.flexShrink };
+        });
+      return {
+        badges: read('ol.rankList .job-filter-rating-badge'),
+        labels: read('ol.rankList .job-filter-rating-label'),
+        wraps: read('ol.rankList .job-filter-ratings-wrap'),
+      };
+    });
+
+    for (const group of [styles.badges, styles.labels, styles.wraps]) {
+      expect(group.length).toBeGreaterThan(0);
+      for (const item of group) {
+        expect(item.whiteSpace).toBe('nowrap');
+        expect(item.flexShrink).toBe('0');
+      }
+    }
+  });
+});
+
 test.describe('[회귀] 기존 목록 레이아웃(td.tplCo)의 뱃지 사이 줄바꿈 허용 의도는 유지되어야 한다', () => {
   test('좁은 열에서는 두 뱃지가 서로 다른 줄로 감싸되(wrap), 뱃지 내부 라벨은 쪼개지지 않는다', async ({
     page,
