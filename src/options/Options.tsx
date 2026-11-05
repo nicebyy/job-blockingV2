@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { BlockItem, BlockType, DEFAULT_SETTINGS, FilterSettings } from '../types';
 import { StorageManager, normalizeBlockList } from '../core/storage';
 import { UI_MESSAGES, OPTIONS_FILTER_CONFIG, OptionsFilterType, PLATFORM_CONFIG, PlatformFilterType, SUPPORT_CONFIG, WELCOME_CONFIG } from '../constants';
-import { formatDate } from '../utils/date';
+import { formatDate, isJobExpired } from '../utils/date';
 
 export const Options: React.FC = () => {
   const [blockList, setBlockList] = useState<BlockItem[]>([]);
@@ -82,10 +82,12 @@ export const Options: React.FC = () => {
     const purgedCount = await StorageManager.purgeExpiredJobs();
     if (purgedCount > 0) {
       alert(UI_MESSAGES.PURGE_EXPIRED_SUCCESS(purgedCount));
+      // 정리 결과를 열려 있는 채용 사이트 탭에도 즉시 반영
+      notifyContentScript({ type: 'BLOCKLIST_CHANGED', items: await StorageManager.getBlockList() });
     } else {
       alert(UI_MESSAGES.EMPTY_EXPIRED_LIST);
     }
-    loadBlockList();
+    await loadBlockList();
   };
 
   const handleExport = () => {
@@ -146,6 +148,18 @@ export const Options: React.FC = () => {
     };
   }, [blockList]);
 
+  /**
+   * 보관 기한이 지난 공고 개수.
+   *
+   * [UX] 정리 버튼을 목록 상단으로 올리면서, "지금 누르면 몇 개가 정리되는지"를
+   * 버튼에서 바로 보여준다. 기존에는 버튼을 누른 뒤 alert 로만 알 수 있었고,
+   * 무엇보다 목록이 길면 버튼까지 스크롤해야 했다.
+   */
+  const expiredCount = useMemo(
+    () => blockList.filter((item) => isJobExpired(item)).length,
+    [blockList]
+  );
+
   // 플랫폼별 차단 개수 계산 (현재 선택된 유형 조건과 연동)
   const platformCounts = useMemo(() => {
     const baseList =
@@ -165,6 +179,17 @@ export const Options: React.FC = () => {
       ).length,
     };
   }, [blockList, selectedFilter]);
+
+  /**
+   * 페이지네이션 표시 개수.
+   *
+   * 차단 항목이 수천 건일 때 전부 렌더링하면 DOM 노드가 수만 개가 되어
+   * 스크롤이 버벅이고 목록 끝을 찾기 어렵다. 처음에는 일부만 그리고 확장한다.
+   * 필터/검색이 바뀌면 다시 처음 크기로 되돌린다.
+   */
+  const [visibleCount, setVisibleCount] = useState<number>(
+    OPTIONS_FILTER_CONFIG.PAGINATION.PAGE_SIZE
+  );
 
   // 카테고리 탭 + 플랫폼 탭 + 검색어 복합 필터링
   const filteredList = useMemo(() => {
@@ -193,6 +218,28 @@ export const Options: React.FC = () => {
       return true;
     });
   }, [blockList, selectedFilter, selectedPlatform, search]);
+
+  // 필터 조건이 바뀌면 목록을 처음부터 다시 보여준다
+  useEffect(() => {
+    setVisibleCount(OPTIONS_FILTER_CONFIG.PAGINATION.PAGE_SIZE);
+  }, [selectedFilter, selectedPlatform, search]);
+
+  /** 실제로 화면에 그릴 목록 (앞에서 visibleCount 개) */
+  const visibleList = useMemo(
+    () => filteredList.slice(0, visibleCount),
+    [filteredList, visibleCount]
+  );
+
+  /** 아직 화면에 그리지 않은 남은 개수 */
+  const remainingCount = Math.max(0, filteredList.length - visibleList.length);
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => prev + OPTIONS_FILTER_CONFIG.PAGINATION.LOAD_MORE_STEP);
+  };
+
+  const handleShowAll = () => {
+    setVisibleCount(filteredList.length);
+  };
 
   const getEmptyMessage = () => {
     if (search.trim()) {
@@ -361,83 +408,145 @@ export const Options: React.FC = () => {
           </div>
         </div>
 
+        {/*
+         * [UX] 액션 툴바를 차단 목록 "위"에 배치한다.
+         *
+         * 기존에는 목록 아래에 있어, 공고를 수백~수천 개 차단한 사용자는
+         * [만료 공고 정리] 버튼을 누르기 위해 목록 끝까지 스크롤해야 했다.
+         * 목록 길이와 무관하게 항상 화면 안에 들어오도록 목록 앞으로 옮기고,
+         * 만료된 공고가 몇 개인지 버튼에 바로 표시해 누를 이유를 알 수 있게 한다.
+         */}
+        <div className="action-bar">
+          <button
+            className={`btn-secondary btn-purge ${expiredCount > 0 ? 'has-expired' : ''}`}
+            onClick={handlePurgeExpired}
+            title={UI_MESSAGES.PURGE_EXPIRED_TOOLTIP(expiredCount)}
+            aria-label={UI_MESSAGES.PURGE_EXPIRED_TOOLTIP(expiredCount)}
+          >
+            {expiredCount > 0
+              ? UI_MESSAGES.PURGE_EXPIRED_BUTTON_WITH_COUNT(expiredCount)
+              : UI_MESSAGES.PURGE_EXPIRED_BUTTON}
+          </button>
+          <div className="action-bar-right">
+            <button className="btn-secondary" onClick={handleExport}>
+              {UI_MESSAGES.EXPORT_BUTTON}
+            </button>
+            <label className="btn-secondary" style={{ display: 'inline-block', cursor: 'pointer' }}>
+              {UI_MESSAGES.IMPORT_BUTTON}
+              <input
+                type="file"
+                accept=".json"
+                style={{ display: 'none' }}
+                onChange={handleImport}
+              />
+            </label>
+          </div>
+        </div>
+
         {filteredList.length === 0 ? (
           <div className="empty-state">
             {getEmptyMessage()}
           </div>
         ) : (
-          <ul className="block-list">
-            {filteredList.map((item) => {
-              const itemPlatform = item.platform || PLATFORM_CONFIG.CUSTOM;
-              const platformLabel = PLATFORM_CONFIG.LABELS[itemPlatform];
-              const platformClass = PLATFORM_CONFIG.BADGE_CLASSES[itemPlatform];
+          <>
+            <ul className="block-list">
+              {visibleList.map((item) => {
+                const itemPlatform = item.platform || PLATFORM_CONFIG.CUSTOM;
+                const platformLabel = PLATFORM_CONFIG.LABELS[itemPlatform];
+                const platformClass = PLATFORM_CONFIG.BADGE_CLASSES[itemPlatform];
 
-              return (
-                <li key={item.id} className="block-item">
-                  <div className="block-item-content">
-                    {/* 차단 유형 뱃지 */}
-                    <span
-                      className={`block-badge ${
-                        item.type === 'company'
-                          ? 'badge-company'
-                          : item.type === 'job'
-                          ? 'badge-job'
-                          : 'badge-keyword'
-                      }`}
-                    >
-                      {item.type === 'company' ? '회사' : item.type === 'job' ? '공고' : '키워드'}
-                    </span>
+                return (
+                  <li key={item.id} className="block-item">
+                    {/*
+                     * [레이아웃] 내용 영역은 줄바꿈/말줄임을 담당하고,
+                     * 삭제 버튼은 flex-shrink: 0 으로 고정폭을 유지한다.
+                     * 두 영역을 분리하지 않으면 제목이 2줄 이상으로 늘어날 때
+                     * 버튼 폭이 압축되어 "삭제"가 세로로 한 글자씩 쌓인다.
+                     */}
+                    <div className="block-item-content">
+                      <div className="block-item-badges">
+                        {/* 차단 유형 뱃지 */}
+                        <span
+                          className={`block-badge ${
+                            item.type === 'company'
+                              ? 'badge-company'
+                              : item.type === 'job'
+                              ? 'badge-job'
+                              : 'badge-keyword'
+                          }`}
+                        >
+                          {item.type === 'company' ? '회사' : item.type === 'job' ? '공고' : '키워드'}
+                        </span>
 
-                    {/* 차단 플랫폼 뱃지 */}
-                    <span className={`platform-badge ${platformClass}`}>
-                      {platformLabel}
-                    </span>
+                        {/* 차단 플랫폼 뱃지 */}
+                        <span className={`platform-badge ${platformClass}`}>
+                          {platformLabel}
+                        </span>
 
-                    <strong>
-                      {item.type === 'job'
-                        ? `${item.companyName ? `[${item.companyName}] ` : ''}${item.title || item.pattern}`
-                        : item.pattern}
-                    </strong>
-                    {item.type === 'job' && item.expiresAt && (
-                      <span
-                        className="expire-tag"
-                        title={`공고 마감 정보: ${item.closingDate || '상시채용/미정'} (마감 후 30일 보관)`}
-                      >
-                        만료: {formatDate(item.expiresAt)}
+                        {item.type === 'job' && item.expiresAt && (
+                          <span
+                            className="expire-tag"
+                            title={`공고 마감 정보: ${item.closingDate || '상시채용/미정'} (마감 후 30일 보관)`}
+                          >
+                            만료: {formatDate(item.expiresAt)}
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="block-item-title" title={
+                        item.type === 'job'
+                          ? `${item.companyName ? `[${item.companyName}] ` : ''}${item.title || item.pattern}`
+                          : item.pattern
+                      }>
+                        {item.type === 'job'
+                          ? `${item.companyName ? `[${item.companyName}] ` : ''}${item.title || item.pattern}`
+                          : item.pattern}
                       </span>
-                    )}
-                  </div>
+                    </div>
+                    <button
+                      className="btn-delete"
+                      onClick={() => handleDelete(item.id)}
+                      title={UI_MESSAGES.DELETE_BUTTON_TOOLTIP}
+                      aria-label={`${item.pattern} ${UI_MESSAGES.DELETE_BUTTON}`}
+                    >
+                      {UI_MESSAGES.DELETE_BUTTON}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/*
+             * 페이지네이션: 남은 항목을 한 번에 다 그리지 않고 단계적으로 확장한다.
+             * 수천 건 목록에서도 초기 렌더/스크롤이 가볍게 유지된다.
+             */}
+            {remainingCount > 0 && (
+              <div className="list-pagination">
+                <span className="list-pagination-summary">
+                  {UI_MESSAGES.LOAD_MORE_REMAINING(visibleList.length, filteredList.length)}
+                </span>
+                <div className="list-pagination-actions">
                   <button
-                    className="btn-delete"
-                    onClick={() => handleDelete(item.id)}
-                    title="삭제"
+                    type="button"
+                    className="btn-secondary btn-load-more"
+                    onClick={handleLoadMore}
                   >
-                    삭제
+                    {UI_MESSAGES.LOAD_MORE_BUTTON(
+                      Math.min(remainingCount, OPTIONS_FILTER_CONFIG.PAGINATION.LOAD_MORE_STEP)
+                    )}
                   </button>
-                </li>
-              );
-            })}
-          </ul>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-show-all"
+                    onClick={handleShowAll}
+                  >
+                    {UI_MESSAGES.SHOW_ALL_BUTTON(filteredList.length)}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
-
-
-        <div className="action-bar">
-          <button className="btn-secondary" onClick={handlePurgeExpired} title="보관 기한이 지난 마감 공고 일괄 정리">
-            🧹 만료 공고 정리
-          </button>
-          <button className="btn-secondary" onClick={handleExport}>
-            📥 목록 내보내기 (Export JSON)
-          </button>
-          <label className="btn-secondary" style={{ display: 'inline-block', cursor: 'pointer' }}>
-            📤 목록 가져오기 (Import JSON)
-            <input
-              type="file"
-              accept=".json"
-              style={{ display: 'none' }}
-              onChange={handleImport}
-            />
-          </label>
-        </div>
 
         {/* 크롬 웹스토어 평점 리뷰 유도 & 피드백 및 개인정보처리방침 푸터 카드 */}
         <div className="options-footer-section">

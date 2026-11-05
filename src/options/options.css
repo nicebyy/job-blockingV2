@@ -249,9 +249,55 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 10px 14px;
   border-bottom: 1px solid #f1f5f9;
   transition: background 0.1s;
+}
+
+/*
+ * [레이아웃] 내용 영역
+ *
+ * 이 규칙이 없으면 .block-item-content 가 flex 아이템으로서 충분히 줄어들지 못해,
+ * 제목이 2줄 이상이 될 때 삭제 버튼이 압축되고 "삭제" 가 한 글자씩 세로로 쌓인다.
+ * min-width: 0 은 flex 아이템이 내부 텍스트 폭 아래로 줄어들 수 있게 하는 필수 조건이다.
+ */
+.block-item-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 뱃지 줄: 줄바꿈 허용, 뱃지 자체는 압축되지 않음 */
+.block-item-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.block-item-badges .block-badge,
+.block-item-badges .platform-badge,
+.block-item-badges .expire-tag {
+  margin-right: 0;
+  margin-left: 0;
+  flex-shrink: 0;
+}
+
+/* 제목: 최대 2줄까지 표시하고 넘치면 말줄임 (긴 공고명으로 행이 무한히 커지는 것 방지) */
+.block-item-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #0f172a;
 }
 
 .block-item:last-child {
@@ -345,7 +391,16 @@ body {
   font-weight: normal;
 }
 
+/*
+ * 삭제 버튼
+ *
+ * [중요] flex-shrink: 0 + white-space: nowrap 이 없으면, 옆의 제목이 2줄 이상으로
+ * 늘어날 때 이 버튼이 압축되어 "삭제" 가 세로로 한 글자씩 쌓인다.
+ */
 .btn-delete {
+  flex: 0 0 auto;
+  align-self: center;
+  white-space: nowrap;
   background: none;
   border: none;
   color: #ef4444;
@@ -353,10 +408,39 @@ body {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
+  line-height: 1.2;
 }
 
 .btn-delete:hover {
   background-color: #fee2e2;
+}
+
+/* 목록 페이지네이션 (남은 항목 점진적 렌더링) */
+.list-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.list-pagination-summary {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.list-pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-load-more,
+.btn-show-all {
+  white-space: nowrap;
 }
 
 .empty-state {
@@ -365,12 +449,36 @@ body {
   color: #94a3b8;
 }
 
+/* 액션 툴바: 차단 목록 "위"에 고정 배치하여 목록 길이와 무관하게 항상 접근 가능 */
 .action-bar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.action-bar-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 만료 공고가 있을 때는 정리 버튼을 강조해 "지금 누를 이유"를 시각적으로 전달 */
+.btn-purge.has-expired {
+  background-color: #fff7ed;
+  border-color: #fdba74;
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.btn-purge.has-expired:hover {
+  background-color: #ffedd5;
+  border-color: #fb923c;
 }
 
 /* 푸터 영역: 크롬 웹스토어 리뷰 유도 카드 및 지원 링크 */

@@ -56,7 +56,7 @@ export class ContentController {
     } catch (err) {
       console.error('[JobFilter] 차단 목록 로드 실패, 빈 목록으로 진행:', err);
     }
-    this.filterEngine = new FilterEngine(this.settings, blockList);
+    this.filterEngine = new FilterEngine(this.settings, blockList, this.getPlatformKey());
 
     // 무한 스크롤 초기화 (단, 상세 페이지에서는 비활성화)
     if (
@@ -112,6 +112,9 @@ export class ContentController {
   private handleUrlOrFilterChange(): void {
     // 사이트 정렬 및 검색 필터 변경 시 어댑터 재확인 및 무한 스크롤 초기화
     this.adapter = AdapterRegistry.getAdapterForUrl(window.location.href);
+
+    // SPA 전환으로 플랫폼이 바뀔 수 있으므로 jobId 플랫폼 격리 기준을 갱신
+    this.filterEngine?.updatePlatform(this.getPlatformKey());
 
     if (this.infiniteScroll) {
       this.infiniteScroll.destroy();

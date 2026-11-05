@@ -5,7 +5,7 @@ export const APP_INFO = {
   NAME: 'Job Blocking V2',
   FULL_NAME: 'Job Blocking V2 - 채용 사이트 공고 필터링',
   DESCRIPTION: '원티드, 사람인, 잡코리아, 리멤버, 점핏 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
-  VERSION: '0.2.5',
+  VERSION: '0.2.6',
 } as const;
 
 /**
@@ -424,6 +424,22 @@ export const UI_MESSAGES = {
   EMPTY_BLOCK_LIST: '등록된 차단 항목이 없습니다.',
   PURGE_EXPIRED_SUCCESS: (count: number) => `만료된 공고 ${count}개가 자동 정리되었습니다.`,
   EMPTY_EXPIRED_LIST: '만료된 공고가 없습니다.',
+  PURGE_EXPIRED_BUTTON: '🧹 만료 공고 정리',
+  PURGE_EXPIRED_BUTTON_WITH_COUNT: (count: number) => `🧹 만료 공고 ${count}개 정리`,
+  PURGE_EXPIRED_TOOLTIP: (count: number) =>
+    count > 0
+      ? `보관 기한(마감 후 30일)이 지난 공고 ${count}개를 목록에서 지금 바로 정리합니다.`
+      : '보관 기한(마감 후 30일)이 지난 만료 공고를 일괄 정리합니다. (현재 만료된 공고 없음)',
+  EXPORT_BUTTON: '📥 목록 내보내기 (Export JSON)',
+  IMPORT_BUTTON: '📤 목록 가져오기 (Import JSON)',
+  DELETE_BUTTON: '삭제',
+  DELETE_BUTTON_TOOLTIP: '이 항목을 차단 목록에서 삭제합니다.',
+  /** 목록 페이지네이션 — 더 보기 버튼 라벨/안내 */
+  LOAD_MORE_BUTTON: (step: number) => `↓ ${step}개 더 보기`,
+  LOAD_MORE_REMAINING: (shown: number, total: number) =>
+    `전체 ${total.toLocaleString()}개 중 ${shown.toLocaleString()}개 표시 중`,
+  LOAD_MORE_ALL_LOADED: (total: number) => `전체 ${total.toLocaleString()}개 모두 표시됨`,
+  SHOW_ALL_BUTTON: (total: number) => `전체 ${total.toLocaleString()}개 모두 보기`,
   TOGGLE_LABELS: {
     MODE_BLUR: '블러(흐리게) 처리',
     MODE_HIDE: '완전 숨김 처리',
@@ -459,6 +475,17 @@ export const OPTIONS_FILTER_CONFIG = {
     COMPANY: '차단된 회사가 없습니다.',
     JOB: '숨긴 공고가 없습니다.',
     KEYWORD: '차단된 키워드가 없습니다.',
+  },
+  /**
+   * 목록 페이지네이션(점진적 렌더링) 설정.
+   *
+   * 차단 항목이 수천 건이면 한 번에 모두 렌더링할 때 DOM 노드가 수만 개가 되어
+   * 옵션 페이지 스크롤이 버벅이고, 사용자가 목록 끝을 찾기도 어렵다.
+   * 처음에는 PAGE_SIZE 개만 그리고 [더 보기] 로 확장한다.
+   */
+  PAGINATION: {
+    PAGE_SIZE: 50,
+    LOAD_MORE_STEP: 100,
   },
 } as const;
 
@@ -612,6 +639,22 @@ export const BLIND_CONFIG = {
  * 기업 평점(잡플래닛 / 블라인드) 뱃지 UI 설정 상수
  */
 export const RATING_BADGE_CONFIG = {
+  /**
+   * 뱃지 좌 → 우 표시 우선순위 (값이 작을수록 왼쪽)
+   *
+   * 잡플래닛 / 블라인드 평점은 각각 별도의 비동기 요청으로 도착하기 때문에,
+   * 도착 순서대로 DOM 에 append 하면 같은 목록 안에서도 카드마다 좌우 순서가 뒤바뀐다.
+   * (실측: 잡코리아 CardJobBasic 카드 8개 중 0,2,4,6 = 잡플래닛→블라인드 /
+   *  1,3,5,7 = 블라인드→잡플래닛 으로 교차)
+   *
+   * 따라서 삽입 위치를 이 상수 기준으로 결정해, 비동기 응답 도착 순서와 무관하게
+   * 표시 순서를 항상 잡플래닛 → 블라인드 로 고정한다.
+   * (사용처: src/adapters/base.ts 의 injectRatingBadge)
+   */
+  ORDER: {
+    jobplanet: 0,
+    blind: 1,
+  },
   CLASSES: {
     WRAP: 'job-filter-ratings-wrap',
     BADGE: 'job-filter-rating-badge',

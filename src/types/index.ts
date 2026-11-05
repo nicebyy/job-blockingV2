@@ -41,12 +41,15 @@ export type CompanyMatchMode = 'exact' | 'contains';
 
 /**
  * 사용자 환경 설정 인터페이스
+ *
+ * [정리] blurIntensity / showInlineButton 은 제거되었다.
+ * 두 값은 UI 에 노출된 적이 없고 참조하는 코드도 없어(항상 상수/true 로 동작)
+ * 타입에만 존재하는 죽은 설정이었다. 블러 강도는 FILTER_CONFIG.DEFAULT_BLUR_INTENSITY,
+ * 인라인 버튼 노출은 항상 true 로 고정 동작한다.
  */
 export interface FilterSettings {
   mode: FilterMode;
-  blurIntensity: number; // px 단위 (기본: 6)
   hideAds: boolean; // 상시/추천/헤드헌팅 광고 공고 숨김 여부
-  showInlineButton: boolean; // 공고 카드에 [차단] 인라인 버튼 노출 여부
   enableInfiniteScroll: boolean; // 페이지네이션을 무한 스크롤로 자동 변환 여부
   showJobplanetRating: boolean; // 잡플래닛 평점 뱃지 표시 여부 (초록색)
   showBlindRating: boolean; // 블라인드 평점 뱃지 표시 여부 (빨간색)
@@ -62,9 +65,7 @@ export interface FilterSettings {
  */
 export const DEFAULT_SETTINGS: FilterSettings = {
   mode: 'blur',
-  blurIntensity: 6,
   hideAds: true,
-  showInlineButton: true,
   enableInfiniteScroll: true,
   showJobplanetRating: true,
   showBlindRating: true,

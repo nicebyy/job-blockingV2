@@ -82,6 +82,13 @@ export class InfiniteScrollManager {
   private setupSentinel(container: HTMLElement): void {
     if (typeof document === 'undefined') return;
 
+    // [중요] 확장 리로드 / SPA 전환 / URL 변경 등으로 매니저가 다시 생성되면
+    // 이전 인스턴스가 남긴 인디케이터·센티넬이 DOM 에 그대로 남아 누적된다.
+    // 그중 하나라도 is-active 상태로 남으면 스피너가 "영구히 도는" 것처럼 보인다.
+    // 새로 만들기 전에 동일 ID 의 잔여 요소를 제거한다.
+    document.getElementById(INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID)?.remove();
+    document.getElementById(INFINITE_SCROLL_CONFIG.SENTINEL_ID)?.remove();
+
     // 로딩 인디케이터 (표시 여부는 CSS 의 .is-active 상태 클래스로만 제어한다)
     const indicator = document.createElement('div');
     indicator.id = INFINITE_SCROLL_CONFIG.LOADING_INDICATOR_ID;
@@ -330,7 +337,11 @@ export class InfiniteScrollManager {
 
       const currentContainer = this.adapter.getCardListContainer?.(document);
       if (!currentContainer) {
-        return false;
+        // [중요] 여기서 그냥 return false 하면 실패 카운터가 증가하지 않아,
+        // finally 의 scheduleIntersectionRefill 이 곧바로 재요청 → 또 컨테이너 없음 →
+        // 재요청 ... 을 영구 반복한다. 스피너가 꺼지지 않고 계속 도는 직접 원인이었다.
+        // 컨테이너 소실은 "복구 불가능한 실패"로 취급해 무한 스크롤을 종료한다.
+        throw new Error('Card list container disappeared');
       }
 
       // 기존 공고 중 중복 검사 (이미 DOM에 존재하는 공고는 중복 추가하지 않음)

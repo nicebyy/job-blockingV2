@@ -15,8 +15,12 @@ test-results/
 .worktrees/
 
 # Local Rules & Config
-gemini.md
-GEMINI.md
+#
+# [중요] gemini.md / GEMINI.md 는 저장소에 커밋한다.
+# 과거에는 이 파일을 ignore 했는데, 그 결과 `git worktree add` 로 새 작업 공간을 만들 때
+# 규칙 문서가 복사되지 않아 워크트리에서 작업하는 에이전트가 프로젝트 규칙
+# (워크트리 격리·테스트 게이트·커밋 규칙 등)을 볼 수 없었다.
+# 규칙 문서는 코드와 함께 버전 관리되어야 모든 작업 탭에 동일하게 적용된다.
 .gemini/
 .cursor/
 .cursorrules
@@ -24,6 +28,9 @@ GEMINI.md
 .windsurfrules
 .claude/
 .clinerules
+
+# Temporary scratch directories (스크린샷·진단 스크립트 등 작업 중 산출물)
+.tmp/
 
 # IDE & Editor
 .vscode/
