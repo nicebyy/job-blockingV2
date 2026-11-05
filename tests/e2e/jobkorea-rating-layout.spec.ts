@@ -435,6 +435,244 @@ test.describe('[회귀] 잡코리아 TOP100(레거시 ol.rankList) 뱃지도 한
   });
 });
 
+/**
+ * [회귀] 잡코리아 TOP100(/top100/) 회사명 열(.coTit) 대비 뱃지 wrap 의 overhang
+ *
+ * ## 배경 (라이브 실측 — 신입 탭 10행 전수)
+ *
+ * 사이트 CSS 가 TOP100 레거시 레이아웃의 회사명 열 `.coTit` 을 `width: 150px` 로 고정한다.
+ * 확장이 주입하는 뱃지 wrap 의 내용폭은 163.5px(잡플래닛 + 블라인드 + gap 4px)이라
+ * `.coTit` 오른쪽 경계를 **+15.5px 넘친다**. 다음 열 `.info` 시작 x 까지는 18.3px 여유가
+ * 있어 실제 겹침은 아직 없지만, 폰트/브라우저 배율 변화로 뱃지 폭이 조금만 커져도
+ * 곧바로 공고 제목 열을 침범한다.
+ *
+ * 해결 (src/content/style.css):
+ *   ol.rankList > li.dmpItem .coTit:has(> .job-filter-ratings-wrap) { min-width: 170px }
+ *
+ * 실측 (수정 전 → 수정 후, 라이브 10행 평균):
+ *   - .coTit 폭                              : 150px  → 170px
+ *   - 뱃지 wrap 오른쪽 끝 − .coTit 오른쪽 끝 : +15.5px → **-4.5px** (overhang 해소)
+ *   - 뱃지 wrap 오른쪽 끝 − .info 열 시작 x  : 18.3px → 27.3px (겹침 0)
+ *   - 행 높이                                : 137/145.2px → 137/141.2px
+ *   - 뱃지 미주입 상태의 사이트 레이아웃은 100% 동일 (`:has()` 스코프, 부작용 0)
+ *
+ * 아래 픽스처는 라이브 TOP100 행의 실제 열 폭(rank 45.9 / co 192.8 / info 578.3 / side 101,
+ * li 918)을 그대로 재현한다. 뱃지가 없는 행 1개를 함께 넣어 `:has()` 스코프를 검증한다.
+ *
+ * ## 뱃지 폭 고정 이유
+ *
+ * 라이브 TOP100 에서 측정한 뱃지 1개(테두리 포함)의 폭은 79.75px 이고,
+ * wrap 내용폭 163.5px = 2 × 79.75px + gap 4px 이다.
+ * 폰트 메트릭은 OS/브라우저마다 달라서(이 환경의 Malgun Gothic 에서는 뱃지가 83.66px 로
+ * 4.7px 더 넓게 렌더링된다) 뱃지 폭을 그대로 두면 overhang 판정이 실행 환경에 따라
+ * 비결정적이 된다. 레이아웃 기하만 검증하는 테스트이므로 뱃지 **박스 폭만** 라이브 실측값으로
+ * 고정한다 (내부 DOM/클래스/글꼴 설정은 `badgeHtml` 과 완전히 동일).
+ */
+const LIVE_TOP100_BADGE_WIDTH = 79.75;
+
+const top100BadgeHtml = (platform: 'jobplanet' | 'blind', score: string): string =>
+  badgeHtml(platform, score).replace(
+    'class="job-filter-rating-badge',
+    `style="box-sizing: border-box; width: ${LIVE_TOP100_BADGE_WIDTH}px;" class="job-filter-rating-badge`
+  );
+
+const TOP100_OVERHANG_HTML = `
+  <ol class="rankList listItem" style="list-style:none;margin:0;padding:0;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:14px;line-height:1.4;color:#111;">
+    ${[
+      { company: '㈜농심', jobplanetScore: '3.0', blindScore: '3.2', desc: '1000대기업' },
+      { company: '한미그룹', jobplanetScore: '4.1', blindScore: '3.0', desc: '우수기업' },
+      { company: '뱃지없는회사', jobplanetScore: '', blindScore: '', desc: '스코프 확인용' },
+    ]
+      .map(
+        (spec, i) => `
+      <li class="dmpItem" style="display:flex;width:918px;padding:12px 0;border-bottom:1px solid #eee;">
+        <div class="rank" style="width:45.9px;"><span class="num">${i + 1}</span></div>
+        <div class="co" style="width:192.8px;">
+          <div class="coTit" style="width:150px;">
+            <a class="coLink" href="#"><b>${spec.company}</b></a>
+            <button type="button" class="tplBtnTy tplBtnFavOff devFavor"><span>관심기업</span></button>${
+              spec.jobplanetScore
+                ? `
+            <span class="job-filter-ratings-wrap">
+              ${top100BadgeHtml('jobplanet', spec.jobplanetScore)}
+              ${top100BadgeHtml('blind', spec.blindScore)}
+            </span>`
+                : ''
+            }
+          </div>
+          <div class="coDesc"><span>${spec.desc}</span></div>
+        </div>
+        <div class="info" style="width:578.3px;padding-left:0;">채용 공고 제목 영역</div>
+        <div class="side" style="width:101px;">즉시지원</div>
+      </li>`
+      )
+      .join('')}
+  </ol>`;
+
+/** TOP100_OVERHANG_HTML 에서 뱃지가 주입된 행 수 (마지막 1행은 뱃지 미주입 = 스코프 확인용) */
+const TOP100_BADGE_ROW_COUNT = 2;
+
+test.describe('[회귀] 잡코리아 TOP100 뱃지 wrap 은 회사명 열(.coTit) 폭을 넘지 않아야 한다', () => {
+  test.beforeEach(async ({ page }) => {
+    await loadPage(page, TOP100_OVERHANG_HTML);
+  });
+
+  test('overhang: 뱃지 wrap 오른쪽 끝이 .coTit/.co 열 오른쪽 끝과 .info 열 시작 x 를 넘지 않는다', async ({
+    page,
+  }) => {
+    const rows = page.locator('ol.rankList li.dmpItem');
+    await expect(rows).toHaveCount(TOP100_BADGE_ROW_COUNT + 1);
+
+    for (let i = 0; i < TOP100_BADGE_ROW_COUNT; i += 1) {
+      const row = rows.nth(i);
+      const wrap = row.locator('.job-filter-ratings-wrap');
+      await expect(wrap).toHaveCount(1);
+
+      const wrapBox = await wrap.boundingBox();
+      const coTitBox = await row.locator('.coTit').boundingBox();
+      const coBox = await row.locator('.co').boundingBox();
+      const infoBox = await row.locator('.info').boundingBox();
+      expect(wrapBox, `TOP100 행 ${i}: 뱃지 wrap boundingBox 없음`).not.toBeNull();
+      expect(coTitBox, `TOP100 행 ${i}: .coTit boundingBox 없음`).not.toBeNull();
+      expect(coBox, `TOP100 행 ${i}: .co 열 boundingBox 없음`).not.toBeNull();
+      expect(infoBox, `TOP100 행 ${i}: .info 열 boundingBox 없음`).not.toBeNull();
+
+      const wrapRight = wrapBox!.x + wrapBox!.width;
+      const coTitRight = coTitBox!.x + coTitBox!.width;
+      const coRight = coBox!.x + coBox!.width;
+
+      // (a) 회사명 열(.coTit) 오른쪽 끝을 넘지 않는다. 수정 전 라이브 실측은 +15.5px.
+      //     (서브픽셀 반올림 허용 오차 0.5px)
+      expect(
+        wrapRight,
+        `TOP100 행 ${i}: 뱃지 wrap 이 .coTit 오른쪽으로 ${(wrapRight - coTitRight).toFixed(1)}px 넘침 (overhang)`
+      ).toBeLessThanOrEqual(coTitRight + 0.5);
+
+      // 수정 후 라이브 실측은 -4.5px (뱃지 wrap 이 .coTit 안쪽에 4.5px 여유). 픽스처도 같은 값이어야 한다.
+      expect(
+        wrapRight - coTitRight,
+        `TOP100 행 ${i}: overhang 여유가 라이브 실측(-4.5px)과 다름`
+      ).toBeCloseTo(-4.5, 0);
+
+      // (a-2) 부모 .co 열 오른쪽 끝도 넘지 않는다 (라이브 overCo 실측 -18.3px)
+      expect(
+        wrapRight,
+        `TOP100 행 ${i}: 뱃지 wrap 이 .co 열 오른쪽으로 넘침`
+      ).toBeLessThanOrEqual(coRight + 0.5);
+
+      // (b) 다음 열 .info 시작 x 를 넘지 않는다 = 공고 제목과 겹침 0 (라이브 gap 18.3px)
+      expect(
+        wrapRight,
+        `TOP100 행 ${i}: 뱃지 wrap 이 .info 열을 침범함 (겹침 ${(wrapRight - infoBox!.x).toFixed(1)}px)`
+      ).toBeLessThanOrEqual(infoBox!.x + 0.5);
+
+      // 수정 후 라이브 실측 gapToInfo 는 27.3px (= 18.3px gap + 9px 완충).
+      expect(
+        infoBox!.x - wrapRight,
+        `TOP100 행 ${i}: .info 열까지의 여유가 라이브 실측(27.3px)과 다름`
+      ).toBeCloseTo(27.3, 0);
+
+      // 뱃지가 실제로 회사명 열 안쪽에 들어왔는지(=여유가 0 이상인지)도 확인한다.
+      expect(wrapBox!.width, `TOP100 행 ${i}: 뱃지 wrap 폭이 0`).toBeGreaterThan(0);
+    }
+  });
+
+  test('min-width 스코프: 뱃지가 있는 행의 .coTit 만 170px 이고 뱃지 없는 행은 150px 그대로다', async ({
+    page,
+  }) => {
+    const coTits = page.locator('ol.rankList li.dmpItem .coTit');
+    await expect(coTits).toHaveCount(TOP100_BADGE_ROW_COUNT + 1);
+
+    for (let i = 0; i < TOP100_BADGE_ROW_COUNT; i += 1) {
+      const coTit = coTits.nth(i);
+      // (c) 확장 CSS 의 `:has(> .job-filter-ratings-wrap)` 스코프가 걸린 행만 170px
+      await expect(coTit, `TOP100 행 ${i}: 뱃지가 있는데 min-width 가 170px 이 아님`).toHaveCSS(
+        'min-width',
+        '170px'
+      );
+      const box = await coTit.boundingBox();
+      expect(box, `TOP100 행 ${i}: .coTit boundingBox 없음`).not.toBeNull();
+      expect(box!.width, `TOP100 행 ${i}: .coTit 실제 폭이 170px 이 아님`).toBeCloseTo(170, 0);
+    }
+
+    // (d) 뱃지가 없는 행은 :has() 스코프 밖 → min-width 규칙 미적용, 사이트의 150px 고정 유지
+    const noBadgeRow = page.locator('ol.rankList li.dmpItem').nth(TOP100_BADGE_ROW_COUNT);
+    await expect(noBadgeRow.locator('.job-filter-ratings-wrap')).toHaveCount(0);
+    const noBadgeCoTit = noBadgeRow.locator('.coTit');
+    const noBadgeMinWidth = await noBadgeCoTit.evaluate((el) => getComputedStyle(el).minWidth);
+    expect(
+      noBadgeMinWidth,
+      `뱃지 없는 행에도 min-width: 170px 이 적용됨 (스코프 누수, min-width=${noBadgeMinWidth})`
+    ).not.toBe('170px');
+    await expect(noBadgeCoTit).toHaveCSS('display', 'flex');
+    const noBadgeBox = await noBadgeCoTit.boundingBox();
+    expect(noBadgeBox, '뱃지 없는 행: .coTit boundingBox 없음').not.toBeNull();
+    expect(
+      noBadgeBox!.width,
+      `뱃지 없는 행의 .coTit 폭이 사이트 고정값 150px 에서 변함 (width=${noBadgeBox!.width})`
+    ).toBeCloseTo(150, 0);
+  });
+
+  /**
+   * [검증력(sensitivity) 보증] 위 overhang 단언이 "수정 전 상태"를 실제로 잡아낼 수 있는지 확인한다.
+   *
+   * 확장 style.css 에서 overhang 규칙(`min-width: 170px`)만 제거하고 동일 픽스처를 측정하면
+   * `.coTit` 은 사이트 고정값 150px 로 돌아가고 뱃지 wrap 은 이를 넘어야 한다.
+   * → 라이브 수정 전 실측(+15.5px)과 같은 값이 재현되어야 하며, 이 값이 나와야 위 단언이
+   *   공허하게 항상 참인 것이 아님을 보장한다.
+   */
+  test('[검증력] overhang 규칙을 제거하면 뱃지 wrap 이 .coTit 을 다시 넘어야 한다', async ({ page }) => {
+    // 새로 추가한 규칙 블록만 정확히 걷어낸다 (다른 규칙은 그대로).
+    const OVERHANG_RULE = /ol\.rankList > li\.dmpItem \.coTit:has\(> \.job-filter-ratings-wrap\)[\s\S]*?\}/;
+    expect(STYLE_CSS, 'overhang 규칙을 style.css 에서 찾지 못함').toMatch(OVERHANG_RULE);
+    const cssBeforeFix = STYLE_CSS.replace(OVERHANG_RULE, '');
+    expect(cssBeforeFix, 'overhang 규칙 제거 후에도 170px min-width 가 남아 있음').not.toMatch(
+      /\.coTit:has\(> \.job-filter-ratings-wrap\)/
+    );
+
+    await page.setContent(
+      `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>top100-overhang-before</title></head><body>${TOP100_OVERHANG_HTML}</body></html>`
+    );
+    await page.addStyleTag({ content: LIVE_BASE_STYLES });
+    await page.addStyleTag({ content: cssBeforeFix });
+    await page.evaluate(async () => {
+      void document.body.offsetHeight;
+      for (const animation of document.getAnimations()) {
+        try {
+          animation.finish();
+        } catch {
+          /* 무한 애니메이션 무시 */
+        }
+      }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    });
+
+    const row = page.locator('ol.rankList li.dmpItem').nth(0);
+    const coTit = await row.locator('.coTit').boundingBox();
+    const wrap = await row.locator('.job-filter-ratings-wrap').boundingBox();
+    expect(coTit).not.toBeNull();
+    expect(wrap).not.toBeNull();
+
+    // 수정 전에는 .coTit 이 사이트 고정값 150px 이다.
+    expect(coTit!.width, `수정 전 조건에서 .coTit 폭이 150px 이 아님 (${coTit!.width})`).toBeCloseTo(
+      150,
+      0
+    );
+
+    // 그리고 뱃지 wrap 이 .coTit 오른쪽을 넘는다 = 라이브 수정 전 실측 +15.5px
+    const overhang = wrap!.x + wrap!.width - (coTit!.x + coTit!.width);
+    expect(
+      overhang,
+      `overhang 규칙 없이도 넘침이 재현되지 않음 → overhang 단언이 공허함 (overhang=${overhang.toFixed(1)}px)`
+    ).toBeGreaterThan(1);
+    // 라이브 실측 +15.5px 과 같은 값이어야 픽스처가 라이브를 제대로 재현한 것이다 (허용 오차 0.5px).
+    expect(
+      overhang,
+      `라이브 실측(+15.5px)과 픽스처 값이 다름 (overhang=${overhang.toFixed(1)}px)`
+    ).toBeCloseTo(15.5, 0);
+  });
+});
+
 test.describe('[회귀] 기존 목록 레이아웃(td.tplCo)의 뱃지 사이 줄바꿈 허용 의도는 유지되어야 한다', () => {
   test('좁은 열에서는 두 뱃지가 서로 다른 줄로 감싸되(wrap), 뱃지 내부 라벨은 쪼개지지 않는다', async ({
     page,
