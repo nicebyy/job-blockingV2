@@ -224,6 +224,16 @@ npm run test:e2e
 > PW_HEADLESS=true npm run test:e2e   # 또는 CI=true
 > ```
 
+E2E 스펙은 **확장 빌드 산출물(`dist/`)을 로드하는 통합 테스트** 외에,
+라이브 실측 DOM/CSS를 `page.setContent()` 로 재현해 **레이아웃 회귀만** 검증하는 스펙을 함께 운영합니다
+(네트워크 요청 없음).
+
+| 스펙 | 검증 대상 |
+| :--- | :--- |
+| `tests/e2e/extension.spec.ts` | 팝업·옵션·웰컴 UI, 평점 뱃지 주입, 차단 동작 |
+| `tests/e2e/jobkorea-rating-layout.spec.ts` | 잡코리아 메인 CardJobBasic / TOP100 뱃지 한 줄 정렬·overhang |
+| `tests/e2e/saramin-hot100-toolbar.spec.ts` | 사람인 HOT 100 카드 `[공고숨김 \| 회사차단]` 툴바 잘림·지원 버튼 겹침 |
+
 ### 통합 검증 (한 번에 실행)
 ```bash
 npm run verify:all
