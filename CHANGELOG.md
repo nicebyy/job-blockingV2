@@ -3,6 +3,53 @@
 이 문서는 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 형식을 따르며,
 [유의적 버전(Semantic Versioning)](https://semver.org/lang/ko/)을 준수합니다.
 
+## [Unreleased]
+
+### 수정
+- **사람인 HOT 100**: 카드 우측 상단의 `[공고숨김 | 회사차단]` 툴바가 목록 경계에서
+  **"회사차단" 이 잘려 보이던** 문제.
+
+  HOT 100 목록은 카드에 **좌우 48px 인셋**을 주는 레이아웃이다.
+
+  ```
+  .list_recruiting.list_hot_type        width: 1260px
+    .list_body                          overflow: hidden   ← 모서리 라운딩 클립
+      .list_item                        margin: 0 48px     ← 인셋
+        .box_item                       padding: 24px 48px; margin: 0 -48px
+          .job-filter-btn-group         position: absolute; right: 12px  ← 확장 주입
+  ```
+
+  그런데 확장 style.css 의 사람인 목록 폴백 블록이 `.list_item { width: 100% !important }`
+  로 폭을 강제하고 있었다. `width: 100%` 는 **마진을 뺀 폭을 계산하지 않고** 컨테이닝 블록
+  폭을 그대로 잡으므로 좌우 48px 인셋이 무력화되고, 카드가 `.list_body` 폭을 그대로 차지했다.
+  그 결과 카드 오른쪽 끝이 클립 경계를 넘어, 카드에 absolute 로 앵커된 툴바가
+  클립 밖으로 밀려나 "회사차단" 텍스트가 잘렸다.
+
+  - 실측(라이브 HOT 100 `#rec-55566807` 행):
+
+    | 항목                    | 수정 전    | 수정 후     |
+    | ----------------------- | ---------- | ----------- |
+    | 카드 폭                 | 1258px     | 1162px      |
+    | 카드 오른쪽 끝          | 1397px     | 1301px      |
+    | 툴바 오른쪽 끝          | 1383.4px   | 1287.4px    |
+    | 클립 경계(list_body)    | 1350px     | 1350px      |
+    | **잘림**                | **+33.4px**| **-62.6px** |
+    | 입사지원 버튼과의 겹침  | 4.8px      | 0px         |
+
+  수정 내용:
+  1. 폴백 블록의 `width` / `border-bottom` 강제를 제거하고 `!important` 를 전부 걷어냈다
+     (사이트 규칙이 항상 우선하도록).
+  2. 폴백 셀렉터를 `:not(.list_recruiting *)` 로 스코프해, 표준 목록 컨테이너 안에서는
+     **아예 개입하지 않게** 했다. `min-width` / `max-width` 는 사이트가 선언하지 않는 속성이라
+     `!important` 만 제거하면 폴백 값(232px)이 HOT 100 사이트 값(216px)을 덮어써 열 폭이 밀린다.
+  3. 사람인 목록 행 툴바의 `top` 을 `10px → 0px` 로 보정. 행 상단에는
+     `padding: 24px` 의 빈 밴드가 있고 실제 콘텐츠는 +24px 에서 시작하므로, 캡슐(높이 23px)이
+     0~23px 에 놓여야 우측 [입사지원] 버튼을 덮지 않는다.
+
+  - 회귀 테스트: `tests/e2e/saramin-hot100-toolbar.spec.ts` (5건)
+    — 잘림 0 / 인셋 유지 / 지원 버튼 비겹침 / 폴백 스코프, 그리고 "수정 전 상태에서
+    잘림이 실제로 재현되는지"를 확인하는 검증력(sensitivity) 테스트.
+
 ## [0.2.6] - 2026-11-05
 
 ### 변경
