@@ -271,8 +271,18 @@ export class ContentController {
       if (evalResult.shouldFilter) {
         // [중요] 사용자가 직접 [공고숨김]을 누른 단일 공고(type === 'job')는
         // 사용자의 명시적 의도에 따라 blur 모드와 무관하게 항상 완전 숨김('hide') 적용
-        const effectiveMode =
+        let effectiveMode =
           evalResult.matchedItem?.type === 'job' ? 'hide' : (this.settings?.mode || 'blur');
+
+        // [상세페이지 백지화 방지] 상세 페이지에서 메인 공고 본문 뷰어가 hide 모드로 평가되었을 때,
+        // display: none 으로 인해 화면 전체가 백지(아예 렌더링되지 않음)가 되는 현상을 방지하기 위해 blur 로 안전 대체
+        const isMainDetailView =
+          this.adapter?.isDetailPage?.() &&
+          cardInfo.cardElement.matches?.(FILTER_CONFIG.DETAIL_VIEW_PROTECTED_CONTAINERS);
+        if (isMainDetailView && effectiveMode === 'hide') {
+          effectiveMode = 'blur';
+        }
+
         this.filterEngine.applyFilter(cardInfo.cardElement, effectiveMode);
         totalBlocked++;
 

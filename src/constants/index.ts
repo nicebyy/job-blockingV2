@@ -60,6 +60,12 @@ export const FILTER_CONFIG = {
    */
   ATTR_FILTER_ORIGIN: 'data-filter-origin',
   FILTER_ORIGIN_MANUAL: 'manual',
+  /**
+   * 상세 페이지에서 차단(hide 모드) 시 화면 전체가 백지(White-out)로 먹통이 되는 것을 방지하기 위해
+   * display: none 대신 blur 로 안전 대체해야 하는 메인 공고 본문 컨테이너 셀렉터.
+   */
+  DETAIL_VIEW_PROTECTED_CONTAINERS:
+    'section.jview, .wrap_jview > .jview, .wrap_jv_cont, div[id^="jview_"], .jview_box, main[class*="grid"], #dev-gi-read, [data-jobview-section="atf"]',
 } as const;
 
 /**
@@ -202,19 +208,23 @@ export const SARAMIN_SELECTORS = {
   PAGE_QUERY_PARAMS: ['recruitPage', 'page'],
 
   COMPANY_NAME:
-    '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a, .company_nm .str_tit, .corp, span.corp, a.company:not(.company_popup)',
+    '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a, .company_nm .str_tit, .corp, span.corp, a.company:not(.company_popup), .offer.list .company, .jview_wing .company, span.company',
 
   POSITION_TITLE:
-    '.area_job .job_tit a, .job_tit a.str_tit, .job_tit a, .area_job .job_tit, strong.tit, .tit, .job_tit',
+    '.area_job .job_tit a, .job_tit a.str_tit, .job_tit a, .area_job .job_tit, strong.tit, .tit, .job_tit, .offer.list .title, .jview_wing .title, span.title',
   AD_BADGE: '.badge_plus, .badge_recommend, .tag_ad, .ad_tag',
   AD_CLASS: 'plus_ad',
-  CLOSING_DATE: '.area_job .date, .item_recruit .date, .date, .info_period .date, .jv_summary .date, .info_period .txt',
+  CLOSING_DATE:
+    '.area_job .date, .item_recruit .date, .date, .info_period .date, .jv_summary .date, .info_period .txt, .recruit_func .date',
   // 상세 페이지 및 하단 무한 스크롤(릴레이 뷰/추천 공고) 셀렉터 (.wrap_jview는 부모 래퍼이므로 제외하고 개별 공고 단위로 지정)
-  DETAIL_RELAY_CONTAINERS: '.wrap_jview > .jview, .wrap_jview > section[class*="jview"], .wrap_jview > div[class*="jview"], .wrap_jv_cont, div[id^="jview_"], .jview_box, section.jview',
-  DETAIL_RECOMMEND_CARDS: '.item_recommend, .recommend_sec .list_item, .box_recommend li, .relate_job li, [class*="recommend_job"] li, .jview_wing .offer.list li',
+  DETAIL_RELAY_CONTAINERS:
+    '.wrap_jview > .jview, .wrap_jview > section[class*="jview"], .wrap_jview > div[class*="jview"], .wrap_jv_cont, div[id^="jview_"], .jview_box, section.jview',
+  DETAIL_RECOMMEND_CARDS:
+    '.item_recommend, .recommend_sec .list_item, .box_recommend li, .relate_job li, [class*="recommend_job"] li, .jview_wing .offer.list li, .offer.list > li, [id^="recommend_wing_"]',
   DETAIL_COMPANY_NAME:
-    '.jv_header .title_inner .company, .title_inner .company, .jv_header .title_inner a:not(.btn_interest):not(.company_popup), .title_inner a:not(.btn_interest):not(.company_popup), .jv_header a.company, .jv_header .company_name, .wrap_jv_header .corp_name, .company_info .name',
-  DETAIL_POSITION_TITLE: '.jv_header .tit_job, .jv_header h1, h1.tit_job, .wrap_jv_header .tit_job, .job_tit, .tit',
+    '.jv_header .title_inner .company, .title_inner .company, .jv_header .title_inner a:not(.btn_interest):not(.company_popup), .title_inner a:not(.btn_interest):not(.company_popup), .jv_header a.company, .jv_header .company_name, .wrap_jv_header .corp_name, .company_info .name, .offer.list .company, .jview_wing .company, span.company',
+  DETAIL_POSITION_TITLE:
+    '.jv_header .tit_job, .jv_header h1, h1.tit_job, .wrap_jv_header .tit_job, .job_tit, .tit, .offer.list .title, .jview_wing .title, span.title',
   DETAIL_HEADER: '.jv_header, .wrap_jv_header, .header_jv, .view_header',
   DETAIL_TITLE_INNER: '.title_inner, .wrap_corp_info, .area_corp',
 

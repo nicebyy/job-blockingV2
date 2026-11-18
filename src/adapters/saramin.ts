@@ -346,8 +346,14 @@ export class SaraminAdapter extends BaseSiteAdapter {
       element.classList.contains('item') ||
       Boolean(element.querySelector('.area_corp, .corp_name, .company_nm, .corp'));
 
-    // 1. 회사명 추출 (리스트 카드 우선 탐색 또는 상세 헤더 우선 탐색)
-    let companyEl = isListCard
+    const isRecommendCard =
+      element.classList.contains('item_recommend') ||
+      Boolean(element.closest('.jview_wing, .offer.list')) ||
+      Boolean(element.querySelector('.offer.list, [id^="recommend_wing_"]')) ||
+      element.id?.startsWith('recommend_wing_');
+
+    // 1. 회사명 추출 (리스트/추천 카드 우선 탐색 또는 상세 헤더 우선 탐색)
+    let companyEl = (isListCard || isRecommendCard)
       ? element.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME) ||
         element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME)
       : element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME) ||
@@ -365,7 +371,7 @@ export class SaraminAdapter extends BaseSiteAdapter {
     }
 
     // 2. 공고 제목 추출
-    const titleEl = isListCard
+    const titleEl = (isListCard || isRecommendCard)
       ? element.querySelector<HTMLElement>(SARAMIN_SELECTORS.POSITION_TITLE) ||
         element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_POSITION_TITLE)
       : element.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_POSITION_TITLE) ||
@@ -463,7 +469,13 @@ export class SaraminAdapter extends BaseSiteAdapter {
       cardElement.classList.contains('item') ||
       Boolean(cardElement.querySelector('.area_corp, .corp_name, .company_nm, .corp'));
 
-    let el = isListCard
+    const isRecommendCard =
+      cardElement.classList.contains('item_recommend') ||
+      Boolean(cardElement.closest('.jview_wing, .offer.list')) ||
+      Boolean(cardElement.querySelector('.offer.list, [id^="recommend_wing_"]')) ||
+      cardElement.id?.startsWith('recommend_wing_');
+
+    let el = (isListCard || isRecommendCard)
       ? cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.COMPANY_NAME) ||
         cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME)
       : cardElement.querySelector<HTMLElement>(SARAMIN_SELECTORS.DETAIL_COMPANY_NAME) ||
