@@ -348,8 +348,8 @@ export class SaraminAdapter extends BaseSiteAdapter {
 
     const isRecommendCard =
       element.classList.contains('item_recommend') ||
-      Boolean(element.closest('.jview_wing, .offer.list')) ||
-      Boolean(element.querySelector('.offer.list, [id^="recommend_wing_"]')) ||
+      Boolean(element.closest('.jview_wing, .offer.list, .similar_recruit, .list_ongoing')) ||
+      Boolean(element.querySelector('.offer.list, [id^="recommend_wing_"], .similar_recruit, .list_ongoing')) ||
       element.id?.startsWith('recommend_wing_');
 
     // 1. 회사명 추출 (리스트/추천 카드 우선 탐색 또는 상세 헤더 우선 탐색)
@@ -413,15 +413,21 @@ export class SaraminAdapter extends BaseSiteAdapter {
       recruitId = btn?.getAttribute('rec_idx') || btn?.getAttribute('data-rec-idx') || null;
     }
 
-    if (!recruitId && element.id) {
-      const match = element.id.match(/\d+/);
-      if (match) recruitId = match[0];
+    // 링크 및 idx 속성 확인 (사람인 공고 링크에 붙은 rec_idx 및 추천 공고 idx)
+    if (!recruitId) {
+      const idxEl = element.getAttribute('idx') ? element : element.querySelector<HTMLElement>('[idx]');
+      recruitId = idxEl?.getAttribute('idx') || null;
     }
 
     if (!recruitId) {
       const link = element.querySelector<HTMLAnchorElement>('a[href*="rec_idx="]');
       const match = link?.href?.match(/rec_idx=(\d+)/);
       if (match) recruitId = match[1];
+    }
+
+    if (!recruitId && element.id) {
+      const match = element.id.match(/\d+/);
+      if (match) recruitId = match[0];
     }
 
     // URL fallback (릴레이 뷰의 개별 공고는 각자 고유 ID가 있으므로 URL fallback은 일반 상세 뷰일 때만 사용)
@@ -471,8 +477,8 @@ export class SaraminAdapter extends BaseSiteAdapter {
 
     const isRecommendCard =
       cardElement.classList.contains('item_recommend') ||
-      Boolean(cardElement.closest('.jview_wing, .offer.list')) ||
-      Boolean(cardElement.querySelector('.offer.list, [id^="recommend_wing_"]')) ||
+      Boolean(cardElement.closest('.jview_wing, .offer.list, .similar_recruit, .list_ongoing')) ||
+      Boolean(cardElement.querySelector('.offer.list, [id^="recommend_wing_"], .similar_recruit, .list_ongoing')) ||
       cardElement.id?.startsWith('recommend_wing_');
 
     let el = (isListCard || isRecommendCard)
