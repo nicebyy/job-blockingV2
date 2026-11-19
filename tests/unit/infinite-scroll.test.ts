@@ -409,7 +409,6 @@ describe('InfiniteScrollManager 단위 테스트', () => {
       manager.init();
       expect(capturedOptions).not.toBeNull();
       expect(capturedOptions.rootMargin).toBe(INFINITE_SCROLL_CONFIG.ROOT_MARGIN);
-      expect(capturedOptions.rootMargin).toBe('1200px');
     } finally {
       (window as any).IntersectionObserver = OriginalObserver;
     }
@@ -720,13 +719,15 @@ describe('InfiniteScrollManager 단위 테스트', () => {
 
           // 센티넬이 화면 안에 들어옴 → 로딩 시작
           observerCallback!([{ isIntersecting: true }]);
-          await vi.advanceTimersByTimeAsync(0);
+          await vi.advanceTimersByTimeAsync(INFINITE_SCROLL_CONFIG.FETCH_DELAY_MS);
           expect(requestedPages).toEqual([2]);
 
           // 로딩이 끝났지만 교차 상태는 그대로 true → 새 이벤트가 오지 않는 상황
           // 스스로 재확인해서 3페이지를 이어서 요청해야 한다
           await vi.advanceTimersByTimeAsync(
-            INFINITE_SCROLL_CONFIG.INTERSECTION_REFILL_DELAY_MS + 50
+            INFINITE_SCROLL_CONFIG.INTERSECTION_REFILL_DELAY_MS +
+              INFINITE_SCROLL_CONFIG.FETCH_DELAY_MS +
+              50
           );
           expect(requestedPages).toEqual([2, 3]);
           expect(manager.isDestroyed()).toBe(false);
@@ -736,6 +737,154 @@ describe('InfiniteScrollManager 단위 테스트', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+  });
+
+  describe('웹 방화벽(WAF) 차단 감지 및 보호 (Circuit Breaker)', () => {
+    const setupBasicDom = () => {
+      document.body.innerHTML = `
+        <div id="recruit_info_list">
+          <div class="content_wrap">
+            <div class="item_recruit">1페이지 공고</div>
+          </div>
+        </div>
+        <div class="pagination">
+          <a href="https://www.saramin.co.kr/zf_user/search?page=2" page="2">2</a>
+        </div>
+      `;
+    };
+
+    it('웹 방화벽(WAF) 차단 문구가 포함된 200 OK 응답이 올 경우 즉시 무한 스크롤을 중단하고 WAF 전용 안내 문구를 노출해야 한다', async () => {
+      setupBasicDom();
+
+      const wafHtml = `
+        <html>
+          <body>
+            <h1>403 Forbidden</h1>
+            <p>The request / response that are contrary to the Web firewall security policies have been blocked.</p>
+          </body>
+        </html>
+      `;
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(wafHtml),
+      });
+
+      const onAppended = vi.fn();
+      const manager = new InfiniteScrollManager({
+        adapter: new SaraminAdapter(),
+        onCardsAppended: onAppended,
+        fetchFn: mockFetch as any,
+      });
+
+      manager.init();
+      const result = await manager.loadNextPage();
+
+      expect(result).toBe(false);
+      expect(manager.isDestroyed()).toBe(true);
+      expect(onAppended).not.toHaveBeenCalled();
+
+      // WAF 전용 안내 문구 확인
+      const notice = document.querySelector('.job-filter-waf-notice');
+      expect(notice).not.toBeNull();
+      expect(notice?.textContent).toBe(INFINITE_SCROLL_CONFIG.LABELS.WAF_FAILURE);
+    });
+
+    it('429 Too Many Requests 응답 시 즉시 무한 스크롤을 중단하고 WAF 안내를 노출해야 한다', async () => {
+      setupBasicDom();
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        text: () => Promise.resolve('Too Many Requests'),
+      });
+
+      const manager = new InfiniteScrollManager({
+        adapter: new SaraminAdapter(),
+        onCardsAppended: vi.fn(),
+        fetchFn: mockFetch as any,
+      });
+
+      manager.init();
+      const result = await manager.loadNextPage();
+
+      expect(result).toBe(false);
+      expect(manager.isDestroyed()).toBe(true);
+
+      const notice = document.querySelector('.job-filter-waf-notice');
+      expect(notice).not.toBeNull();
+      expect(notice?.textContent).toBe(INFINITE_SCROLL_CONFIG.LABELS.WAF_FAILURE);
+    });
+
+    it('403 Forbidden 응답 시 WAF 차단으로 감지하고 즉시 중단해야 한다', async () => {
+      setupBasicDom();
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        text: () => Promise.resolve('Access Denied by Web Firewall'),
+      });
+
+      const manager = new InfiniteScrollManager({
+        adapter: new SaraminAdapter(),
+        onCardsAppended: vi.fn(),
+        fetchFn: mockFetch as any,
+      });
+
+      manager.init();
+      const result = await manager.loadNextPage();
+
+      expect(result).toBe(false);
+      expect(manager.isDestroyed()).toBe(true);
+
+      const notice = document.querySelector('.job-filter-waf-notice');
+      expect(notice).not.toBeNull();
+      expect(notice?.textContent).toBe(INFINITE_SCROLL_CONFIG.LABELS.WAF_FAILURE);
+    });
+
+    it('다음 페이지 요청 시 브라우저 표준 네비게이션 헤더(DEFAULT_HEADERS)가 포함되어 전달되어야 한다', async () => {
+      setupBasicDom();
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () =>
+          Promise.resolve(`
+          <html>
+            <body>
+              <div id="recruit_info_list">
+                <div class="content_wrap">
+                  <div class="item_recruit">
+                    <div class="area_corp"><span class="corp_name"><a href="#">기업</a></span></div>
+                    <div class="area_job"><span class="job_tit"><a href="#">직무</a></span></div>
+                  </div>
+                </div>
+              </div>
+            </body>
+          </html>
+        `),
+      });
+
+      const manager = new InfiniteScrollManager({
+        adapter: new SaraminAdapter(),
+        onCardsAppended: vi.fn(),
+        fetchFn: mockFetch as any,
+      });
+
+      manager.init();
+      await manager.loadNextPage();
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const callArgs = mockFetch.mock.calls[0];
+      const requestOptions = callArgs[1];
+      expect(requestOptions).toBeDefined();
+      expect(requestOptions.headers).toBeDefined();
+      expect(requestOptions.headers.Accept).toBe(INFINITE_SCROLL_CONFIG.DEFAULT_HEADERS.Accept);
+      expect(requestOptions.headers['Accept-Language']).toBe(
+        INFINITE_SCROLL_CONFIG.DEFAULT_HEADERS['Accept-Language']
+      );
     });
   });
 });

@@ -301,10 +301,34 @@ export class InfiniteScrollManager {
 
       let htmlText: string;
       try {
+        const headers = {
+          ...INFINITE_SCROLL_CONFIG.DEFAULT_HEADERS,
+          ...(nextRequest?.options?.headers || {}),
+        };
+
         const response = await this.fetchFn(nextUrl, {
           ...nextRequest?.options,
+          headers,
           signal: controller?.signal,
         });
+
+        // WAF 차단 페이지는 200 OK 또는 403/429 등으로 반환될 수 있으므로 본문 및 상태 코드 검사
+        try {
+          htmlText = await response.text();
+        } catch {
+          htmlText = '';
+        }
+
+        if (this.isWafBlocked(htmlText, response.status)) {
+          console.warn(
+            '[JobFilter] 웹 방화벽(WAF) 보안 정책에 의해 요청이 차단되어 무한 스크롤을 즉시 중단합니다:',
+            nextUrl
+          );
+          this.hasMorePages = false;
+          this.showWafFailure();
+          this.destroy();
+          return false;
+        }
 
         if (!response.ok) {
           throw new Error(`Fetch failed with status ${response.status}`);
@@ -314,9 +338,6 @@ export class InfiniteScrollManager {
         if (this.destroyed) {
           return false;
         }
-
-        // response.text() 는 타임아웃 타이머가 살아있는 상태에서 읽는다
-        htmlText = await response.text();
       } finally {
         if (timeoutId) {
           clearTimeout(timeoutId);
@@ -438,6 +459,43 @@ export class InfiniteScrollManager {
     notice.className = INFINITE_SCROLL_CONFIG.FAILURE_NOTICE_CLASS;
     notice.textContent = INFINITE_SCROLL_CONFIG.LABELS.LOAD_FAILURE;
     host.insertBefore(notice, this.loadingIndicator);
+  }
+
+  /**
+   * 웹 방화벽(WAF) 보안 정책 차단 감지 시 전용 안내 문구를 노출
+   */
+  private showWafFailure(): void {
+    if (!this.loadingIndicator || typeof document === 'undefined') return;
+
+    const host = this.loadingIndicator.parentElement;
+    if (!host) return;
+
+    const notice = document.createElement('div');
+    notice.className = `${INFINITE_SCROLL_CONFIG.FAILURE_NOTICE_CLASS} job-filter-waf-notice`;
+    notice.textContent = INFINITE_SCROLL_CONFIG.LABELS.WAF_FAILURE;
+    host.insertBefore(notice, this.loadingIndicator);
+  }
+
+  /**
+   * 응답 본문 및 HTTP 상태 코드를 분석하여 웹 방화벽(WAF) 차단 여부를 감지
+   */
+  private isWafBlocked(text: string, status: number): boolean {
+    if (status === 429) {
+      return true;
+    }
+    const lower = text.toLowerCase();
+    for (const keyword of INFINITE_SCROLL_CONFIG.WAF_BLOCK_KEYWORDS) {
+      if (lower.includes(keyword.toLowerCase())) {
+        return true;
+      }
+    }
+    if (
+      status === 403 &&
+      (lower.includes('forbidden') || lower.includes('firewall') || text.length < 500)
+    ) {
+      return true;
+    }
+    return false;
   }
 
   private setLoadingVisible(visible: boolean): void {
