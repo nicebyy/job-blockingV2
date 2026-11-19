@@ -7,7 +7,10 @@
 .list-post,
 [data-cy="job-card"],
 li[class*="Card_"],
-.jview,
+section.jview,
+.wrap_jview > .jview,
+.offer.list li,
+[id^="recommend_wing_"],
 tr.devloopArea,
 tr[data-gno],
 td.tplTit,
@@ -177,8 +180,10 @@ div[class*="POSITION_VIEW_WING_BANNER"] {
 .list_product > li:hover .job-filter-btn-group,
 [data-cy="job-card"]:hover .job-filter-btn-group,
 .list-post:hover .job-filter-btn-group,
-.jview:hover .job-filter-btn-group,
+section.jview:hover .job-filter-btn-group,
 .wrap_jview .jview:hover .job-filter-btn-group,
+.offer.list li:hover .job-filter-btn-group,
+[id^="recommend_wing_"]:hover .job-filter-btn-group,
 tr.devloopArea:hover .job-filter-btn-group,
 tr[data-gno]:hover .job-filter-btn-group,
 .tplJobList tr:hover .job-filter-btn-group,
@@ -443,6 +448,13 @@ div[class*="sc-80824a9d-0"] .job-filter-btn-group {
   border: 1px solid #fecaca !important;
 }
 
+/* 웹 방화벽(WAF) 일시 차단 감지 시 경고 안내 문구 */
+.job-filter-waf-notice {
+  color: #c2410c !important;
+  background-color: #fff7ed !important;
+  border: 1px solid #fed7aa !important;
+}
+
 @keyframes job-filter-spin {
   to {
     transform: rotate(360deg);
@@ -604,6 +616,89 @@ td.tplCo .job-filter-ratings-wrap,
  */
 .list_recruiting .list_body .list_item > .job-filter-btn-group {
   top: 0px !important;
+}
+
+/* 사람인 최근 본 공고 하단 "유사해요" 추천 공고(.similar_recruit) 긴 지역 텍스트 레이아웃 겹침 방지
+ *
+ * [배경 및 실측 근거]
+ * 사람인의 최근 본 공고 유사 리스트(.similar_recruit .list_ongoing > li)는
+ * .job_condition { width: 220px; flex: 0 0 220px } 에 overflow: hidden 이 없고,
+ * 내부 첫 번째 span(지역 목록)에 max-width 가 없어 긴 지역명(예: 서울전체, 경기 경기전체, 과천시, 수원시...)이
+ * 342px 이상으로 늘어나 우측 .job_date(마감일 및 입사지원 버튼)를 108.7px 침범하여
+ * 심각한 글자 겹침(Overhang/Overlap)이 발생한다.
+ *
+ * [해결]
+ * 1. .job_condition 에 display: flex; overflow: hidden; min-width: 0 을 부여하고,
+ * 2. 내부 첫 번째 span(지역 목록)에 flex: 1 1 auto; min-width: 0; max-width: 140px; text-overflow: ellipsis 를 적용하여
+ *    남는 공간에 맞게 말줄임 처리한다.
+ * 3. 두 번째 span(경력)은 flex-shrink: 0 으로 형태를 온전히 보존한다.
+ * 4. .job_tit 은 flex: 0 1 530px; min-width: 0 으로 좁은 화면에서도 유연하게 폭을 양보한다.
+ * 5. .job_date 는 flex-shrink: 0 및 white-space: nowrap 으로 날짜와 버튼이 밀리거나
+ *    줄바꿈되지 않도록 고정한다.
+ * 6. 추천 공고 행(li) 호버 시 [공고숨김 / 회사차단] 툴바 및 평점 뱃지가 깔끔하게 인라인 정렬되도록 보정한다.
+ */
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .job_condition {
+  display: flex !important;
+  align-items: center !important;
+  width: 220px !important;
+  max-width: 220px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .job_condition > span:first-child {
+  display: block !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  max-width: 140px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .job_condition > span:last-child {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .job_tit {
+  flex: 0 1 530px !important;
+  min-width: 0 !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .job_date {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .job_date .date,
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .job_date .sri_btn_sm,
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .job_date .btn_join {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li {
+  position: relative !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li > .job-filter-btn-group {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  right: 8px !important;
+  z-index: 10 !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .corp_name .job-filter-ratings-wrap {
+  display: inline-flex !important;
+  vertical-align: middle !important;
+  margin-left: 4px !important;
+  flex-shrink: 0 !important;
+}
+
+.list_recruiting .list_body .list_item .similar_recruit .list_ongoing > li .corp_name > a span {
+  max-width: calc(166px - 60px) !important;
+  display: inline-block !important;
 }
 
 /* 사람인 그리드 상품 카드(.list_product .item) 내 평점 뱃지 정렬 */

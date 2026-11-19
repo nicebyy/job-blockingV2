@@ -5,7 +5,7 @@ export const APP_INFO = {
   NAME: 'Job Blocking V2',
   FULL_NAME: 'Job Blocking V2 - 채용 사이트 공고 필터링',
   DESCRIPTION: '원티드, 사람인, 잡코리아, 리멤버, 점핏 등 채용 사이트의 원치 않는 회사 및 광고 공고를 숨기거나 블러 처리합니다.',
-  VERSION: '0.2.7',
+  VERSION: '0.2.8',
 } as const;
 
 /**
@@ -60,6 +60,12 @@ export const FILTER_CONFIG = {
    */
   ATTR_FILTER_ORIGIN: 'data-filter-origin',
   FILTER_ORIGIN_MANUAL: 'manual',
+  /**
+   * 상세 페이지에서 차단(hide 모드) 시 화면 전체가 백지(White-out)로 먹통이 되는 것을 방지하기 위해
+   * display: none 대신 blur 로 안전 대체해야 하는 메인 공고 본문 컨테이너 셀렉터.
+   */
+  DETAIL_VIEW_PROTECTED_CONTAINERS:
+    'section.jview, .wrap_jview > .jview, .wrap_jv_cont, div[id^="jview_"], .jview_box, main[class*="grid"], #dev-gi-read, [data-jobview-section="atf"]',
 } as const;
 
 /**
@@ -144,9 +150,9 @@ export const WANTED_SELECTORS = {
  */
 export const INFINITE_SCROLL_CONFIG = {
   MIN_VISIBLE_CARDS: 5,
-  MAX_CONSECUTIVE_FETCHES: 5,
-  FETCH_DELAY_MS: 0, // 사용자 스크롤 시 지연 없이 즉시 프리페치 (기존 300ms 제거)
-  AUTO_REFILL_DELAY_MS: 150, // 연속 자동 채우기(Auto-Refill) 시 서버 보호용 안전 딜레이
+  MAX_CONSECUTIVE_FETCHES: 3, // WAF 봇 차단 방지를 위해 최대 연속 요청 3회로 완화
+  FETCH_DELAY_MS: 300, // 사용자 스크롤 시 WAF 보호용 안전 딜레이 300ms
+  AUTO_REFILL_DELAY_MS: 500, // 연속 자동 채우기(Auto-Refill) 시 WAF 보호용 안전 딜레이 500ms
   FETCH_TIMEOUT_MS: 10000,
   SENTINEL_ID: 'job-filter-scroll-sentinel',
   LOADING_INDICATOR_ID: 'job-filter-loading-indicator',
@@ -159,21 +165,33 @@ export const INFINITE_SCROLL_CONFIG = {
   LABELS: {
     LOADING: '다음 공고를 불러오는 중입니다...',
     LOAD_FAILURE: '다음 공고를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.',
+    WAF_FAILURE: '웹 방화벽(WAF) 보안 정책에 의해 요청이 일시 제한되었습니다. 잠시 후 새로고침해 주세요.',
   },
-  ROOT_MARGIN: '1200px', // 바닥 도달 전 약 1.5~2 화면 전 선제적 백그라운드 프리페치
+  ROOT_MARGIN: '600px', // 바닥 도달 전 약 1 화면 전 백그라운드 프리페치 (과도한 조기 프리페치 방지)
   /**
    * 로딩 완료 후 센티넬이 여전히 화면 안에 있을 때 다음 페이지를 이어서 불러오기까지의 지연(ms).
-   *
-   * IntersectionObserver 는 교차 상태가 바뀔 때만 이벤트를 주므로, 사용자가 바닥에 머무른 채
-   * 로딩이 끝나면 이벤트가 오지 않아 목록이 멈춘 것처럼 보인다. 이 지연 후 스스로 재확인한다.
-   * (서버 보호를 위해 MAX_CONSECUTIVE_FETCHES 회까지만 연속 자동 로딩)
    */
-  INTERSECTION_REFILL_DELAY_MS: 250,
+  INTERSECTION_REFILL_DELAY_MS: 400,
   /**
    * 연속 자동 로딩이 MAX_CONSECUTIVE_FETCHES 회에 도달했을 때의 휴지 시간(ms).
-   * 영구 정지하지 않고 잠시 쉬었다 다시 이어간다(서버 보호 + 스크롤 정지 방지).
    */
-  INTERSECTION_REFILL_COOLDOWN_MS: 1200,
+  INTERSECTION_REFILL_COOLDOWN_MS: 1500,
+  /**
+   * 웹 방화벽(WAF) 차단 응답 감지 키워드 목록
+   */
+  WAF_BLOCK_KEYWORDS: [
+    'contrary to the Web firewall',
+    'Web firewall security policies',
+    'web firewall',
+    '방화벽',
+  ] as const,
+  /**
+   * 브라우저 일반 네비게이션 표준 요청 헤더 (WAF 봇 탐지 우회용)
+   */
+  DEFAULT_HEADERS: {
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+  } as const,
 } as const;
 
 /**
@@ -202,19 +220,23 @@ export const SARAMIN_SELECTORS = {
   PAGE_QUERY_PARAMS: ['recruitPage', 'page'],
 
   COMPANY_NAME:
-    '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a, .company_nm .str_tit, .corp, span.corp, a.company:not(.company_popup)',
+    '.area_corp .corp_name a, .area_corp .corp_name, strong.corp_name a, strong.corp_name, .corp_name a, .corp_name, .col.company_nm a, .company_nm a, .company_nm .str_tit, .corp, span.corp, a.company:not(.company_popup), .offer.list .company, .jview_wing .company, span.company',
 
   POSITION_TITLE:
-    '.area_job .job_tit a, .job_tit a.str_tit, .job_tit a, .area_job .job_tit, strong.tit, .tit, .job_tit',
+    '.area_job .job_tit a, .job_tit a.str_tit, .job_tit a, .area_job .job_tit, strong.tit, .tit, .job_tit, .offer.list .title, .jview_wing .title, span.title',
   AD_BADGE: '.badge_plus, .badge_recommend, .tag_ad, .ad_tag',
   AD_CLASS: 'plus_ad',
-  CLOSING_DATE: '.area_job .date, .item_recruit .date, .date, .info_period .date, .jv_summary .date, .info_period .txt',
+  CLOSING_DATE:
+    '.area_job .date, .item_recruit .date, .date, .info_period .date, .jv_summary .date, .info_period .txt, .recruit_func .date, .job_date .date',
   // 상세 페이지 및 하단 무한 스크롤(릴레이 뷰/추천 공고) 셀렉터 (.wrap_jview는 부모 래퍼이므로 제외하고 개별 공고 단위로 지정)
-  DETAIL_RELAY_CONTAINERS: '.wrap_jview > .jview, .wrap_jview > section[class*="jview"], .wrap_jview > div[class*="jview"], .wrap_jv_cont, div[id^="jview_"], .jview_box, section.jview',
-  DETAIL_RECOMMEND_CARDS: '.item_recommend, .recommend_sec .list_item, .box_recommend li, .relate_job li, [class*="recommend_job"] li, .jview_wing .offer.list li',
+  DETAIL_RELAY_CONTAINERS:
+    '.wrap_jview > .jview, .wrap_jview > section[class*="jview"], .wrap_jview > div[class*="jview"], .wrap_jv_cont, div[id^="jview_"], .jview_box, section.jview',
+  DETAIL_RECOMMEND_CARDS:
+    '.item_recommend, .recommend_sec .list_item, .box_recommend li, .relate_job li, [class*="recommend_job"] li, .jview_wing .offer.list li, .offer.list > li, [id^="recommend_wing_"], .similar_recruit .list_ongoing > li, .similar_recruit li',
   DETAIL_COMPANY_NAME:
-    '.jv_header .title_inner .company, .title_inner .company, .jv_header .title_inner a:not(.btn_interest):not(.company_popup), .title_inner a:not(.btn_interest):not(.company_popup), .jv_header a.company, .jv_header .company_name, .wrap_jv_header .corp_name, .company_info .name',
-  DETAIL_POSITION_TITLE: '.jv_header .tit_job, .jv_header h1, h1.tit_job, .wrap_jv_header .tit_job, .job_tit, .tit',
+    '.jv_header .title_inner .company, .title_inner .company, .jv_header .title_inner a:not(.btn_interest):not(.company_popup), .title_inner a:not(.btn_interest):not(.company_popup), .jv_header a.company, .jv_header .company_name, .wrap_jv_header .corp_name, .company_info .name, .offer.list .company, .jview_wing .company, span.company',
+  DETAIL_POSITION_TITLE:
+    '.jv_header .tit_job, .jv_header h1, h1.tit_job, .wrap_jv_header .tit_job, .job_tit, .tit, .offer.list .title, .jview_wing .title, span.title',
   DETAIL_HEADER: '.jv_header, .wrap_jv_header, .header_jv, .view_header',
   DETAIL_TITLE_INNER: '.title_inner, .wrap_corp_info, .area_corp',
 
