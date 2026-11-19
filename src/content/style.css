@@ -448,6 +448,13 @@ div[class*="sc-80824a9d-0"] .job-filter-btn-group {
   border: 1px solid #fecaca !important;
 }
 
+/* 웹 방화벽(WAF) 일시 차단 감지 시 경고 안내 문구 */
+.job-filter-waf-notice {
+  color: #c2410c !important;
+  background-color: #fff7ed !important;
+  border: 1px solid #fed7aa !important;
+}
+
 @keyframes job-filter-spin {
   to {
     transform: rotate(360deg);
